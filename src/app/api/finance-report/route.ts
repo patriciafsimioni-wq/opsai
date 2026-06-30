@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiUser } from "@/lib/api";
-import { PM_CATEGORIES, WO_TITLE_TO_PM_CATEGORY, FINANCE_STATIONS } from "@/lib/constants";
+import { PM_CATEGORIES, WO_TITLE_TO_PM_CATEGORY, STATIONS } from "@/lib/constants";
+
+const ALL_STATIONS = STATIONS as readonly string[];
+
+function getMonday(d: Date): Date {
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(d.getFullYear(), d.getMonth(), diff);
+}
 
 export async function GET(req: NextRequest) {
   const auth = await requireApiUser();
@@ -10,7 +18,20 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const year = parseInt(url.searchParams.get("year") ?? String(new Date().getFullYear()));
   const month = parseInt(url.searchParams.get("month") ?? String(new Date().getMonth() + 1));
+  const viewMode = url.searchParams.get("view") ?? "month";
+  const weekDateParam = url.searchParams.get("weekDate") ?? "";
   const prevYear = year - 1;
+
+  // Week boundaries (used when viewMode === "week")
+  let weekStart: Date | null = null;
+  let weekEnd: Date | null = null;
+  if (viewMode === "week") {
+    const ref = weekDateParam ? new Date(weekDateParam) : new Date();
+    weekStart = getMonday(ref);
+    weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+  }
 
   // Fetch budgets for the selected year
   const budgets = await prisma.pmBudget.findMany({ where: { year } });
@@ -65,7 +86,7 @@ export async function GET(req: NextRequest) {
 
   function buildActuals(workOrders: typeof woCurrent): AllData {
     const data: AllData = {};
-    for (const station of [...FINANCE_STATIONS, "ALL"]) {
+    for (const station of [...ALL_STATIONS, "ALL"]) {
       data[station] = {};
       for (const cat of PM_CATEGORIES) {
         data[station][cat] = { monthly: 0, ytd: 0 };
@@ -75,9 +96,10 @@ export async function GET(req: NextRequest) {
     for (const wo of workOrders) {
       const station = wo.vehicle?.station ?? "IAH";
       const cat = classify(wo.title);
-      if (!cat || !FINANCE_STATIONS.includes(station as typeof FINANCE_STATIONS[number])) continue;
+      if (!cat || !ALL_STATIONS.includes(station)) continue;
 
       const woMonth = wo.completedAt ? new Date(wo.completedAt).getMonth() + 1 : month;
+      const woDate = wo.completedAt ? new Date(wo.completedAt) : null;
       const cost = wo.cost ?? 0;
 
       // YTD
@@ -88,8 +110,15 @@ export async function GET(req: NextRequest) {
         data["ALL"][cat].ytd += cost;
       }
 
-      // Monthly (only the selected month)
-      if (woMonth === month) {
+      // Period (week or month)
+      let inPeriod = false;
+      if (viewMode === "week" && weekStart && weekEnd && woDate) {
+        inPeriod = woDate >= weekStart && woDate <= weekEnd;
+      } else {
+        inPeriod = woMonth === month;
+      }
+
+      if (inPeriod) {
         if (data[station]?.[cat]) {
           data[station][cat].monthly += cost;
         }
@@ -108,7 +137,7 @@ export async function GET(req: NextRequest) {
   // Build budget data: { station -> category -> { monthly, ytd, annual } }
   type BudgetData = Record<string, Record<string, { monthly: number; ytd: number; annual: number }>>;
   const budgetData: BudgetData = {};
-  for (const station of [...FINANCE_STATIONS, "ALL"]) {
+  for (const station of [...ALL_STATIONS, "ALL"]) {
     budgetData[station] = {};
     for (const cat of PM_CATEGORIES) {
       budgetData[station][cat] = { monthly: 0, ytd: 0, annual: 0 };
@@ -133,6 +162,7 @@ export async function GET(req: NextRequest) {
     if (b.month <= month) {
       budgetData["ALL"][cat].ytd += b.amount;
     }
+    // For weekly view, still use the month-level budget as the reference period
     if (b.month === month) {
       budgetData["ALL"][cat].monthly += b.amount;
     }
@@ -245,9 +275,12 @@ export async function GET(req: NextRequest) {
     AUS: "AUS - Austin",
     HRL: "HRL - Harlingen",
     LRD: "LRD - Laredo",
+    ACT: "ACT - Waco",
+    CLL: "CLL - College Station",
+    BPT: "BPT - Beaumont",
   };
 
-  for (const station of ["ALL", ...FINANCE_STATIONS]) {
+  for (const station of ["ALL", ...ALL_STATIONS]) {
     stations[station] = {
       rows: buildStationRows(station),
       label: stationLabels[station] ?? station,
@@ -260,5 +293,6 @@ export async function GET(req: NextRequest) {
     prevYear,
     stations,
     monthlyTotals,
+    ...(weekStart && weekEnd ? { weekStart: weekStart.toISOString(), weekEnd: weekEnd.toISOString() } : {}),
   });
 }

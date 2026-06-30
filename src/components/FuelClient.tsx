@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Search, Trash2, Fuel } from "lucide-react";
+import { Plus, Search, Trash2, Fuel, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, Button, Table, Th, Td, EmptyState, StatCard } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
 import type { FuelLogDTO, VehicleDTO, DriverDTO } from "@/lib/types";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/utils";
+import { STATION_LABEL } from "@/lib/constants";
 
 const emptyForm = {
   vehicleId: "",
@@ -18,8 +19,35 @@ const emptyForm = {
   location: "",
 };
 
+type FuelApiResponse = {
+  logs: FuelLogDTO[];
+  stations: string[];
+  dateStart: string;
+  dateEnd: string;
+};
+
+function getMonday(d: Date): Date {
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(d.getFullYear(), d.getMonth(), diff);
+}
+
+function formatDateRange(start: string, end: string, range: string): string {
+  const s = new Date(start);
+  const e = new Date(end);
+  if (range === "week") {
+    return `${s.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${e.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+  }
+  return s.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
 export function FuelClient({ canManage }: { canManage: boolean }) {
-  const { data: logs, loading, reload } = useData<FuelLogDTO[]>("/api/fuel");
+  const [station, setStation] = useState("");
+  const [range, setRange] = useState<"week" | "month">("month");
+  const [refDate, setRefDate] = useState(new Date().toISOString().slice(0, 10));
+
+  const apiUrl = `/api/fuel?range=${range}&date=${refDate}${station ? `&station=${station}` : ""}`;
+  const { data, loading, reload } = useData<FuelApiResponse>(apiUrl);
   const { data: vehicles } = useData<VehicleDTO[]>("/api/vehicles");
   const { data: drivers } = useData<DriverDTO[]>("/api/drivers");
   const [search, setSearch] = useState("");
@@ -28,8 +56,20 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const logs = data?.logs ?? [];
+  const availableStations = data?.stations ?? [];
+
+  function navigate(dir: -1 | 1) {
+    const d = new Date(refDate);
+    if (range === "week") {
+      d.setDate(d.getDate() + dir * 7);
+    } else {
+      d.setMonth(d.getMonth() + dir);
+    }
+    setRefDate(d.toISOString().slice(0, 10));
+  }
+
   const filtered = useMemo(() => {
-    if (!logs) return [];
     const q = search.toLowerCase();
     return logs.filter(
       (l) =>
@@ -40,14 +80,13 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
   }, [logs, search]);
 
   const stats = useMemo(() => {
-    const list = logs ?? [];
-    const cost = list.reduce((s, l) => s + l.totalCost, 0);
-    const liters = list.reduce((s, l) => s + l.liters, 0);
+    const cost = logs.reduce((s, l) => s + l.totalCost, 0);
+    const liters = logs.reduce((s, l) => s + l.liters, 0);
     return {
       cost,
       liters,
       avg: liters > 0 ? cost / liters : 0,
-      count: list.length,
+      count: logs.length,
     };
   }, [logs]);
 
@@ -70,6 +109,64 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
 
   return (
     <div className="space-y-4">
+      {/* Filters row */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Station filter */}
+        <select
+          value={station}
+          onChange={(e) => setStation(e.target.value)}
+          className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm"
+        >
+          <option value="">All stations</option>
+          {availableStations.map((s) => (
+            <option key={s} value={s}>{STATION_LABEL[s] ?? s}</option>
+          ))}
+        </select>
+
+        {/* Week/Month toggle */}
+        <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden">
+          <button
+            onClick={() => setRange("week")}
+            className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+              range === "week"
+                ? "bg-blue-600 text-white"
+                : "bg-white text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            Week
+          </button>
+          <button
+            onClick={() => setRange("month")}
+            className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+              range === "month"
+                ? "bg-blue-600 text-white"
+                : "bg-white text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            Month
+          </button>
+        </div>
+
+        {/* Date navigation */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => navigate(-1)}
+            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <span className="min-w-[180px] text-center text-sm font-medium text-slate-700">
+            {data ? formatDateRange(data.dateStart, data.dateEnd, range) : "Loading..."}
+          </span>
+          <button
+            onClick={() => navigate(1)}
+            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Total Spend" value={formatCurrency(stats.cost)} icon={<Fuel size={18} />} accent="#0891b2" />
         <StatCard label="Total Volume" value={`${formatNumber(stats.liters)} L`} icon={<Fuel size={18} />} accent="#2563eb" />
@@ -105,6 +202,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
               <tr>
                 <Th>Date</Th>
                 <Th>Vehicle</Th>
+                <Th>Station</Th>
                 <Th>Volume</Th>
                 <Th>Price/L</Th>
                 <Th>Total</Th>
@@ -117,6 +215,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
                 <tr key={l.id} className="hover:bg-slate-50">
                   <Td className="text-slate-600">{formatDate(l.date)}</Td>
                   <Td className="font-medium">{l.vehicle.name}</Td>
+                  <Td className="text-slate-600">{l.vehicle.station ?? "—"}</Td>
                   <Td>{formatNumber(l.liters, 1)} L</Td>
                   <Td>{formatCurrency(l.pricePerLiter)}</Td>
                   <Td className="font-medium">{formatCurrency(l.totalCost)}</Td>

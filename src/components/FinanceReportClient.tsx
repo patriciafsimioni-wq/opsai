@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useData } from "@/lib/use-data";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const STATION_ORDER = ["ALL", "IAH", "AUS", "HRL", "LRD"];
+const STATION_ORDER = ["ALL", "IAH", "AUS", "HRL", "LRD", "ACT", "CLL", "BPT"];
 
 type CategoryRow = {
   category: string;
@@ -44,6 +44,8 @@ type ReportData = {
   prevYear: number;
   stations: Record<string, StationBlock>;
   monthlyTotals: MonthlyTotal[];
+  weekStart?: string;
+  weekEnd?: string;
 };
 
 function fmt(n: number): string {
@@ -370,11 +372,20 @@ function YtdChart({ data, year }: { data: MonthlyTotal[]; year: number }) {
   return <canvas ref={canvasRef} className="h-[280px] w-full" />;
 }
 
+function getMonday(d: Date): Date {
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(d.getFullYear(), d.getMonth(), diff);
+}
+
 export function FinanceReportClient() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
-  const { data, loading } = useData<ReportData>(`/api/finance-report?year=${year}&month=${month}`);
+  const [viewMode, setViewMode] = useState<"week" | "month">("month");
+  const [weekDate, setWeekDate] = useState(now.toISOString().slice(0, 10));
+  const weekParam = viewMode === "week" ? `&view=week&weekDate=${weekDate}` : "";
+  const { data, loading } = useData<ReportData>(`/api/finance-report?year=${year}&month=${month}${weekParam}`);
   const [activeStation, setActiveStation] = useState("ALL");
   const [exporting, setExporting] = useState(false);
 
@@ -412,18 +423,74 @@ export function FinanceReportClient() {
             ))}
           </select>
         </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-slate-600">Month</label>
-          <select
-            value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
-            className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm"
+
+        {/* Week/Month toggle */}
+        <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden">
+          <button
+            onClick={() => setViewMode("week")}
+            className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+              viewMode === "week"
+                ? "bg-blue-600 text-white"
+                : "bg-white text-slate-600 hover:bg-slate-50"
+            }`}
           >
-            {MONTHS.map((m, i) => (
-              <option key={i} value={i + 1}>{m}</option>
-            ))}
-          </select>
+            Week
+          </button>
+          <button
+            onClick={() => setViewMode("month")}
+            className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+              viewMode === "month"
+                ? "bg-blue-600 text-white"
+                : "bg-white text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            Month
+          </button>
         </div>
+
+        {viewMode === "month" ? (
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-slate-600">Month</label>
+            <select
+              value={month}
+              onChange={(e) => setMonth(Number(e.target.value))}
+              className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm"
+            >
+              {MONTHS.map((m, i) => (
+                <option key={i} value={i + 1}>{m}</option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                const d = new Date(weekDate);
+                d.setDate(d.getDate() - 7);
+                setWeekDate(d.toISOString().slice(0, 10));
+              }}
+              className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <span className="min-w-[180px] text-center text-sm font-medium text-slate-700">
+              {data?.weekStart && data?.weekEnd
+                ? `${new Date(data.weekStart).toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date(data.weekEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+                : "Loading..."}
+            </span>
+            <button
+              onClick={() => {
+                const d = new Date(weekDate);
+                d.setDate(d.getDate() + 7);
+                setWeekDate(d.toISOString().slice(0, 10));
+              }}
+              className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        )}
+
         <button
           onClick={handlePrint}
           disabled={exporting}
