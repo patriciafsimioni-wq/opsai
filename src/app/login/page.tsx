@@ -7,14 +7,14 @@ import { Button } from "@/components/ui";
 import { Input } from "@/components/form";
 
 const DEMO = [
-  { role: "Admin", email: "admin@fleetops.com", password: "admin123" },
-  { role: "Manager", email: "manager@fleetops.com", password: "manager123" },
-  { role: "Driver", email: "driver@fleetops.com", password: "driver123" },
+  { role: "Admin", email: "admin@livefleet.ai", password: "admin123" },
+  { role: "Manager", email: "manager@livefleet.ai", password: "manager123" },
+  { role: "Driver", email: "driver@livefleet.ai", password: "driver123" },
 ];
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@fleetops.com");
+  const [email, setEmail] = useState("admin@livefleet.ai");
   const [password, setPassword] = useState("admin123");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);

@@ -46,9 +46,9 @@ npm run dev                 # http://localhost:3000
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Admin | `admin@fleetops.com` | `admin123` |
-| Manager | `manager@fleetops.com` | `manager123` |
-| Driver | `driver@fleetops.com` | `driver123` |
+| Admin | `admin@livefleet.ai` | `admin123` |
+| Manager | `manager@livefleet.ai` | `manager123` |
+| Driver | `driver@livefleet.ai` | `driver123` |
 
 ## Scripts
 

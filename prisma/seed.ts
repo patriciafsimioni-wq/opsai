@@ -123,7 +123,7 @@ async function main() {
       data: {
         firstName: first,
         lastName: last,
-        email: `${first.toLowerCase()}.${last.toLowerCase()}${i}@fleetops.com`,
+        email: `${first.toLowerCase()}.${last.toLowerCase()}${i}@livefleet.ai`,
         phone: `+1 (415) 555-0${randInt(100, 999)}`,
         licenseNumber: `CA-${randInt(100000, 999999)}`,
         licenseClass: pick(["A", "B", "C"]),
@@ -143,14 +143,14 @@ async function main() {
   const mgrPass = await bcrypt.hash("manager123", 10);
   const drvPass = await bcrypt.hash("driver123", 10);
   await prisma.user.create({
-    data: { email: "admin@fleetops.com", name: "Alex Admin", role: "ADMIN", passwordHash: adminPass },
+    data: { email: "admin@livefleet.ai", name: "Alex Admin", role: "ADMIN", passwordHash: adminPass },
   });
   await prisma.user.create({
-    data: { email: "manager@fleetops.com", name: "Morgan Manager", role: "MANAGER", passwordHash: mgrPass },
+    data: { email: "manager@livefleet.ai", name: "Morgan Manager", role: "MANAGER", passwordHash: mgrPass },
   });
   await prisma.user.create({
     data: {
-      email: "driver@fleetops.com",
+      email: "driver@livefleet.ai",
       name: `${drivers[0].firstName} ${drivers[0].lastName}`,
       role: "DRIVER",
       passwordHash: drvPass,
@@ -336,7 +336,7 @@ async function main() {
   console.log(
     `✅ Seeded: ${vehicles.length} vehicles, ${drivers.length} drivers, 40 trips, work orders, fuel logs, alerts, ${fenceDefs.length} geofences.`,
   );
-  console.log("👤 Logins: admin@fleetops.com / admin123 · manager@fleetops.com / manager123 · driver@fleetops.com / driver123");
+  console.log("👤 Logins: admin@livefleet.ai / admin123 · manager@livefleet.ai / manager123 · driver@livefleet.ai / driver123");
 }
 
 main()
