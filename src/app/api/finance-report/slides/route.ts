@@ -97,6 +97,7 @@ export async function GET(req: NextRequest) {
     include: { vehicle: { select: { station: true } } },
   });
 
+  type CategoryDetail = { category: string; monthActual: number; monthPrev: number; monthBudget: number; ytdActual: number; ytdPrev: number; ytdBudget: number; annualBudget: number };
   type StationTotals = {
     monthActual: number;
     monthBudget: number;
@@ -105,7 +106,7 @@ export async function GET(req: NextRequest) {
     ytdBudget: number;
     ytdPrev: number;
     annualBudget: number;
-    topCategories: { category: string; monthActual: number; monthBudget: number; ytdActual: number }[];
+    categories: CategoryDetail[];
   };
 
   function computeStation(station: string): StationTotals {
@@ -139,18 +140,18 @@ export async function GET(req: NextRequest) {
     let monthBudget = 0;
     let ytdBudget = 0;
     let annualBudget = 0;
-    const catBudgets: Record<string, number> = {};
-    for (const cat of CATEGORIES) catBudgets[cat] = 0;
+    const catMonthBudgets: Record<string, number> = {};
+    const catYtdBudgets: Record<string, number> = {};
+    const catAnnualBudgets: Record<string, number> = {};
+    for (const cat of CATEGORIES) { catMonthBudgets[cat] = 0; catYtdBudgets[cat] = 0; catAnnualBudgets[cat] = 0; }
 
     for (const b of budgets) {
       if (station !== "ALL" && b.station !== station) continue;
       if (!(CATEGORIES as readonly string[]).includes(b.category)) continue;
       annualBudget += b.amount;
-      if (b.month <= month) ytdBudget += b.amount;
-      if (b.month === month) {
-        monthBudget += b.amount;
-        catBudgets[b.category] = (catBudgets[b.category] ?? 0) + b.amount;
-      }
+      catAnnualBudgets[b.category] = (catAnnualBudgets[b.category] ?? 0) + b.amount;
+      if (b.month <= month) { ytdBudget += b.amount; catYtdBudgets[b.category] = (catYtdBudgets[b.category] ?? 0) + b.amount; }
+      if (b.month === month) { monthBudget += b.amount; catMonthBudgets[b.category] = (catMonthBudgets[b.category] ?? 0) + b.amount; }
     }
 
     const monthActual = Object.values(catData).reduce((s, c) => s + c.monthActual, 0);
@@ -158,17 +159,18 @@ export async function GET(req: NextRequest) {
     const ytdActual = Object.values(catData).reduce((s, c) => s + c.ytdActual, 0);
     const ytdPrev = Object.values(catData).reduce((s, c) => s + c.ytdPrev, 0);
 
-    const topCategories = (CATEGORIES as readonly string[])
-      .map((cat) => ({
-        category: cat,
-        monthActual: catData[cat].monthActual,
-        monthBudget: catBudgets[cat] ?? 0,
-        ytdActual: catData[cat].ytdActual,
-      }))
-      .sort((a, b) => b.monthActual - a.monthActual)
-      .slice(0, 3);
+    const categories = (CATEGORIES as readonly string[]).map((cat) => ({
+      category: cat,
+      monthActual: Math.round(catData[cat].monthActual),
+      monthPrev: Math.round(catData[cat].monthPrev),
+      monthBudget: Math.round(catMonthBudgets[cat] ?? 0),
+      ytdActual: Math.round(catData[cat].ytdActual),
+      ytdPrev: Math.round(catData[cat].ytdPrev),
+      ytdBudget: Math.round(catYtdBudgets[cat] ?? 0),
+      annualBudget: Math.round(catAnnualBudgets[cat] ?? 0),
+    }));
 
-    return { monthActual: Math.round(monthActual), monthBudget: Math.round(monthBudget), monthPrev: Math.round(monthPrev), ytdActual: Math.round(ytdActual), ytdBudget: Math.round(ytdBudget), ytdPrev: Math.round(ytdPrev), annualBudget: Math.round(annualBudget), topCategories };
+    return { monthActual: Math.round(monthActual), monthBudget: Math.round(monthBudget), monthPrev: Math.round(monthPrev), ytdActual: Math.round(ytdActual), ytdBudget: Math.round(ytdBudget), ytdPrev: Math.round(ytdPrev), annualBudget: Math.round(annualBudget), categories };
   }
 
   const consolidated = computeStation("ALL");
@@ -211,17 +213,36 @@ export async function GET(req: NextRequest) {
 
   // Station-level YTD bullets
   const stationBullets: string[] = [];
-  for (const s of ALL_STATIONS) {
+  const activeStations = ALL_STATIONS.filter((s) => {
     const d = stationData[s];
-    if (d.ytdActual === 0 && d.ytdBudget === 0) continue;
+    return d.ytdActual > 0 || d.annualBudget > 0;
+  });
+  for (const s of activeStations) {
+    const d = stationData[s];
     const varAmt = d.monthActual - d.monthBudget;
     const varPct = d.monthBudget > 0 ? Math.round(((d.monthActual - d.monthBudget) / d.monthBudget) * 100) : 0;
-    const topCats = d.topCategories.filter((c) => c.monthActual > 0).map((c) => c.category.toLowerCase()).slice(0, 2);
+    const topCats = d.categories.filter((c) => c.monthActual > 0).sort((a, b) => b.monthActual - a.monthActual).map((c) => c.category.toLowerCase()).slice(0, 2);
     const drivers = topCats.length > 0 ? ` Spending driven primarily by ${topCats.join(" and ")} activity.` : "";
     stationBullets.push(
       `${STATION_LABELS[s] ?? s}: ${monthName} spend of ${fmtDollar(d.monthActual)} vs budget of ${fmtDollar(d.monthBudget)} (${Math.abs(varPct)}% ${favorableUnfavorable(varAmt)}).${drivers}`
     );
   }
+
+  // Station YTD summary cards (like page 2 of PDF)
+  const stationCards = activeStations.map((s) => {
+    const d = stationData[s];
+    const ytdVar = d.ytdBudget > 0 ? Math.round(((d.ytdActual - d.ytdBudget) / d.ytdBudget) * 100) : 0;
+    return {
+      station: s,
+      label: STATION_LABELS[s] ?? s,
+      prevYearExpenses: d.ytdPrev,
+      currentYearExpenses: d.ytdActual,
+      annualBudget: d.annualBudget,
+      ytdVariancePct: ytdVar,
+      ytdVarianceAmt: d.ytdActual - d.ytdBudget,
+      remainingBalance: d.annualBudget - d.ytdActual,
+    };
+  });
 
   const executiveSummarySlide = {
     type: "executive_summary" as const,
@@ -237,16 +258,16 @@ export async function GET(req: NextRequest) {
       },
     ],
     stationBullets,
+    stationCards,
   };
 
-  // Slide 3: Detailed Variance Analysis
+  // Slide 3: Detailed Variance Analysis per station
   const detailedFindings: { station: string; label: string; actual: number; budget: number; variancePct: number; varianceAmt: number; finding: string }[] = [];
-  for (const s of ALL_STATIONS) {
+  for (const s of activeStations) {
     const d = stationData[s];
-    if (d.monthActual === 0 && d.monthBudget === 0) continue;
     const varAmt = d.monthActual - d.monthBudget;
     const varPct = d.monthBudget > 0 ? Math.round(((d.monthActual - d.monthBudget) / d.monthBudget) * 100) : 0;
-    const topCats = d.topCategories.filter((c) => c.monthActual > 0).map((c) => c.category.toLowerCase());
+    const topCats = d.categories.filter((c) => c.monthActual > 0).sort((a, b) => b.monthActual - a.monthActual).map((c) => c.category.toLowerCase());
     const aboveBelow = varAmt > 0 ? "exceeded budget" : "finished below budget";
     const drivers = topCats.length > 0 ? ` primarily due to ${topCats.slice(0, 2).join(" and ")} activity` : "";
     detailedFindings.push({
@@ -282,7 +303,40 @@ export async function GET(req: NextRequest) {
     stationFindings: detailedFindings,
   };
 
-  // Slide 4: YTD Performance Summary
+  // Slide 4: Per-category detailed analysis with station concentration
+  const categoryDetails = consolidated.categories.map((cat) => {
+    const stationConcentration = activeStations.map((s) => {
+      const sCat = stationData[s].categories.find((c) => c.category === cat.category);
+      return { station: s, monthActual: sCat?.monthActual ?? 0 };
+    }).filter((sc) => sc.monthActual > 0);
+
+    const yoyPct = cat.monthPrev > 0 ? Math.round(((cat.monthActual - cat.monthPrev) / cat.monthPrev) * 100) : (cat.monthActual > 0 ? 100 : 0);
+    const budVarPct = cat.monthBudget > 0 ? Math.round(((cat.monthActual - cat.monthBudget) / cat.monthBudget) * 100) : 0;
+
+    return {
+      category: cat.category,
+      monthActual: cat.monthActual,
+      monthPrev: cat.monthPrev,
+      monthBudget: cat.monthBudget,
+      yoyPct,
+      yoyAmt: cat.monthActual - cat.monthPrev,
+      budgetVariancePct: budVarPct,
+      budgetVarianceAmt: cat.monthActual - cat.monthBudget,
+      stationConcentration,
+    };
+  });
+
+  const categorySlide = {
+    type: "category_detail" as const,
+    title: `${reportLabel} Detailed Analysis`,
+    heading: `${reportLabelShort === "CR" ? "Repair Type" : "Service Type"} Allocation`,
+    categories: categoryDetails,
+    monthName,
+    year,
+    prevYear,
+  };
+
+  // Slide 5: YTD Performance Summary
   const ytdSlide = {
     type: "ytd_summary" as const,
     title: `${reportLabel} Detailed Variance Analysis`,
@@ -297,10 +351,10 @@ export async function GET(req: NextRequest) {
       ytdBudgetVarianceAmt: ytdVarianceAmt,
       remainingBalance: remainderAmt,
     },
-    observations: generateObservations(consolidated, stationData, reportLabelShort, monthName, year),
+    observations: generateObservations(consolidated, stationData, reportLabelShort, monthName, year, activeStations),
   };
 
-  const slides = [coverSlide, executiveSummarySlide, detailedSlide, ytdSlide];
+  const slides = [coverSlide, executiveSummarySlide, detailedSlide, categorySlide, ytdSlide];
 
   return NextResponse.json({
     year,
@@ -314,11 +368,13 @@ export async function GET(req: NextRequest) {
 
 function generateObservations(
   consolidated: { ytdActual: number; ytdPrev: number; annualBudget: number; ytdBudget: number },
-  stationData: Record<string, { monthActual: number; monthBudget: number; ytdActual: number; ytdBudget: number; topCategories: { category: string; monthActual: number }[] }>,
+  stationData: Record<string, { monthActual: number; monthBudget: number; ytdActual: number; ytdBudget: number; categories: { category: string; monthActual: number }[] }>,
   reportLabelShort: string,
   monthName: string,
   year: number,
+  activeStations: string[],
 ): string[] {
+  void activeStations;
   const observations: string[] = [];
   const yoyPct = consolidated.ytdPrev > 0 ? Math.round(((consolidated.ytdActual - consolidated.ytdPrev) / consolidated.ytdPrev) * 100) : 0;
   const budgetUtilPct = consolidated.annualBudget > 0 ? Math.round((consolidated.ytdActual / consolidated.annualBudget) * 100) : 0;

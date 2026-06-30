@@ -11,11 +11,23 @@ type CoverSlide = {
   footer: string;
 };
 
+type StationCard = {
+  station: string;
+  label: string;
+  prevYearExpenses: number;
+  currentYearExpenses: number;
+  annualBudget: number;
+  ytdVariancePct: number;
+  ytdVarianceAmt: number;
+  remainingBalance: number;
+};
+
 type ExecSummarySlide = {
   type: "executive_summary";
   title: string;
   sections: { heading: string; paragraphs: string[] }[];
   stationBullets: string[];
+  stationCards: StationCard[];
 };
 
 type DetailedSlide = {
@@ -59,7 +71,27 @@ type YtdSlide = {
   observations: string[];
 };
 
-type Slide = CoverSlide | ExecSummarySlide | DetailedSlide | YtdSlide;
+type CategoryDetailSlide = {
+  type: "category_detail";
+  title: string;
+  heading: string;
+  monthName: string;
+  year: number;
+  prevYear: number;
+  categories: {
+    category: string;
+    monthActual: number;
+    monthPrev: number;
+    monthBudget: number;
+    yoyPct: number;
+    yoyAmt: number;
+    budgetVariancePct: number;
+    budgetVarianceAmt: number;
+    stationConcentration: { station: string; monthActual: number }[];
+  }[];
+};
+
+type Slide = CoverSlide | ExecSummarySlide | DetailedSlide | CategoryDetailSlide | YtdSlide;
 
 type SlidesData = {
   year: number;
@@ -97,22 +129,40 @@ function CoverSlideView({ slide }: { slide: CoverSlide }) {
 function ExecSummarySlideView({ slide }: { slide: ExecSummarySlide }) {
   return (
     <div className="flex h-full flex-col bg-white p-10">
-      <h2 className="mb-6 border-b-2 border-blue-600 pb-2 text-2xl font-bold text-blue-900">{slide.title}</h2>
-      <div className="flex-1 space-y-5 overflow-y-auto">
+      <h2 className="mb-4 border-b-2 border-blue-600 pb-2 text-2xl font-bold text-blue-900">{slide.title}</h2>
+      <div className="flex-1 space-y-4 overflow-y-auto">
+        {/* Station YTD cards */}
+        {slide.stationCards.length > 0 && (
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            {slide.stationCards.map((sc) => (
+              <div key={sc.station} className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                <p className="mb-1 text-xs font-bold text-blue-800">{sc.label}</p>
+                <div className="space-y-0.5 text-[10px] text-slate-600">
+                  <div className="flex justify-between"><span>{slide.sections[0]?.heading.includes("2026") ? "2025" : "Prior"} Expenses:</span> <span className="font-semibold text-slate-800">{fmtDollar(sc.prevYearExpenses)}</span></div>
+                  <div className="flex justify-between"><span>Current Expenses:</span> <span className="font-semibold text-slate-800">{fmtDollar(sc.currentYearExpenses)}</span></div>
+                  <div className="flex justify-between"><span>Budget (Annual):</span> <span className="font-semibold text-slate-800">{fmtDollar(sc.annualBudget)}</span></div>
+                  <div className="flex justify-between"><span>Variance:</span> <span className={`font-semibold ${sc.ytdVarianceAmt > 0 ? "text-red-600" : "text-green-600"}`}>{sc.ytdVariancePct}% ({sc.ytdVarianceAmt > 0 ? "+" : "-"}{fmtDollar(Math.abs(sc.ytdVarianceAmt))})</span></div>
+                  <div className="flex justify-between"><span>Remaining:</span> <span className={`font-semibold ${sc.remainingBalance >= 0 ? "text-green-600" : "text-red-600"}`}>{fmtDollar(sc.remainingBalance)}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {slide.sections.map((sec, i) => (
           <div key={i}>
-            <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-blue-700">{sec.heading}</h3>
+            <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-blue-700">{sec.heading}</h3>
             {sec.paragraphs.map((p, j) => (
-              <p key={j} className="mb-2 text-sm leading-relaxed text-slate-700">{p}</p>
+              <p key={j} className="mb-1 text-xs leading-relaxed text-slate-700">{p}</p>
             ))}
           </div>
         ))}
         {slide.stationBullets.length > 0 && (
           <div>
-            <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-blue-700">Station-Level Performance</h3>
-            <div className="space-y-2">
+            <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-blue-700">Station-Level Performance</h3>
+            <div className="space-y-1">
               {slide.stationBullets.map((b, i) => (
-                <div key={i} className="flex gap-2 text-xs leading-relaxed text-slate-700">
+                <div key={i} className="flex gap-2 text-[10px] leading-relaxed text-slate-700">
                   <span className="mt-0.5 text-blue-500">•</span>
                   <span>{b}</span>
                 </div>
@@ -161,6 +211,46 @@ function DetailedSlideView({ slide, year }: { slide: DetailedSlide; year: number
             <p className="text-xs leading-relaxed text-slate-600">{f.finding}</p>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function CategoryDetailSlideView({ slide }: { slide: CategoryDetailSlide }) {
+  return (
+    <div className="flex h-full flex-col bg-white p-10">
+      <h2 className="mb-3 border-b-2 border-blue-600 pb-2 text-2xl font-bold text-blue-900">{slide.title}</h2>
+      <h3 className="mb-3 text-sm font-bold text-slate-800">{slide.heading}</h3>
+      <div className="flex-1 space-y-2.5 overflow-y-auto">
+        {slide.categories.map((cat, idx) => {
+          const yoyColor = cat.yoyAmt > 0 ? "text-red-600" : "text-green-600";
+          const budColor = cat.budgetVarianceAmt > 0 ? "text-red-600" : "text-green-600";
+          return (
+            <div key={cat.category} className="rounded-lg border border-slate-200 p-3">
+              <div className="mb-1.5 flex items-start justify-between">
+                <div>
+                  <span className="mr-2 text-xs font-bold text-blue-600">{idx + 1}.</span>
+                  <span className="text-sm font-bold text-slate-800">{cat.category}</span>
+                </div>
+                <span className="text-sm font-bold text-slate-900">{fmtDollar(cat.monthActual)}</span>
+              </div>
+              <div className="mb-1.5 grid grid-cols-4 gap-2 text-[10px] text-slate-600">
+                <div><span className="text-slate-400">{slide.prevYear} Actual:</span> <span className="font-semibold">{fmtDollar(cat.monthPrev)}</span></div>
+                <div><span className="text-slate-400">YoY:</span> <span className={`font-semibold ${yoyColor}`}>{cat.yoyPct > 0 ? "+" : ""}{cat.yoyPct}%</span></div>
+                <div><span className="text-slate-400">Budget:</span> <span className="font-semibold">{fmtDollar(cat.monthBudget)}</span></div>
+                <div><span className="text-slate-400">vs Budget:</span> <span className={`font-semibold ${budColor}`}>{cat.budgetVariancePct > 0 ? "+" : ""}{cat.budgetVariancePct}%</span></div>
+              </div>
+              {cat.stationConcentration.length > 0 && (
+                <div className="flex flex-wrap gap-2 text-[10px]">
+                  <span className="text-slate-400">Station:</span>
+                  {cat.stationConcentration.map((sc) => (
+                    <span key={sc.station} className="rounded bg-blue-50 px-1.5 py-0.5 font-medium text-blue-700">{sc.station}: {fmtDollar(sc.monthActual)}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -304,6 +394,7 @@ export function SlidePresentation({ year, month, reportType, onClose }: { year: 
             {slide.type === "cover" && <CoverSlideView slide={slide} />}
             {slide.type === "executive_summary" && <ExecSummarySlideView slide={slide} />}
             {slide.type === "detailed_analysis" && <DetailedSlideView slide={slide} year={data.year} />}
+            {slide.type === "category_detail" && <CategoryDetailSlideView slide={slide} />}
             {slide.type === "ytd_summary" && <YtdSlideView slide={slide} year={data.year} />}
           </div>
         </div>
