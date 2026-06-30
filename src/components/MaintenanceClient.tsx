@@ -180,6 +180,7 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
                 <Th>Work Order</Th>
                 <Th>Vehicle</Th>
                 <Th>Station</Th>
+                <Th>Mileage</Th>
                 <Th>Material</Th>
                 <Th>Labor</Th>
                 <Th>Total</Th>
@@ -202,6 +203,9 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
                     <Td className="text-slate-600">{o.vehicle.name}</Td>
                     <Td>
                       <Badge bg="#eef2ff" fg="#3730a3">{o.station}</Badge>
+                    </Td>
+                    <Td className="text-slate-600">
+                      {o.odometerAt ? `${Number(o.odometerAt).toLocaleString()} mi` : <span className="text-slate-300">—</span>}
                     </Td>
                     <Td className="text-slate-600">{formatCurrency(o.materialCost)}</Td>
                     <Td className="text-slate-600">

@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   MapPin,
   User,
+  AlertTriangle,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { Card, CardHeader, Badge, Table, Th, Td, ProgressBar } from "@/components/ui";
@@ -15,6 +16,7 @@ import {
   VEHICLE_STATUS,
   WO_STATUS,
   PRIORITY,
+  TIME_SCHEDULE,
   titleCase,
 } from "@/lib/constants";
 import {
@@ -24,6 +26,45 @@ import {
   relativeTime,
   daysUntil,
 } from "@/lib/utils";
+
+const SERVICE_INTERVALS: [number, string, number][] = [
+  [6000, "Oil + Filter + Tire Rotation", 6000],
+  [10000, "Fluids", 10000],
+  [12000, "Brake Pads Replacement", 20000],
+  [12000, "Brake Inspection + Cabin Air", 24000],
+  [30000, "Engine Air Filter", 30000],
+  [30000, "Air Brake Cleaning", 30000],
+  [40000, "Tire Replacement", 40000],
+  [40000, "Brake Calipers", 40000],
+  [50000, "Transmission Fluid", 50000],
+  [50000, "Turbocharger Inspection", 50000],
+  [80000, "Battery Replacement", 80000],
+  [100000, "Coolant + Spark Plugs", 100000],
+  [150000, "Timing Belt", 150000],
+  [150000, "Diesel Filter Cleaning", 150000],
+  [250000, "Drivetrain Overhaul", 250000],
+];
+
+function matchService(woTitle: string): string | null {
+  const lower = woTitle.toLowerCase();
+  if (lower.includes("oil change") || lower.includes("oil + filter") || lower.includes("pm a") || lower.includes("pm b") || lower.includes("pm c") || lower.includes("tire rotation")) return "Oil + Filter + Tire Rotation";
+  if (lower === "fluids" || lower === "fluids check" || lower.includes("fluids ")) return "Fluids";
+  if (lower.includes("brake pad")) return "Brake Pads Replacement";
+  if (lower.includes("brake inspection") || lower.includes("cabin air")) return "Brake Inspection + Cabin Air";
+  if (lower.includes("engine air filter") || lower.includes("engine filter") || lower.includes("air filter")) return "Engine Air Filter";
+  if (lower.includes("air brake") || lower.includes("purge brake")) return "Air Brake Cleaning";
+  if (lower.includes("tire replacement") || lower.includes("tires replacement") || lower.includes("tire install")) return "Tire Replacement";
+  if (lower.includes("brake caliper")) return "Brake Calipers";
+  if (lower.includes("transmission")) return "Transmission Fluid";
+  if (lower.includes("turbo")) return "Turbocharger Inspection";
+  if (lower.includes("battery")) return "Battery Replacement";
+  if (lower.includes("coolant") || lower.includes("spark plug")) return "Coolant + Spark Plugs";
+  if (lower.includes("timing belt") || lower.includes("time belt")) return "Timing Belt";
+  if (lower.includes("diesel filter")) return "Diesel Filter Cleaning";
+  if (lower.includes("drivetrain")) return "Drivetrain Overhaul";
+  if (lower.includes("wiper")) return "Wiper Blades";
+  return null;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +92,76 @@ export default async function VehicleDetailPage({
     .reduce((s, w) => s + w.cost, 0);
   const regDays = daysUntil(v.registrationExpiry);
   const insDays = daysUntil(v.insuranceExpiry);
+
+  // Compute maintenance schedule for this vehicle
+  const completedWOs = v.maintenance.filter((w) => w.status === "COMPLETED");
+  const lastPerformed: Record<string, { odometerAt: number; completedAt: Date }> = {};
+  for (const wo of completedWOs) {
+    const svcName = matchService(wo.title);
+    if (!svcName) continue;
+    if (!lastPerformed[svcName] && wo.odometerAt != null && wo.completedAt) {
+      lastPerformed[svcName] = { odometerAt: wo.odometerAt, completedAt: wo.completedAt };
+    }
+  }
+  const odo = v.odometer;
+  const now = new Date();
+  const scheduleRows = SERVICE_INTERVALS.map(([interval, service, firstDue]) => {
+    const last = lastPerformed[service];
+    let nextDue: number;
+    let lastAt: number | null = null;
+    let lastDate: string | null = null;
+    let svcStatus: "never_performed" | "overdue" | "upcoming" | "on_track";
+    if (last) {
+      lastAt = Math.round(last.odometerAt);
+      lastDate = last.completedAt.toISOString().slice(0, 10);
+      nextDue = lastAt + interval;
+    } else {
+      nextDue = firstDue;
+    }
+    const milesUntil = Math.round(nextDue - odo);
+    if (!last && odo >= firstDue) svcStatus = "never_performed";
+    else if (milesUntil < 0) svcStatus = "overdue";
+    else if (milesUntil <= 2000) svcStatus = "upcoming";
+    else svcStatus = "on_track";
+    return { service, interval, lastAt, lastDate, nextDue: Math.round(nextDue), milesUntil, status: svcStatus };
+  });
+  // Time-based
+  const timeRows = TIME_SCHEDULE.map(([intervalMonths, service]) => {
+    const last = lastPerformed[service];
+    let lastDate: string | null = null;
+    let nextDueDate: string | null = null;
+    let daysTil: number | null = null;
+    let tStatus: "never_performed" | "overdue" | "upcoming" | "on_track";
+    if (last) {
+      lastDate = last.completedAt.toISOString().slice(0, 10);
+      const nd = new Date(last.completedAt);
+      nd.setMonth(nd.getMonth() + intervalMonths);
+      nextDueDate = nd.toISOString().slice(0, 10);
+      daysTil = Math.round((nd.getTime() - now.getTime()) / 86400000);
+      tStatus = daysTil < 0 ? "overdue" : daysTil <= 30 ? "upcoming" : "on_track";
+    } else if (v.onboardedDate) {
+      const months = (now.getFullYear() - v.onboardedDate.getFullYear()) * 12 + (now.getMonth() - v.onboardedDate.getMonth());
+      if (months >= intervalMonths) {
+        tStatus = "never_performed";
+        const sd = new Date(v.onboardedDate);
+        sd.setMonth(sd.getMonth() + intervalMonths);
+        nextDueDate = sd.toISOString().slice(0, 10);
+        daysTil = Math.round((sd.getTime() - now.getTime()) / 86400000);
+      } else {
+        const nd = new Date(v.onboardedDate);
+        nd.setMonth(nd.getMonth() + intervalMonths);
+        nextDueDate = nd.toISOString().slice(0, 10);
+        daysTil = Math.round((nd.getTime() - now.getTime()) / 86400000);
+        tStatus = daysTil <= 30 ? "upcoming" : "on_track";
+      }
+    } else {
+      tStatus = "on_track";
+    }
+    return { service, intervalMonths, lastDate, nextDueDate, daysTil, status: tStatus };
+  });
+  const alertRows = scheduleRows.filter((r) => r.status === "never_performed" || r.status === "overdue");
+  const upcomingRows = scheduleRows.filter((r) => r.status === "upcoming");
+  const timeAlerts = timeRows.filter((r) => r.status === "never_performed" || r.status === "overdue");
 
   return (
     <div>
@@ -167,6 +278,124 @@ export default async function VehicleDetailPage({
         </Card>
       </div>
 
+      {/* PM Schedule Section */}
+      <div className="mt-6">
+        <Card>
+          <CardHeader title="PM Schedule" subtitle={`Based on ${formatNumber(odo)} mi odometer`} />
+          {(alertRows.length > 0 || timeAlerts.length > 0) && (
+            <div className="border-b border-[var(--color-border)] px-5 py-3">
+              <p className="mb-2 flex items-center gap-1 text-xs font-bold uppercase text-red-600"><AlertTriangle size={12} /> Alerts — Services Never Performed or Overdue</p>
+              <div className="space-y-1">
+                {alertRows.map((r, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-lg bg-red-50 px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.status === "never_performed" ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}`}>
+                        {r.status === "never_performed" ? "Never Done" : "Overdue"}
+                      </span>
+                      <span className="font-medium text-slate-800">{r.service}</span>
+                    </div>
+                    <div className="text-right text-xs">
+                      <span className="text-slate-500">Due at {r.nextDue.toLocaleString()} mi</span>
+                      <span className="ml-2 font-semibold text-red-600">{Math.abs(r.milesUntil).toLocaleString()} mi past</span>
+                    </div>
+                  </div>
+                ))}
+                {timeAlerts.map((r, i) => (
+                  <div key={`t-${i}`} className="flex items-center justify-between rounded-lg bg-red-50 px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+                        {r.status === "never_performed" ? "Never Done" : "Overdue"}
+                      </span>
+                      <span className="font-medium text-slate-800">{r.service}</span>
+                    </div>
+                    <span className="text-xs text-slate-500">{r.nextDueDate ? `Due: ${r.nextDueDate}` : ""} {r.daysTil != null ? `(${Math.abs(r.daysTil)}d ago)` : ""}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {upcomingRows.length > 0 && (
+            <div className="border-b border-[var(--color-border)] px-5 py-3">
+              <p className="mb-2 text-xs font-bold uppercase text-amber-600">Upcoming Services (within 2,000 mi)</p>
+              <div className="space-y-1">
+                {upcomingRows.map((r, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Upcoming</span>
+                      <span className="font-medium text-slate-800">{r.service}</span>
+                    </div>
+                    <div className="text-right text-xs">
+                      {r.lastAt != null && <span className="mr-2 text-slate-400">Last: {r.lastAt.toLocaleString()} mi</span>}
+                      <span className="text-slate-500">Due at {r.nextDue.toLocaleString()} mi</span>
+                      <span className="ml-2 font-semibold text-amber-600">{r.milesUntil.toLocaleString()} mi left</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="px-5 py-3">
+            <p className="mb-2 text-xs font-bold uppercase text-slate-400">Full Schedule</p>
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Status</Th>
+                  <Th>Service</Th>
+                  <Th>Interval</Th>
+                  <Th>Last Done At</Th>
+                  <Th>Next Due At</Th>
+                  <Th>Miles Until</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {scheduleRows.map((r, i) => (
+                  <tr key={i} className={r.status === "never_performed" ? "bg-red-50/50" : r.status === "overdue" ? "bg-orange-50/50" : ""}>
+                    <Td>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        r.status === "never_performed" ? "bg-red-100 text-red-700"
+                        : r.status === "overdue" ? "bg-orange-100 text-orange-700"
+                        : r.status === "upcoming" ? "bg-amber-100 text-amber-700"
+                        : "bg-green-100 text-green-700"
+                      }`}>
+                        {r.status === "never_performed" ? "Never Done" : r.status === "overdue" ? "Overdue" : r.status === "upcoming" ? "Upcoming" : "On Track"}
+                      </span>
+                    </Td>
+                    <Td className="font-medium">{r.service}</Td>
+                    <Td className="text-xs text-slate-400">Every {r.interval.toLocaleString()} mi</Td>
+                    <Td>{r.lastAt != null ? <><span className="font-medium">{r.lastAt.toLocaleString()} mi</span>{r.lastDate && <span className="block text-[10px] text-slate-400">{r.lastDate}</span>}</> : <span className="text-slate-300">Never</span>}</Td>
+                    <Td className="font-medium">{r.nextDue.toLocaleString()} mi</Td>
+                    <Td className={`font-medium ${r.milesUntil < 0 ? "text-red-600" : r.milesUntil <= 2000 ? "text-amber-600" : "text-slate-500"}`}>
+                      {r.milesUntil > 0 ? `${r.milesUntil.toLocaleString()} mi` : `${Math.abs(r.milesUntil).toLocaleString()} mi past`}
+                    </Td>
+                  </tr>
+                ))}
+                {timeRows.map((r, i) => (
+                  <tr key={`t-${i}`} className={r.status === "never_performed" ? "bg-red-50/50" : r.status === "overdue" ? "bg-orange-50/50" : ""}>
+                    <Td>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        r.status === "never_performed" ? "bg-red-100 text-red-700"
+                        : r.status === "overdue" ? "bg-orange-100 text-orange-700"
+                        : r.status === "upcoming" ? "bg-amber-100 text-amber-700"
+                        : "bg-green-100 text-green-700"
+                      }`}>
+                        {r.status === "never_performed" ? "Never Done" : r.status === "overdue" ? "Overdue" : r.status === "upcoming" ? "Upcoming" : "On Track"}
+                      </span>
+                    </Td>
+                    <Td className="font-medium">{r.service}</Td>
+                    <Td className="text-xs text-slate-400">Every {r.intervalMonths} months</Td>
+                    <Td>{r.lastDate ? <span className="font-medium">{r.lastDate}</span> : <span className="text-slate-300">Never</span>}</Td>
+                    <Td>{r.nextDueDate ?? <span className="text-slate-300">—</span>}</Td>
+                    <Td className={`font-medium ${r.daysTil != null && r.daysTil < 0 ? "text-red-600" : r.daysTil != null && r.daysTil <= 30 ? "text-amber-600" : "text-slate-500"}`}>
+                      {r.daysTil != null ? (r.daysTil > 0 ? `${r.daysTil} days` : `${Math.abs(r.daysTil)} days past`) : "—"}
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        </Card>
+      </div>
+
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader title="Maintenance History" />
@@ -177,6 +406,7 @@ export default async function VehicleDetailPage({
               <thead>
                 <tr>
                   <Th>Work Order</Th>
+                  <Th>Mileage</Th>
                   <Th>Status</Th>
                   <Th>Priority</Th>
                   <Th>Cost</Th>
@@ -187,7 +417,10 @@ export default async function VehicleDetailPage({
                   <tr key={w.id}>
                     <Td>
                       <p className="font-medium">{w.title}</p>
-                      <p className="text-xs text-slate-400">{titleCase(w.type)}</p>
+                      <p className="text-xs text-slate-400">{titleCase(w.type)}{w.completedAt ? ` · ${formatDate(w.completedAt)}` : ""}</p>
+                    </Td>
+                    <Td className="text-slate-600">
+                      {w.odometerAt ? `${Number(w.odometerAt).toLocaleString()} mi` : <span className="text-slate-300">—</span>}
                     </Td>
                     <Td>
                       <Badge

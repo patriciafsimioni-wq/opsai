@@ -19,6 +19,7 @@ import {
   DollarSign,
   Settings2,
   Upload,
+  CalendarClock,
   Truck as TruckLogo,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ const NAV = [
   { href: "/drivers", label: "Drivers", icon: Users },
   { href: "/fareye-routes", label: "FareEye Routes", icon: Navigation },
   { href: "/maintenance", label: "Maintenance", icon: Wrench },
+  { href: "/maintenance-schedule", label: "PM Schedule", icon: CalendarClock },
   { href: "/work-order-requests", label: "WO Requests", icon: ClipboardList },
   { href: "/log-service", label: "Log Service", icon: ClipboardCheck },
   { href: "/services", label: "Service Catalog", icon: ListChecks },
