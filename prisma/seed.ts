@@ -507,6 +507,9 @@ async function main() {
     "Cabin filter", "Timing belt", "Serpentine belt", "Battery", "Coolant",
     "Transmission fluid", "Brake rotors", "Alternator", "Starter motor",
   ];
+  // PO number prefix mapping and starting sequences (numbers below start are "already used")
+  const PO_PREFIX: Record<string, string> = { IAH: "IA", AUS: "AU", HRL: "HR", ACT: "AC", LRD: "LR", CLL: "CL", BPT: "BP" };
+  const poCounters: Record<string, number> = { IAH: 265, AUS: 286, HRL: 174, ACT: 34, LRD: 11, CLL: 31, BPT: 7 };
   for (let i = 0; i < 8; i++) {
     const v = pick(vehicles);
     const s = pick(services);
@@ -519,8 +522,14 @@ async function main() {
     }
     const status = i < 5 ? "PENDING" : pick(["APPROVED", "REJECTED"]) as "APPROVED" | "REJECTED";
     const reviewer = status !== "PENDING" ? (adminUser ?? managerUser) : null;
+    const stationKey = v.station as string;
+    const prefix = PO_PREFIX[stationKey] ?? stationKey.slice(0, 2);
+    const seq = (poCounters[stationKey] ?? 1);
+    poCounters[stationKey] = seq + 1;
+    const poNumber = `${prefix}${String(seq).padStart(3, "0")}`;
     await prisma.workOrderRequest.create({
       data: {
+        poNumber,
         station: v.station,
         vehicleId: v.id,
         odometer: v.odometer - randInt(0, 2000),

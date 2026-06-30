@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, badRequest } from "@/lib/api";
+import { PO_PREFIX, PO_START } from "@/lib/constants";
 
 const userSelect = { id: true, name: true, email: true, role: true } as const;
 
@@ -42,8 +43,25 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Invalid input");
   const d = parsed.data;
+
+  // Auto-generate PO number: prefix (2 letters from station) + zero-padded seq
+  const prefix = PO_PREFIX[d.station] ?? d.station.slice(0, 2);
+  const startSeq = PO_START[d.station] ?? 1;
+  const lastPO = await prisma.workOrderRequest.findFirst({
+    where: { poNumber: { startsWith: prefix } },
+    orderBy: { poNumber: "desc" },
+    select: { poNumber: true },
+  });
+  let nextSeq = startSeq;
+  if (lastPO?.poNumber) {
+    const numPart = parseInt(lastPO.poNumber.slice(prefix.length), 10);
+    if (!isNaN(numPart) && numPart >= startSeq) nextSeq = numPart + 1;
+  }
+  const poNumber = `${prefix}${String(nextSeq).padStart(3, "0")}`;
+
   const record = await prisma.workOrderRequest.create({
     data: {
+      poNumber,
       station: d.station,
       vehicleId: d.vehicleId || null,
       vehicleOther: d.vehicleOther || null,

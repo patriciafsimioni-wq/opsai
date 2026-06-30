@@ -90,6 +90,28 @@ export const PREVENTIVE_GROUPS: { label: string; services: string[] }[] = [
   { label: "Turbocharger Inspection", services: ["Turbocharger Inspection PM"] },
 ];
 
+/** Station → 2-letter PO prefix and starting sequence number. */
+export const PO_PREFIX: Record<string, string> = {
+  IAH: "IA",
+  AUS: "AU",
+  HRL: "HR",
+  ACT: "AC",
+  LRD: "LR",
+  CLL: "CL",
+  BPT: "BP",
+};
+
+/** First PO number to use per station (inclusive). Earlier numbers are assumed taken. */
+export const PO_START: Record<string, number> = {
+  IAH: 269,
+  AUS: 290,
+  HRL: 178,
+  ACT: 38,
+  LRD: 15,
+  CLL: 35,
+  BPT: 11,
+};
+
 export const WO_REQUEST_STATUS = {
   PENDING: { label: "Pending", bg: "#fef3c7", fg: "#92400e" },
   APPROVED: { label: "Approved", bg: "#dcfce7", fg: "#166534" },

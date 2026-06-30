@@ -309,6 +309,7 @@ export function WorkOrderRequestsClient({
             <Table>
               <thead>
                 <tr>
+                  <Th>PO#</Th>
                   <Th>Station</Th>
                   <Th>Vehicle</Th>
                   <Th>Service</Th>
@@ -570,6 +571,12 @@ export function WorkOrderRequestsClient({
         {reviewModal && (
           <div className="space-y-4">
             <div className="rounded-lg bg-slate-50 p-4 text-sm">
+              {reviewModal.poNumber && (
+                <p>
+                  <strong>PO#:</strong>{" "}
+                  <span className="font-mono font-semibold">{reviewModal.poNumber}</span>
+                </p>
+              )}
               <p>
                 <strong>Requester:</strong> {reviewModal.requestedBy.name}
               </p>
@@ -678,6 +685,9 @@ function RequestRow({
   return (
     <>
       <tr className="cursor-pointer hover:bg-slate-50" onClick={onToggle}>
+        <Td className="font-mono text-xs font-semibold text-slate-700">
+          {r.poNumber ?? "—"}
+        </Td>
         <Td>
           <Badge bg="#eef2ff" fg="#3730a3">
             {r.station}
@@ -727,7 +737,7 @@ function RequestRow({
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={8} className="border-b border-[var(--color-border)] bg-slate-50 px-6 py-3">
+          <td colSpan={9} className="border-b border-[var(--color-border)] bg-slate-50 px-6 py-3">
             <RequestDetail r={r} />
           </td>
         </tr>
@@ -739,6 +749,10 @@ function RequestRow({
 function RequestDetail({ r }: { r: WorkOrderRequestDTO }) {
   return (
     <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+      <div>
+        <p className="text-xs font-medium text-slate-400">PO Number</p>
+        <p className="font-mono font-semibold">{r.poNumber ?? "—"}</p>
+      </div>
       <div>
         <p className="text-xs font-medium text-slate-400">Station</p>
         <p>{STATION_LABEL[r.station] ?? r.station}</p>

@@ -327,6 +327,7 @@ model TelemetryLog {
 
 model WorkOrderRequest {
   id                 String          @id @default(cuid())
+  poNumber           String?         @unique
   station            Station         @default(AUS)
   vehicle            Vehicle?        @relation(fields: [vehicleId], references: [id])
   vehicleId          String?
