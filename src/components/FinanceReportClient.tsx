@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useData } from "@/lib/use-data";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -42,6 +42,7 @@ type ReportData = {
   year: number;
   month: number;
   prevYear: number;
+  reportType: string;
   stations: Record<string, StationBlock>;
   monthlyTotals: MonthlyTotal[];
   monthlyByStation: Record<string, MonthlyTotal[]>;
@@ -71,7 +72,7 @@ function budgetVarianceColor(amt: number): string {
   return "";
 }
 
-function VarianceTable({ station, data, year, month }: { station: string; data: StationBlock; year: number; month: number }) {
+function VarianceTable({ station, data, year, month, serviceLabel = "PM Service" }: { station: string; data: StationBlock; year: number; month: number; serviceLabel?: string }) {
   const prevYear = year - 1;
   const rows = data.rows;
   const totals = {
@@ -108,7 +109,7 @@ function VarianceTable({ station, data, year, month }: { station: string; data: 
           </tr>
           <tr className={headerBg + " border-b border-[var(--color-border)]"}>
             <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold">#</th>
-            <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold">PM Service</th>
+            <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold">{serviceLabel}</th>
             <th className="whitespace-nowrap px-2 py-1.5 text-right font-semibold">A{prevYear}</th>
             <th className="whitespace-nowrap px-2 py-1.5 text-right font-semibold">A{year}</th>
             <th className="whitespace-nowrap px-2 py-1.5 text-right font-semibold">B{year}</th>
@@ -385,19 +386,33 @@ export function FinanceReportClient() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [viewMode, setViewMode] = useState<"week" | "month">("month");
   const [weekDate, setWeekDate] = useState(now.toISOString().slice(0, 10));
+  const [reportType, setReportType] = useState<"PM" | "CR">("PM");
   const weekParam = viewMode === "week" ? `&view=week&weekDate=${weekDate}` : "";
-  const { data, loading } = useData<ReportData>(`/api/finance-report?year=${year}&month=${month}${weekParam}`);
+  const { data, loading } = useData<ReportData>(`/api/finance-report?year=${year}&month=${month}${weekParam}&reportType=${reportType}`);
   const [activeStation, setActiveStation] = useState("ALL");
   const [chartStation, setChartStation] = useState("ALL");
   const [exporting, setExporting] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
 
-  const handlePrint = () => {
+  const handleExportPDF = useCallback(async () => {
+    if (!reportRef.current) return;
     setExporting(true);
-    setTimeout(() => {
+    try {
+      const html2canvas = (await import("html2canvas-pro")).default;
+      const { jsPDF } = await import("jspdf");
+      const el = reportRef.current;
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, logging: false });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [canvas.width, canvas.height] });
+      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+      const label = reportType === "CR" ? "Corrective_Repairs" : "PM";
+      pdf.save(`${label}_Finance_Report_${MONTHS[month - 1]}_${year}.pdf`);
+    } catch {
       window.print();
+    } finally {
       setExporting(false);
-    }, 200);
-  };
+    }
+  }, [reportType, month, year]);
 
   if (loading) return <div className="p-8 text-center text-slate-500">Loading report...</div>;
   if (!data) return <div className="p-8 text-center text-red-500">Failed to load report data.</div>;
@@ -409,10 +424,36 @@ export function FinanceReportClient() {
   const totalRemainder = totalAnnualBudget - totalYtdActual;
   const budgetUtilPct = totalAnnualBudget > 0 ? Math.round((totalYtdActual / totalAnnualBudget) * 100) : 0;
 
+  const reportLabel = reportType === "CR" ? "Corrective Repairs" : "Preventive Maintenance";
+
   return (
     <div className="space-y-6 print:space-y-4">
       {/* Header controls */}
       <div className="flex flex-wrap items-center gap-4 print:hidden">
+        {/* Report type toggle */}
+        <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden">
+          <button
+            onClick={() => setReportType("PM")}
+            className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+              reportType === "PM"
+                ? "bg-blue-600 text-white"
+                : "bg-white text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            PM Finance
+          </button>
+          <button
+            onClick={() => setReportType("CR")}
+            className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+              reportType === "CR"
+                ? "bg-blue-600 text-white"
+                : "bg-white text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            Corrective Repairs
+          </button>
+        </div>
+
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-slate-600">Year</label>
           <select
@@ -494,7 +535,7 @@ export function FinanceReportClient() {
         )}
 
         <button
-          onClick={handlePrint}
+          onClick={handleExportPDF}
           disabled={exporting}
           className="ml-auto rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
@@ -502,9 +543,10 @@ export function FinanceReportClient() {
         </button>
       </div>
 
+      <div ref={reportRef}>
       {/* Report title for print */}
       <div className="hidden print:block">
-        <h1 className="text-xl font-bold">SYNCTX / Fleet Preventive Maintenance Expenses</h1>
+        <h1 className="text-xl font-bold">SYNCTX / Fleet {reportLabel} Expenses</h1>
         <p className="text-sm text-slate-600">Year: {year} | Month: {MONTHS[month - 1]} | Actual to Budget Variance Analysis</p>
       </div>
 
@@ -578,6 +620,7 @@ export function FinanceReportClient() {
             data={data.stations[activeStation]}
             year={year}
             month={month}
+            serviceLabel={reportType === "CR" ? "CR Service" : "PM Service"}
           />
         )}
       </div>
@@ -586,10 +629,11 @@ export function FinanceReportClient() {
       <div className="hidden print:block">
         {STATION_ORDER.map((s) =>
           data.stations[s] ? (
-            <VarianceTable key={s} station={s} data={data.stations[s]} year={year} month={month} />
+            <VarianceTable key={s} station={s} data={data.stations[s]} year={year} month={month} serviceLabel={reportType === "CR" ? "CR Service" : "PM Service"} />
           ) : null,
         )}
       </div>
+      </div>{/* close reportRef */}
     </div>
   );
 }

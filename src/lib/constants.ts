@@ -134,6 +134,34 @@ export const WO_TITLE_TO_PM_CATEGORY: Record<string, string> = {
   "DOT Annual Inspection": "Brakes",
 };
 
+/** Corrective Repair budget categories for the finance report (matches CR PDF template). */
+export const CR_CATEGORIES = [
+  "Mechanical Repairs",
+  "Engine Services",
+  "Electrical Repairs",
+  "A/C & Heating",
+  "Cosmetic / Utility",
+] as const;
+
+/** Maps work-order titles (from service history) → CR budget category. */
+export const WO_TITLE_TO_CR_CATEGORY: Record<string, string> = {
+  "Engine Work": "Engine Services",
+  "DEF System": "Engine Services",
+  "Turbo / Actuator": "Engine Services",
+  "Bodyshop Repair": "Cosmetic / Utility",
+  "AC Work": "A/C & Heating",
+  "Radiator Work": "Mechanical Repairs",
+  "Transmission Work": "Mechanical Repairs",
+  "Hose Replacement": "Mechanical Repairs",
+  "Electrical Repairs": "Electrical Repairs",
+  "Parts Purchase / Order": "Mechanical Repairs",
+  "Parts Purchase / Autozone / Oreillys": "Mechanical Repairs",
+  "REGISTRATION": "Cosmetic / Utility",
+  "Other": "Mechanical Repairs",
+  "Purge brakes": "Mechanical Repairs",
+  "Fluids Check": "Mechanical Repairs",
+};
+
 /** Stations shown in the finance report (original 4 TX stations). */
 export const FINANCE_STATIONS = ["IAH", "AUS", "HRL", "LRD"] as const;
 

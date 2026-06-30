@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiUser } from "@/lib/api";
-import { PM_CATEGORIES, WO_TITLE_TO_PM_CATEGORY, STATIONS } from "@/lib/constants";
+import { PM_CATEGORIES, WO_TITLE_TO_PM_CATEGORY, CR_CATEGORIES, WO_TITLE_TO_CR_CATEGORY, STATIONS } from "@/lib/constants";
 
 const ALL_STATIONS = STATIONS as readonly string[];
 
@@ -20,7 +20,10 @@ export async function GET(req: NextRequest) {
   const month = parseInt(url.searchParams.get("month") ?? String(new Date().getMonth() + 1));
   const viewMode = url.searchParams.get("view") ?? "month";
   const weekDateParam = url.searchParams.get("weekDate") ?? "";
+  const reportType = url.searchParams.get("reportType") ?? "PM";
   const prevYear = year - 1;
+
+  const CATEGORIES = reportType === "CR" ? CR_CATEGORIES : PM_CATEGORIES;
 
   // Week boundaries (used when viewMode === "week")
   let weekStart: Date | null = null;
@@ -59,7 +62,7 @@ export async function GET(req: NextRequest) {
   });
 
   // Helper: classify WO title to PM category
-  function classify(title: string): string | null {
+  function classifyPM(title: string): string | null {
     if (WO_TITLE_TO_PM_CATEGORY[title]) return WO_TITLE_TO_PM_CATEGORY[title];
     const lower = title.toLowerCase();
     if (lower.includes("brake pad") || lower.includes("brake rotor") || lower.includes("air brake")) return "Brakes";
@@ -80,6 +83,18 @@ export async function GET(req: NextRequest) {
     return null;
   }
 
+  function classifyCR(title: string): string | null {
+    if (WO_TITLE_TO_CR_CATEGORY[title]) return WO_TITLE_TO_CR_CATEGORY[title];
+    const lower = title.toLowerCase();
+    if (lower.includes("engine") || lower.includes("def system") || lower.includes("turbo") || lower.includes("actuator")) return "Engine Services";
+    if (lower.includes("electric") || lower.includes("wiring") || lower.includes("fuse")) return "Electrical Repairs";
+    if (lower.includes("ac ") || lower.includes("a/c") || lower.includes("heating") || lower.includes("hvac")) return "A/C & Heating";
+    if (lower.includes("body") || lower.includes("cosmetic") || lower.includes("paint") || lower.includes("dent") || lower.includes("registration")) return "Cosmetic / Utility";
+    return "Mechanical Repairs";
+  }
+
+  const classify = reportType === "CR" ? classifyCR : classifyPM;
+
   // Build actuals: { station -> category -> { monthly, ytd } }
   type StationData = Record<string, { monthly: number; ytd: number }>;
   type AllData = Record<string, StationData>;
@@ -88,7 +103,7 @@ export async function GET(req: NextRequest) {
     const data: AllData = {};
     for (const station of [...ALL_STATIONS, "ALL"]) {
       data[station] = {};
-      for (const cat of PM_CATEGORIES) {
+      for (const cat of CATEGORIES) {
         data[station][cat] = { monthly: 0, ytd: 0 };
       }
     }
@@ -96,7 +111,7 @@ export async function GET(req: NextRequest) {
     for (const wo of workOrders) {
       const station = wo.vehicle?.station ?? "IAH";
       const cat = classify(wo.title);
-      if (!cat || !ALL_STATIONS.includes(station)) continue;
+      if (!cat || !(CATEGORIES as readonly string[]).includes(cat) || !ALL_STATIONS.includes(station)) continue;
 
       const woMonth = wo.completedAt ? new Date(wo.completedAt).getMonth() + 1 : month;
       const woDate = wo.completedAt ? new Date(wo.completedAt) : null;
@@ -139,7 +154,7 @@ export async function GET(req: NextRequest) {
   const budgetData: BudgetData = {};
   for (const station of [...ALL_STATIONS, "ALL"]) {
     budgetData[station] = {};
-    for (const cat of PM_CATEGORIES) {
+    for (const cat of CATEGORIES) {
       budgetData[station][cat] = { monthly: 0, ytd: 0, annual: 0 };
     }
   }
@@ -244,7 +259,7 @@ export async function GET(req: NextRequest) {
   };
 
   function buildStationRows(station: string): CategoryRow[] {
-    return PM_CATEGORIES.map((cat) => {
+    return CATEGORIES.map((cat) => {
       const ap = actualsPrev[station]?.[cat]?.monthly ?? 0;
       const ac = actualsCurrent[station]?.[cat]?.monthly ?? 0;
       const bm = budgetData[station]?.[cat]?.monthly ?? 0;
@@ -299,6 +314,7 @@ export async function GET(req: NextRequest) {
     year,
     month,
     prevYear,
+    reportType,
     stations,
     monthlyTotals,
     monthlyByStation,
