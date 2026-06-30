@@ -21,11 +21,11 @@ import { formatCurrency, relativeTime, formatDate } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [vehicles, drivers, trips, alerts, workOrders, fuelLogs] =
+  const [vehicles, drivers, fareyeRoutes, alerts, workOrders, fuelLogs] =
     await Promise.all([
       prisma.vehicle.findMany(),
       prisma.driver.findMany({ orderBy: { safetyScore: "desc" } }),
-      prisma.trip.findMany(),
+      prisma.fareyeRoute.findMany(),
       prisma.alert.findMany({
         orderBy: { createdAt: "desc" },
         include: { vehicle: true },
@@ -46,7 +46,10 @@ export default async function DashboardPage() {
   const openWO = workOrders.filter(
     (w) => w.status === "OPEN" || w.status === "SCHEDULED" || w.status === "IN_PROGRESS",
   ).length;
-  const activeTripsCount = trips.filter((t) => t.status === "IN_PROGRESS").length;
+  const todayStr = new Date().toDateString();
+  const todayRoutes = fareyeRoutes.filter(
+    (r) => new Date(r.date).toDateString() === todayStr,
+  ).length;
 
   // fuel cost last 30 days
   const now = new Date().getTime();
@@ -73,18 +76,15 @@ export default async function DashboardPage() {
     color: VEHICLE_STATUS[k].color,
   }));
 
-  // trips last 7 days
-  const dayLabels: string[] = [];
-  const tripsPerDay: { label: string; value: number }[] = [];
+  // fareye routes – planned miles last 7 days
+  const routeMilesPerDay: { label: string; value: number }[] = [];
   for (let i = 6; i >= 0; i--) {
     const day = new Date(now - i * 86400000);
     const label = day.toLocaleDateString("en-US", { weekday: "short" });
-    dayLabels.push(label);
-    const count = trips.filter((t) => {
-      const d = t.startedAt ?? t.scheduledStart;
-      return new Date(d).toDateString() === day.toDateString();
-    }).length;
-    tripsPerDay.push({ label, value: count });
+    const miles = fareyeRoutes
+      .filter((r) => new Date(r.date).toDateString() === day.toDateString())
+      .reduce((s, r) => s + r.miles, 0);
+    routeMilesPerDay.push({ label, value: Math.round(miles) });
   }
 
   // fuel cost trend last 8 weeks
@@ -187,9 +187,9 @@ export default async function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Trips" subtitle="Last 7 days" />
+          <CardHeader title="FareEye Routes" subtitle="Planned miles · last 7 days" />
           <div className="p-4">
-            <BarChartCard data={tripsPerDay} color="#2563eb" />
+            <BarChartCard data={routeMilesPerDay} color="#7c3aed" />
           </div>
         </Card>
 
@@ -337,8 +337,8 @@ export default async function DashboardPage() {
               <p className="mt-1 text-xl font-bold">{formatCurrency(maint90)}</p>
             </div>
             <div className="bg-white p-5">
-              <p className="text-xs text-slate-400">Active Trips</p>
-              <p className="mt-1 text-xl font-bold">{activeTripsCount}</p>
+              <p className="text-xs text-slate-400">Today&apos;s Routes</p>
+              <p className="mt-1 text-xl font-bold">{todayRoutes}</p>
             </div>
             <div className="bg-white p-5">
               <p className="text-xs text-slate-400">Fleet Utilization</p>

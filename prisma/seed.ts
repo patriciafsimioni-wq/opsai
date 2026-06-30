@@ -477,27 +477,43 @@ async function main() {
 
   console.log(`  Imported ${woImported} real service history work orders`);
 
-  // ----- fuel logs -----
-  for (const v of vehicles) {
-    if (v.fuelType === "ELECTRIC") continue;
-    const count = randInt(3, 9);
-    for (let j = 0; j < count; j++) {
-      const liters = randInt(30, Math.max(40, Math.round(v.tankCapacity * 0.8)));
-      const price = Math.round(rand(0.95, 1.65) * 100) / 100;
-      await prisma.fuelLog.create({
-        data: {
-          vehicleId: v.id,
-          driverId: v.assignedDriverId,
-          date: daysFromNow(-randInt(1, 120)),
-          liters,
-          pricePerLiter: price,
-          totalCost: Math.round(liters * price * 100) / 100,
-          odometer: v.odometer - randInt(0, 8000),
-          location: pick(["Shell - Houston", "Chevron - Austin", "BP - Harlingen", "Buc-ee's - Waco", "Valero - Laredo"]),
-        },
-      });
-    }
+  // ----- fuel logs (real data from Fuel.xlsx) -----
+  type FuelRow = {
+    dxNumber: string;
+    date: string | null;
+    gallons: number;
+    pricePerGallon: number;
+    totalCost: number;
+    location: string | null;
+    station: string;
+    purchaseType: "UNLEADED" | "DIESEL" | "DEF" | "NON_FUEL";
+    driverName: string | null;
+    productDesc: string | null;
+  };
+  const fuelRows: FuelRow[] = JSON.parse(
+    readFileSync(join(__dirname, "data", "fuel-data.json"), "utf-8"),
+  );
+  let fuelImported = 0;
+  const vehicleByDxFuel = new Map(vehicles.map((v) => [v.dxNumber, v]));
+  for (const f of fuelRows) {
+    const vehicle = vehicleByDxFuel.get(f.dxNumber);
+    if (!vehicle || !f.date) continue;
+    await prisma.fuelLog.create({
+      data: {
+        vehicleId: vehicle.id,
+        driverId: vehicle.assignedDriverId,
+        date: new Date(f.date),
+        liters: f.gallons,
+        pricePerLiter: f.pricePerGallon,
+        totalCost: f.totalCost,
+        odometer: vehicle.odometer - randInt(0, 3000),
+        location: f.location,
+        purchaseType: f.purchaseType,
+      },
+    });
+    fuelImported++;
   }
+  console.log(`  Imported ${fuelImported} real fuel logs (of ${fuelRows.length} total)`);
 
   // ----- alerts -----
   const now = Date.now();

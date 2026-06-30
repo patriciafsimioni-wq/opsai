@@ -17,6 +17,14 @@ const emptyForm = {
   pricePerLiter: "1.20",
   odometer: "",
   location: "",
+  purchaseType: "UNLEADED",
+};
+
+type PurchaseBreakdownItem = {
+  type: string;
+  count: number;
+  totalCost: number;
+  totalLiters: number;
 };
 
 type FuelApiResponse = {
@@ -24,6 +32,14 @@ type FuelApiResponse = {
   stations: string[];
   dateStart: string;
   dateEnd: string;
+  purchaseBreakdown: PurchaseBreakdownItem[];
+};
+
+const PURCHASE_TYPE_LABEL: Record<string, string> = {
+  UNLEADED: "Unleaded",
+  DIESEL: "Diesel",
+  DEF: "DEF",
+  NON_FUEL: "Non-Fuel",
 };
 
 function getMonday(d: Date): Date {
@@ -45,8 +61,9 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
   const [station, setStation] = useState("");
   const [range, setRange] = useState<"week" | "month">("month");
   const [refDate, setRefDate] = useState(new Date().toISOString().slice(0, 10));
+  const [purchaseType, setPurchaseType] = useState("");
 
-  const apiUrl = `/api/fuel?range=${range}&date=${refDate}${station ? `&station=${station}` : ""}`;
+  const apiUrl = `/api/fuel?range=${range}&date=${refDate}${station ? `&station=${station}` : ""}${purchaseType ? `&purchaseType=${purchaseType}` : ""}`;
   const { data, loading, reload } = useData<FuelApiResponse>(apiUrl);
   const { data: vehicles } = useData<VehicleDTO[]>("/api/vehicles");
   const { data: drivers } = useData<DriverDTO[]>("/api/drivers");
@@ -80,13 +97,17 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
     );
   }, [logs, search]);
 
+  const breakdown = data?.purchaseBreakdown ?? [];
+  const gasCost = breakdown.find((b) => b.type === "UNLEADED")?.totalCost ?? 0;
+  const dieselCost = breakdown.find((b) => b.type === "DIESEL")?.totalCost ?? 0;
+
   const stats = useMemo(() => {
     const cost = logs.reduce((s, l) => s + l.totalCost, 0);
-    const liters = logs.reduce((s, l) => s + l.liters, 0);
+    const gal = logs.reduce((s, l) => s + l.liters, 0);
     return {
       cost,
-      liters,
-      avg: liters > 0 ? cost / liters : 0,
+      gal,
+      avg: gal > 0 ? cost / gal : 0,
       count: logs.length,
     };
   }, [logs]);
@@ -148,6 +169,19 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
           </button>
         </div>
 
+        {/* Purchase type filter */}
+        <select
+          value={purchaseType}
+          onChange={(e) => setPurchaseType(e.target.value)}
+          className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm"
+        >
+          <option value="">All types</option>
+          <option value="UNLEADED">Unleaded</option>
+          <option value="DIESEL">Diesel</option>
+          <option value="DEF">DEF</option>
+          <option value="NON_FUEL">Non-Fuel</option>
+        </select>
+
         {/* Date navigation */}
         <div className="flex items-center gap-1">
           <button
@@ -168,10 +202,12 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard label="Total Spend" value={formatCurrency(stats.cost)} icon={<Fuel size={18} />} accent="#0891b2" />
-        <StatCard label="Total Volume" value={`${formatNumber(stats.liters)} L`} icon={<Fuel size={18} />} accent="#2563eb" />
-        <StatCard label="Avg Price/L" value={formatCurrency(stats.avg)} icon={<Fuel size={18} />} accent="#7c3aed" />
+        <StatCard label="Gas (Unleaded)" value={formatCurrency(gasCost)} icon={<Fuel size={18} />} accent="#f59e0b" />
+        <StatCard label="Diesel" value={formatCurrency(dieselCost)} icon={<Fuel size={18} />} accent="#6366f1" />
+        <StatCard label="Total Volume" value={`${formatNumber(stats.gal)} Gal`} icon={<Fuel size={18} />} accent="#2563eb" />
+        <StatCard label="Avg Price/Gal" value={formatCurrency(stats.avg)} icon={<Fuel size={18} />} accent="#7c3aed" />
         <StatCard label="Fill-ups" value={stats.count} icon={<Fuel size={18} />} accent="#16a34a" />
       </div>
 
@@ -203,9 +239,10 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
               <tr>
                 <Th>Date</Th>
                 <Th>Vehicle</Th>
+                <Th>Type</Th>
                 <Th>Station</Th>
                 <Th>Volume</Th>
-                <Th>Price/L</Th>
+                <Th>Price/Gal</Th>
                 <Th>Total</Th>
                 <Th>Location</Th>
                 <Th />
@@ -216,8 +253,18 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
                 <tr key={l.id} className="hover:bg-slate-50">
                   <Td className="text-slate-600">{formatDate(l.date)}</Td>
                   <Td className="font-medium">{l.vehicle.name}</Td>
+                  <Td>
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                      l.purchaseType === "UNLEADED" ? "bg-amber-50 text-amber-700" :
+                      l.purchaseType === "DIESEL" ? "bg-indigo-50 text-indigo-700" :
+                      l.purchaseType === "DEF" ? "bg-emerald-50 text-emerald-700" :
+                      "bg-slate-100 text-slate-600"
+                    }`}>
+                      {PURCHASE_TYPE_LABEL[l.purchaseType] ?? l.purchaseType}
+                    </span>
+                  </Td>
                   <Td className="text-slate-600">{l.vehicle.station ?? "—"}</Td>
-                  <Td>{formatNumber(l.liters, 1)} L</Td>
+                  <Td>{formatNumber(l.liters, 1)} Gal</Td>
                   <Td>{formatCurrency(l.pricePerLiter)}</Td>
                   <Td className="font-medium">{formatCurrency(l.totalCost)}</Td>
                   <Td className="text-slate-600">{l.location ?? "—"}</Td>
@@ -281,6 +328,18 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
           </Field>
           <Field label="Odometer (mi)">
             <Input type="number" value={form.odometer} onChange={(e) => setForm({ ...form, odometer: e.target.value })} />
+          </Field>
+          <Field label="Fuel Type" required>
+            <Select
+              value={form.purchaseType}
+              onChange={(e) => setForm({ ...form, purchaseType: e.target.value })}
+              options={[
+                { value: "UNLEADED", label: "Unleaded" },
+                { value: "DIESEL", label: "Diesel" },
+                { value: "DEF", label: "DEF" },
+                { value: "NON_FUEL", label: "Non-Fuel" },
+              ]}
+            />
           </Field>
           <Field label="Location">
             <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />

@@ -33,11 +33,16 @@ export async function GET(req: NextRequest) {
     dateEnd = new Date(ref.getFullYear(), ref.getMonth() + 1, 0, 23, 59, 59, 999);
   }
 
+  const purchaseType = url.searchParams.get("purchaseType") ?? "";
+
   const where: Record<string, unknown> = {
     date: { gte: dateStart, lte: dateEnd },
   };
   if (station) {
     where.vehicle = { station };
+  }
+  if (purchaseType) {
+    where.purchaseType = purchaseType;
   }
 
   const logs = await prisma.fuelLog.findMany({
@@ -53,11 +58,32 @@ export async function GET(req: NextRequest) {
     orderBy: { station: "asc" },
   });
 
+  // Breakdown by purchase type (always unfiltered by purchaseType)
+  const typeWhere: Record<string, unknown> = {
+    date: { gte: dateStart, lte: dateEnd },
+  };
+  if (station) {
+    typeWhere.vehicle = { station };
+  }
+  const typeCounts = await prisma.fuelLog.groupBy({
+    by: ["purchaseType"],
+    where: typeWhere,
+    _count: true,
+    _sum: { totalCost: true, liters: true },
+  });
+  const purchaseBreakdown = typeCounts.map((t) => ({
+    type: t.purchaseType,
+    count: t._count,
+    totalCost: Math.round((t._sum.totalCost ?? 0) * 100) / 100,
+    totalLiters: Math.round((t._sum.liters ?? 0) * 100) / 100,
+  }));
+
   return NextResponse.json({
     logs,
     stations: stationCounts.map((s) => s.station),
     dateStart: dateStart.toISOString(),
     dateEnd: dateEnd.toISOString(),
+    purchaseBreakdown,
   });
 }
 
@@ -69,6 +95,7 @@ const schema = z.object({
   pricePerLiter: z.coerce.number().min(0),
   odometer: z.coerce.number().min(0).optional().nullable(),
   location: z.string().optional().nullable(),
+  purchaseType: z.enum(["UNLEADED", "DIESEL", "DEF", "NON_FUEL"]).optional(),
 });
 
 export async function POST(req: Request) {
@@ -88,6 +115,7 @@ export async function POST(req: Request) {
       totalCost: Math.round(d.liters * d.pricePerLiter * 100) / 100,
       odometer: d.odometer ?? null,
       location: d.location || null,
+      purchaseType: d.purchaseType ?? "DIESEL",
     },
   });
   return NextResponse.json(log, { status: 201 });
