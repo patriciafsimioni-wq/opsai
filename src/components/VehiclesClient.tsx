@@ -334,7 +334,7 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
               ]}
             />
           </Field>
-          <Field label="Odometer (km)">
+          <Field label="Odometer (mi)">
             <Input
               type="number"
               value={form.odometer}

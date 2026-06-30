@@ -279,7 +279,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
           <Field label="Price / Liter" required>
             <Input type="number" step="0.01" value={form.pricePerLiter} onChange={(e) => setForm({ ...form, pricePerLiter: e.target.value })} />
           </Field>
-          <Field label="Odometer (km)">
+          <Field label="Odometer (mi)">
             <Input type="number" value={form.odometer} onChange={(e) => setForm({ ...form, odometer: e.target.value })} />
           </Field>
           <Field label="Location">

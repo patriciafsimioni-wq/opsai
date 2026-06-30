@@ -176,7 +176,7 @@ export default async function DriverDetailPage({
                       </Badge>
                     </Td>
                     <Td className="text-slate-600">{formatDate(t.scheduledStart)}</Td>
-                    <Td>{Math.round(t.distanceKm)} km</Td>
+                    <Td>{Math.round(t.distanceKm)} mi</Td>
                   </tr>
                 ))}
               </tbody>

@@ -125,7 +125,7 @@ export function TripsClient({ canManage }: { canManage: boolean }) {
                   {t.driver ? `${t.driver.firstName} ${t.driver.lastName}` : "—"}
                 </Td>
                 <Td className="text-slate-600">{formatDateTime(t.scheduledStart)}</Td>
-                <Td>{Math.round(t.distanceKm)} km</Td>
+                <Td>{Math.round(t.distanceKm)} mi</Td>
                 <Td>
                   {canManage ? (
                     <select
@@ -210,7 +210,7 @@ export function TripsClient({ canManage }: { canManage: boolean }) {
               onChange={(e) => setForm({ ...form, scheduledStart: e.target.value })}
             />
           </Field>
-          <Field label="Distance (km)">
+          <Field label="Distance (mi)">
             <Input type="number" value={form.distanceKm} onChange={(e) => setForm({ ...form, distanceKm: e.target.value })} />
           </Field>
           <Field label="Cargo" className="col-span-2">

@@ -81,7 +81,7 @@ export default async function VehicleDetailPage({
           <div className="flex items-center gap-2 text-xs text-slate-400">
             <Gauge size={14} /> Odometer
           </div>
-          <p className="mt-1 text-xl font-bold">{formatNumber(v.odometer)} km</p>
+          <p className="mt-1 text-xl font-bold">{formatNumber(v.odometer)} mi</p>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -237,7 +237,7 @@ export default async function VehicleDetailPage({
                       {t.driver ? `${t.driver.firstName} ${t.driver.lastName}` : "—"}
                     </Td>
                     <Td className="text-slate-600">{formatDate(t.scheduledStart)}</Td>
-                    <Td>{Math.round(t.distanceKm)} km</Td>
+                    <Td>{Math.round(t.distanceKm)} mi</Td>
                   </tr>
                 ))}
               </tbody>
