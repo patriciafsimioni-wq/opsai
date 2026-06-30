@@ -495,8 +495,53 @@ async function main() {
     });
   }
 
+  // ----- work order requests (approval workflow demo) -----
+  await prisma.workOrderRequest.deleteMany();
+  const allUsers = await prisma.user.findMany();
+  const driverUser = allUsers.find((u) => u.role === "DRIVER");
+  const managerUser = allUsers.find((u) => u.role === "MANAGER");
+  const adminUser = allUsers.find((u) => u.role === "ADMIN");
+  const requesters = [driverUser, managerUser, adminUser].filter(Boolean) as typeof allUsers;
+  const partsPool = [
+    "Brake pads", "Oil filter", "Air filter", "Spark plugs", "Wiper blades",
+    "Cabin filter", "Timing belt", "Serpentine belt", "Battery", "Coolant",
+    "Transmission fluid", "Brake rotors", "Alternator", "Starter motor",
+  ];
+  for (let i = 0; i < 8; i++) {
+    const v = pick(vehicles);
+    const s = pick(services);
+    const requester = pick(requesters);
+    const partCount = randInt(1, 3);
+    const parts: string[] = [];
+    for (let p = 0; p < partCount; p++) {
+      const part = pick(partsPool);
+      if (!parts.includes(part)) parts.push(part);
+    }
+    const status = i < 5 ? "PENDING" : pick(["APPROVED", "REJECTED"]) as "APPROVED" | "REJECTED";
+    const reviewer = status !== "PENDING" ? (adminUser ?? managerUser) : null;
+    await prisma.workOrderRequest.create({
+      data: {
+        station: v.station,
+        vehicleId: v.id,
+        odometer: v.odometer - randInt(0, 2000),
+        serviceId: s.id,
+        partsNeeded: parts.join(", "),
+        requestedDate: daysFromNow(randInt(1, 14)),
+        expectedCompletion: daysFromNow(randInt(7, 30)),
+        comments: `Request for ${s.name} on ${v.name}`,
+        serviceHours: Math.round(rand(1, 8) * 10) / 10,
+        vendorEstimate: Math.round(rand(100, 3000)),
+        status,
+        requestedById: requester.id,
+        reviewedById: reviewer?.id ?? null,
+        reviewNote: status === "REJECTED" ? "Budget constraints — defer to next quarter." : status === "APPROVED" ? "Approved. Proceed." : null,
+        reviewedAt: status !== "PENDING" ? daysFromNow(-randInt(0, 3)) : null,
+      },
+    });
+  }
+
   console.log(
-    `✅ Seeded: ${vehicles.length} vehicles, ${drivers.length} drivers, ${services.length} services, 40 trips, work orders, fuel logs, alerts, ${fenceDefs.length} geofences.`,
+    `✅ Seeded: ${vehicles.length} vehicles, ${drivers.length} drivers, ${services.length} services, 40 trips, work orders, fuel logs, alerts, ${fenceDefs.length} geofences, 8 WO requests.`,
   );
   console.log("👤 Logins: admin@livefleet.ai / admin123 · manager@livefleet.ai / manager123 · driver@livefleet.ai / driver123");
 }

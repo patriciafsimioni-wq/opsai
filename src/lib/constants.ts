@@ -90,6 +90,25 @@ export const PREVENTIVE_GROUPS: { label: string; services: string[] }[] = [
   { label: "Turbocharger Inspection", services: ["Turbocharger Inspection PM"] },
 ];
 
+export const WO_REQUEST_STATUS = {
+  PENDING: { label: "Pending", bg: "#fef3c7", fg: "#92400e" },
+  APPROVED: { label: "Approved", bg: "#dcfce7", fg: "#166534" },
+  REJECTED: { label: "Rejected", bg: "#fee2e2", fg: "#991b1b" },
+} as const;
+export const WO_REQUEST_STATUSES = ["PENDING", "APPROVED", "REJECTED"] as const;
+
+export const PARTS_LIST = [
+  "Brake pads", "Brake rotors", "Brake calipers", "Oil filter", "Air filter",
+  "Cabin air filter", "Spark plugs", "Wiper blades", "Battery", "Coolant",
+  "Transmission fluid", "Serpentine belt", "Timing belt", "Alternator",
+  "Starter motor", "Radiator", "Water pump", "Fuel pump", "Fuel filter",
+  "Muffler", "Catalytic converter", "Turbocharger", "A/C compressor",
+  "Headlight bulb", "Taillight bulb", "Windshield", "Tire", "Wheel bearing",
+  "Shock absorber", "Strut", "CV joint", "U-joint", "Driveshaft",
+  "Thermostat", "Oxygen sensor", "Mass airflow sensor", "Ignition coil",
+  "EGR valve", "PCV valve", "Power steering fluid",
+] as const;
+
 export const PRIORITY = {
   LOW: { label: "Low", bg: "#f1f5f9", fg: "#475569" },
   MEDIUM: { label: "Medium", bg: "#dbeafe", fg: "#1e40af" },

@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
-import { requireManager, badRequest } from "@/lib/api";
+import { requireApiUser, badRequest } from "@/lib/api";
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 const ALLOWED = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif", "application/pdf"];
 
 export async function POST(req: Request) {
-  const auth = await requireManager();
+  const auth = await requireApiUser();
   if ("error" in auth) return auth.error;
 
   const formData = await req.formData().catch(() => null);

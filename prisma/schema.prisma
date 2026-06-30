@@ -100,6 +100,12 @@ enum GeofenceType {
   RESTRICTED
 }
 
+enum WORequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum AlertType {
   SPEEDING
   GEOFENCE_ENTER
@@ -118,14 +124,16 @@ enum AlertSeverity {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
-  passwordHash String
-  role         Role     @default(MANAGER)
-  driver       Driver?  @relation(fields: [driverId], references: [id])
-  driverId     String?  @unique
-  createdAt    DateTime @default(now())
+  id                String             @id @default(cuid())
+  email             String             @unique
+  name              String
+  passwordHash      String
+  role              Role               @default(MANAGER)
+  driver            Driver?            @relation(fields: [driverId], references: [id])
+  driverId          String?            @unique
+  woRequests        WorkOrderRequest[] @relation("requestedBy")
+  woReviews         WorkOrderRequest[] @relation("reviewedBy")
+  createdAt         DateTime           @default(now())
 }
 
 model Driver {
@@ -184,6 +192,7 @@ model Vehicle {
   fuelLogs           FuelLog[]
   alerts             Alert[]
   telemetry          TelemetryLog[]
+  woRequests         WorkOrderRequest[]
   createdAt          DateTime       @default(now())
 }
 
@@ -247,6 +256,7 @@ model Service {
   laborCost    Float           @default(0)
   active       Boolean         @default(true)
   workOrders   WorkOrder[]
+  woRequests   WorkOrderRequest[]
   createdAt    DateTime        @default(now())
 }
 
@@ -313,4 +323,30 @@ model TelemetryLog {
   speed     Float
   heading   Float
   createdAt DateTime @default(now())
+}
+
+model WorkOrderRequest {
+  id                 String          @id @default(cuid())
+  station            Station         @default(AUS)
+  vehicle            Vehicle?        @relation(fields: [vehicleId], references: [id])
+  vehicleId          String?
+  vehicleOther       String?
+  odometer           Float?
+  service            Service?        @relation(fields: [serviceId], references: [id])
+  serviceId          String?
+  partsNeeded        String?
+  requestedDate      DateTime?
+  expectedCompletion DateTime?
+  comments           String?
+  photoUrl           String?
+  serviceHours       Float?
+  vendorEstimate     Float?
+  status             WORequestStatus @default(PENDING)
+  requestedBy        User            @relation("requestedBy", fields: [requestedById], references: [id])
+  requestedById      String
+  reviewedBy         User?           @relation("reviewedBy", fields: [reviewedById], references: [id])
+  reviewedById       String?
+  reviewNote         String?
+  reviewedAt         DateTime?
+  createdAt          DateTime        @default(now())
 }

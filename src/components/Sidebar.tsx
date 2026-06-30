@@ -15,6 +15,7 @@ import {
   BarChart3,
   ListChecks,
   ClipboardCheck,
+  ClipboardList,
   Receipt,
   Truck as TruckLogo,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const NAV = [
   { href: "/drivers", label: "Drivers", icon: Users },
   { href: "/trips", label: "Trips", icon: Route },
   { href: "/maintenance", label: "Maintenance", icon: Wrench },
+  { href: "/work-order-requests", label: "WO Requests", icon: ClipboardList },
   { href: "/log-service", label: "Log Service", icon: ClipboardCheck },
   { href: "/services", label: "Service Catalog", icon: ListChecks },
   { href: "/service-costs", label: "Service Costs", icon: Receipt },
