@@ -143,6 +143,9 @@ async function main() {
   console.log("🌱 Seeding fleet database...");
 
   // wipe (order matters for FKs)
+  await prisma.fareyeRoute.deleteMany();
+  await prisma.pmBudget.deleteMany();
+  await prisma.workOrderRequest.deleteMany();
   await prisma.telemetryLog.deleteMany();
   await prisma.alert.deleteMany();
   await prisma.fuelLog.deleteMany();
@@ -583,6 +586,55 @@ async function main() {
       },
     });
   }
+
+  // ----- PM budgets -----
+  type BudgetRow = { year: number; month: number; station: string; category: string; amount: number };
+  const budgetRows: BudgetRow[] = JSON.parse(
+    readFileSync(join(__dirname, "pm-budgets.json"), "utf-8"),
+  );
+  for (const b of budgetRows) {
+    await prisma.pmBudget.create({
+      data: {
+        year: b.year,
+        month: b.month,
+        station: b.station as "IAH" | "AUS" | "HRL" | "LRD" | "ACT" | "CLL" | "BPT",
+        category: b.category,
+        amount: b.amount,
+      },
+    });
+  }
+  console.log(`  Imported ${budgetRows.length} PM budget records`);
+
+  // ----- FareEye routes -----
+  type FareyeRow = { date: string; routeId: string; miles: number; travelMinutes: number; routeDurationMinutes: number; leaveByTime: string | null; plannedEndTime: string | null; stops: number; totalWeight: number; totalPallets: number; vehicleType: string; vehicleTag: string | null; vehicleUtilization: number; sporh: number; plannedHours: number; lat: number | null; lng: number | null; station: string };
+  const fareyeRows: FareyeRow[] = JSON.parse(
+    readFileSync(join(__dirname, "fareye-routes.json"), "utf-8"),
+  );
+  for (const r of fareyeRows) {
+    await prisma.fareyeRoute.create({
+      data: {
+        date: new Date(r.date),
+        routeId: r.routeId,
+        miles: r.miles,
+        travelMinutes: r.travelMinutes,
+        routeDurationMinutes: r.routeDurationMinutes,
+        leaveByTime: r.leaveByTime,
+        plannedEndTime: r.plannedEndTime,
+        stops: r.stops,
+        totalWeight: r.totalWeight,
+        totalPallets: r.totalPallets,
+        vehicleType: r.vehicleType,
+        vehicleTag: r.vehicleTag,
+        vehicleUtilization: r.vehicleUtilization,
+        sporh: r.sporh,
+        plannedHours: r.plannedHours,
+        lat: r.lat,
+        lng: r.lng,
+        station: r.station as "IAH" | "AUS" | "HRL" | "LRD" | "ACT" | "CLL" | "BPT",
+      },
+    });
+  }
+  console.log(`  Imported ${fareyeRows.length} FareEye route records`);
 
   console.log(
     `✅ Seeded: ${vehicles.length} vehicles, ${drivers.length} drivers, ${services.length} services, 40 trips, work orders, fuel logs, alerts, ${fenceDefs.length} geofences, 8 WO requests.`,

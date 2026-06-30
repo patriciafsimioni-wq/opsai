@@ -90,6 +90,53 @@ export const PREVENTIVE_GROUPS: { label: string; services: string[] }[] = [
   { label: "Turbocharger Inspection", services: ["Turbocharger Inspection PM"] },
 ];
 
+/** 14 PM budget categories that map to the finance report's service lines. */
+export const PM_CATEGORIES = [
+  "Brakes",
+  "Tires Replacement",
+  "Oil Change",
+  "Brake Calipers",
+  "Drivetrain Overhaul",
+  "Transmission Fluid",
+  "Coolant + Spark plugs",
+  "Time Belt",
+  "Diesel Filter Cleaning",
+  "Engine Filter",
+  "Battery Replacement",
+  "Fluids",
+  "Wiper Replacement",
+  "Turbo Charger Inspection",
+] as const;
+
+/** Maps work-order titles (from service history) → PM budget category. */
+export const WO_TITLE_TO_PM_CATEGORY: Record<string, string> = {
+  "PM A – Basic Oil Change & Inspection": "Oil Change",
+  "PM B – Oil Change + Filters + Tire Rotation": "Oil Change",
+  "PM C – Full Preventive Maintenance": "Oil Change",
+  "Brake Pad Replacement": "Brakes",
+  "Brake Rotor Replacement": "Brakes",
+  "Air Brake Cleaning": "Brakes",
+  "Brake Caliper Replacement": "Brake Calipers",
+  "Tire Replacement": "Tires Replacement",
+  "Tire Rotation": "Tires Replacement",
+  "Tire Pressure Check / Fill": "Tires Replacement",
+  "Drivetrain Overhaul PM": "Drivetrain Overhaul",
+  "Transmission Fluid PM": "Transmission Fluid",
+  "Coolant + Spark Plugs PM": "Coolant + Spark plugs",
+  "Timing Belt PM": "Time Belt",
+  "Diesel Filter Cleaning PM": "Diesel Filter Cleaning",
+  "Engine Air Filter PM": "Engine Filter",
+  "Battery Replacement": "Battery Replacement",
+  "Battery Test": "Battery Replacement",
+  "Fluid Check / Fill up": "Fluids",
+  "Wiper Blades": "Wiper Replacement",
+  "Turbocharger Inspection PM": "Turbo Charger Inspection",
+  "DOT Annual Inspection": "Brakes",
+};
+
+/** Stations shown in the finance report (original 4 TX stations). */
+export const FINANCE_STATIONS = ["IAH", "AUS", "HRL", "LRD"] as const;
+
 /** Station → 2-letter PO prefix and starting sequence number. */
 export const PO_PREFIX: Record<string, string> = {
   IAH: "IA",

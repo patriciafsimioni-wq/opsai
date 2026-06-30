@@ -331,6 +331,43 @@ model TelemetryLog {
   createdAt DateTime @default(now())
 }
 
+model PmBudget {
+  id       String  @id @default(cuid())
+  year     Int
+  month    Int
+  station  Station
+  category String
+  amount   Float
+
+  @@unique([year, month, station, category])
+}
+
+model FareyeRoute {
+  id                    String   @id @default(cuid())
+  date                  DateTime
+  routeId               String
+  miles                 Float
+  travelMinutes         Int
+  routeDurationMinutes  Int
+  leaveByTime           String?
+  plannedEndTime        String?
+  stops                 Int
+  totalWeight           Float    @default(0)
+  totalPallets          Int      @default(0)
+  vehicleType           String
+  vehicleTag            String?
+  vehicleUtilization    Float
+  sporh                 Float
+  plannedHours          Float
+  lat                   Float?
+  lng                   Float?
+  station               Station  @default(IAH)
+  createdAt             DateTime @default(now())
+
+  @@index([date])
+  @@index([station])
+}
+
 model WorkOrderRequest {
   id                 String          @id @default(cuid())
   poNumber           String?         @unique
