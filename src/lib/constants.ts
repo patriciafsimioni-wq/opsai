@@ -52,6 +52,18 @@ export const SERVICE_CATEGORY = {
 } as const;
 export const SERVICE_CATEGORIES = ["PREVENTIVE", "CORRECTIVE"] as const;
 
+// Station order as it appears in the maintenance service-order form.
+export const FORM_STATIONS = ["IAH", "AUS", "HRL", "LRD", "CLL", "BPT", "ACT"] as const;
+
+// Preset service providers from the maintenance service-order form ("Other" allows free text).
+export const SERVICE_PROVIDERS = [
+  "Take5",
+  "Discount Tire",
+  "Ernesto",
+  "Autoservicio De Leon",
+  "Jiffy Lube",
+] as const;
+
 // Maps the preventive service catalog into the report's headline buckets,
 // in display order. Catalog services not listed fall back to their own name.
 export const PREVENTIVE_GROUPS: { label: string; services: string[] }[] = [

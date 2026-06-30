@@ -229,6 +229,10 @@ model WorkOrder {
   performedBy  String?
   odometerAt   Float?
   vendor       String?
+  vin          String?
+  poNumber     String?
+  invoiceNumber String?
+  invoiceUrl   String?
   scheduledFor DateTime?
   completedAt  DateTime?
   createdAt    DateTime        @default(now())

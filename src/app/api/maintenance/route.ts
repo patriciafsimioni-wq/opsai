@@ -25,8 +25,14 @@ const schema = z.object({
   materialCost: z.coerce.number().min(0).optional(),
   laborHours: z.coerce.number().min(0).optional(),
   laborRate: z.coerce.number().min(0).optional(),
+  serviceCost: z.coerce.number().min(0).optional(),
   performedBy: z.string().optional().nullable(),
   vendor: z.string().optional().nullable(),
+  vin: z.string().optional().nullable(),
+  odometerAt: z.coerce.number().min(0).optional().nullable(),
+  poNumber: z.string().optional().nullable(),
+  invoiceNumber: z.string().optional().nullable(),
+  invoiceUrl: z.string().optional().nullable(),
   scheduledFor: z.string().optional().nullable(),
   completedAt: z.string().optional().nullable(),
 });
@@ -41,7 +47,8 @@ export async function POST(req: Request) {
   const materialCost = d.materialCost ?? 0;
   const laborHours = d.laborHours ?? 0;
   const laborRate = d.laborRate ?? 0;
-  const laborCost = laborHours * laborRate;
+  // Labor is entered either as a flat "service cost" (the form) or hours × rate.
+  const laborCost = d.serviceCost != null ? d.serviceCost : laborHours * laborRate;
   const completedAt = d.completedAt
     ? new Date(d.completedAt)
     : d.status === "COMPLETED"
@@ -64,6 +71,11 @@ export async function POST(req: Request) {
       cost: materialCost + laborCost,
       performedBy: d.performedBy || null,
       vendor: d.vendor || null,
+      vin: d.vin || null,
+      odometerAt: d.odometerAt ?? null,
+      poNumber: d.poNumber || null,
+      invoiceNumber: d.invoiceNumber || null,
+      invoiceUrl: d.invoiceUrl || null,
       scheduledFor: d.scheduledFor ? new Date(d.scheduledFor) : null,
       completedAt,
     },

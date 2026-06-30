@@ -11,7 +11,7 @@ export default async function LogServicePage() {
     <div>
       <PageHeader
         title="Log Service"
-        subtitle="Record a service performed on a vehicle — material cost and labor (hours × rate)."
+        subtitle="Record a maintenance / repair service order — material + service cost per vehicle."
       />
       <LogServiceClient canManage={manage} performerName={user?.name ?? ""} />
     </div>

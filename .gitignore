@@ -44,3 +44,6 @@ next-env.d.ts
 # prisma / sqlite
 /prisma/*.db
 /prisma/*.db-journal
+
+# user uploads (invoice pictures)
+/public/uploads
