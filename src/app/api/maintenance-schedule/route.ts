@@ -133,12 +133,16 @@ export async function GET(req: NextRequest) {
     woByVehicle[wo.vehicleId].push(wo);
   }
 
-  // Get all dismissals
-  const dismissals = await prisma.pmAlertDismissal.findMany();
+  // Get all dismissals (gracefully handle if table doesn't exist yet)
   const dismissalMap: Record<string, Record<string, { action: string; note: string | null }>> = {};
-  for (const d of dismissals) {
-    if (!dismissalMap[d.vehicleId]) dismissalMap[d.vehicleId] = {};
-    dismissalMap[d.vehicleId][d.service] = { action: d.action, note: d.note };
+  try {
+    const dismissals = await prisma.pmAlertDismissal.findMany();
+    for (const d of dismissals) {
+      if (!dismissalMap[d.vehicleId]) dismissalMap[d.vehicleId] = {};
+      dismissalMap[d.vehicleId][d.service] = { action: d.action, note: d.note };
+    }
+  } catch {
+    // Table may not exist yet — continue without dismissals
   }
 
   const now = new Date();
