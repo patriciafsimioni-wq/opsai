@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FleetOps — Fleet Management Platform
 
-## Getting Started
+A complete, production-grade fleet management web application: live GPS tracking,
+maintenance & work orders, drivers, trips/dispatch, fuel, geofencing, alerts, and
+analytics — all in one place.
 
-First, run the development server:
+![Stack](https://img.shields.io/badge/Next.js-16-black) ![TS](https://img.shields.io/badge/TypeScript-5-blue) ![Prisma](https://img.shields.io/badge/Prisma-6-2D3748)
+
+## Features
+
+- **Dashboard** — live KPIs, fleet status, trips, fuel spend, top drivers, upcoming maintenance.
+- **Live Map** — real-time vehicle positions with a built-in GPS/telemetry simulator, geofence overlays, heading/speed, and a searchable vehicle list. Powered by MapLibre + OpenStreetMap (no API key required).
+- **Vehicles** — full CRUD, status, fuel level, odometer, compliance docs, per-vehicle detail with maintenance/fuel/trip history.
+- **Drivers** — full CRUD, license tracking, safety scores, ratings, assignments, per-driver detail.
+- **Trips & Dispatch** — schedule trips, assign vehicles/drivers, update status, track distance.
+- **Maintenance** — work orders with type/priority/status/cost, service scheduling, overdue tracking.
+- **Fuel** — fuel logs with cost analytics (spend, volume, avg price).
+- **Geofencing** — depot/customer/service/restricted zones drawn on the live map.
+- **Alerts** — speeding, geofence, low-fuel, maintenance-due, document-expiry notifications with read/resolve.
+- **Reports & Analytics** — cost trends, fleet composition, top-cost vehicles, CSV export.
+- **Auth & RBAC** — session auth (JWT cookie) with three roles: **Admin**, **Manager** (full management), **Driver** (read-only).
+
+## Tech Stack
+
+| Layer | Choice |
+| --- | --- |
+| Framework | Next.js 16 (App Router) + React 19 |
+| Language | TypeScript |
+| Styling | Tailwind CSS v4 |
+| ORM / DB | Prisma 6 · SQLite (dev) — Postgres-ready |
+| Auth | JWT session cookie (`jose`) + `bcryptjs` |
+| Maps | MapLibre GL + OpenStreetMap |
+| Charts | Recharts |
+| Icons | lucide-react |
+
+## Quick Start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env        # adjust AUTH_SECRET for production
+npm run setup               # prisma generate + db push + seed demo data
+npm run dev                 # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Demo accounts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Role | Email | Password |
+| --- | --- | --- |
+| Admin | `admin@fleetops.com` | `admin123` |
+| Manager | `manager@fleetops.com` | `manager123` |
+| Driver | `driver@fleetops.com` | `driver123` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Scripts
 
-## Learn More
+| Script | Description |
+| --- | --- |
+| `npm run dev` | Start dev server |
+| `npm run build` / `npm start` | Production build / serve |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run setup` | Generate client, push schema, seed |
+| `npm run db:seed` | Re-seed demo data |
+| `npm run db:reset` | Reset DB and re-seed |
 
-To learn more about Next.js, take a look at the following resources:
+## Going to Production
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. In `prisma/schema.prisma`, set `datasource.provider = "postgresql"`.
+2. Point `DATABASE_URL` at your Postgres instance and run `npx prisma migrate deploy`.
+3. Set a strong `AUTH_SECRET` (`openssl rand -hex 32`).
+4. Replace the GPS simulator (`/api/simulate`) with your real telematics ingestion.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Architecture
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+  app/
+    (dashboard)/        # authenticated app shell + pages
+    api/                # route handlers (REST) for every resource
+    login/              # public login
+    middleware.ts       # auth gate
+  components/            # UI primitives, charts, map, feature clients
+  lib/                  # db, auth, api helpers, utils, constants, types
+prisma/
+  schema.prisma         # data model
+  seed.ts               # realistic demo data
+```
