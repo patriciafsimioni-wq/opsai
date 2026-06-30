@@ -1,0 +1,276 @@
+// Fleet Management — Prisma schema
+// SQLite for zero-config dev; swap `provider` to "postgresql" for production.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  DRIVER
+}
+
+enum VehicleType {
+  TRUCK
+  VAN
+  CAR
+  BUS
+  PICKUP
+  TRAILER
+}
+
+enum VehicleStatus {
+  ACTIVE
+  IDLE
+  MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+enum FuelType {
+  DIESEL
+  GASOLINE
+  ELECTRIC
+  HYBRID
+  CNG
+}
+
+enum DriverStatus {
+  ACTIVE
+  ON_TRIP
+  OFF_DUTY
+  INACTIVE
+}
+
+enum TripStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum MaintenanceType {
+  SCHEDULED_SERVICE
+  REPAIR
+  INSPECTION
+  TIRE
+  OIL_CHANGE
+  RECALL
+}
+
+enum WorkOrderStatus {
+  OPEN
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum GeofenceType {
+  DEPOT
+  CUSTOMER
+  SERVICE
+  RESTRICTED
+}
+
+enum AlertType {
+  SPEEDING
+  GEOFENCE_ENTER
+  GEOFENCE_EXIT
+  MAINTENANCE_DUE
+  DOCUMENT_EXPIRY
+  LOW_FUEL
+  IDLE
+  HARSH_DRIVING
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(MANAGER)
+  driver       Driver?  @relation(fields: [driverId], references: [id])
+  driverId     String?  @unique
+  createdAt    DateTime @default(now())
+}
+
+model Driver {
+  id            String       @id @default(cuid())
+  firstName     String
+  lastName      String
+  email         String       @unique
+  phone         String?
+  licenseNumber String
+  licenseClass  String?
+  licenseExpiry DateTime
+  status        DriverStatus @default(ACTIVE)
+  hireDate      DateTime     @default(now())
+  rating        Float        @default(4.5)
+  safetyScore   Int          @default(85)
+  avatarColor   String       @default("#2563eb")
+  user          User?
+  vehicles      Vehicle[]
+  trips         Trip[]
+  fuelLogs      FuelLog[]
+  alerts        Alert[]
+  createdAt     DateTime     @default(now())
+}
+
+model Vehicle {
+  id                 String         @id @default(cuid())
+  name               String
+  make               String
+  model              String
+  year               Int
+  vin                String         @unique
+  licensePlate       String
+  type               VehicleType    @default(TRUCK)
+  status             VehicleStatus  @default(ACTIVE)
+  fuelType           FuelType       @default(DIESEL)
+  odometer           Float          @default(0)
+  fuelLevel          Float          @default(100)
+  tankCapacity       Float          @default(200)
+  registrationExpiry DateTime?
+  insuranceExpiry    DateTime?
+  purchaseDate       DateTime?
+  purchasePrice      Float?
+  // live telemetry
+  lat                Float?
+  lng                Float?
+  heading            Float          @default(0)
+  speed              Float          @default(0)
+  engineOn           Boolean        @default(false)
+  lastSeen           DateTime?
+  assignedDriver     Driver?        @relation(fields: [assignedDriverId], references: [id])
+  assignedDriverId   String?
+  trips              Trip[]
+  maintenance        WorkOrder[]
+  schedules          MaintenanceSchedule[]
+  fuelLogs           FuelLog[]
+  alerts             Alert[]
+  telemetry          TelemetryLog[]
+  createdAt          DateTime       @default(now())
+}
+
+model Trip {
+  id            String     @id @default(cuid())
+  vehicle       Vehicle    @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId     String
+  driver        Driver?    @relation(fields: [driverId], references: [id])
+  driverId      String?
+  origin        String
+  destination   String
+  originLat     Float?
+  originLng     Float?
+  destLat       Float?
+  destLng       Float?
+  status        TripStatus @default(SCHEDULED)
+  scheduledStart DateTime
+  startedAt     DateTime?
+  endedAt       DateTime?
+  distanceKm    Float      @default(0)
+  cargo         String?
+  notes         String?
+  createdAt     DateTime   @default(now())
+}
+
+model WorkOrder {
+  id          String          @id @default(cuid())
+  vehicle     Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId   String
+  type        MaintenanceType @default(SCHEDULED_SERVICE)
+  title       String
+  description String?
+  status      WorkOrderStatus @default(OPEN)
+  priority    Priority        @default(MEDIUM)
+  cost        Float           @default(0)
+  odometerAt  Float?
+  vendor      String?
+  scheduledFor DateTime?
+  completedAt DateTime?
+  createdAt   DateTime        @default(now())
+}
+
+model MaintenanceSchedule {
+  id               String   @id @default(cuid())
+  vehicle          Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId        String
+  taskName         String
+  intervalKm       Float?
+  intervalDays     Int?
+  lastServiceOdo   Float?
+  lastServiceDate  DateTime?
+  nextDueOdo       Float?
+  nextDueDate      DateTime?
+  createdAt        DateTime @default(now())
+}
+
+model FuelLog {
+  id            String   @id @default(cuid())
+  vehicle       Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId     String
+  driver        Driver?  @relation(fields: [driverId], references: [id])
+  driverId      String?
+  date          DateTime @default(now())
+  liters        Float
+  pricePerLiter Float
+  totalCost     Float
+  odometer      Float?
+  location      String?
+  createdAt     DateTime @default(now())
+}
+
+model Geofence {
+  id        String       @id @default(cuid())
+  name      String
+  type      GeofenceType @default(DEPOT)
+  centerLat Float
+  centerLng Float
+  radiusM   Float        @default(500)
+  color     String       @default("#2563eb")
+  createdAt DateTime     @default(now())
+}
+
+model Alert {
+  id         String        @id @default(cuid())
+  type       AlertType
+  severity   AlertSeverity @default(WARNING)
+  message    String
+  vehicle    Vehicle?      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId  String?
+  driver     Driver?       @relation(fields: [driverId], references: [id])
+  driverId   String?
+  read       Boolean       @default(false)
+  resolvedAt DateTime?
+  createdAt  DateTime      @default(now())
+}
+
+model TelemetryLog {
+  id        String   @id @default(cuid())
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId String
+  lat       Float
+  lng       Float
+  speed     Float
+  heading   Float
+  createdAt DateTime @default(now())
+}
