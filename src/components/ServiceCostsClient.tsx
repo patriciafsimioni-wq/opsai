@@ -119,6 +119,49 @@ export function ServiceCostsClient() {
     [byStation],
   );
 
+  // Preventive matrix: rows = preventive services, columns = stations, for the selected month.
+  const prevOrders = useMemo(
+    () =>
+      completed.filter(
+        (o) =>
+          (o.service?.category ?? "CORRECTIVE") === "PREVENTIVE" &&
+          (!monthFilter || monthKey(new Date(o.completedAt!)) === monthFilter),
+      ),
+    [completed, monthFilter],
+  );
+
+  const prevMatrix = useMemo(() => {
+    const map = new Map<string, { name: string; perStation: Record<string, number>; total: number }>();
+    for (const o of prevOrders) {
+      const name = o.service?.name ?? o.title;
+      const cur =
+        map.get(name) ??
+        { name, perStation: Object.fromEntries(STATIONS.map((s) => [s, 0])) as Record<string, number>, total: 0 };
+      cur.perStation[o.station] += o.cost;
+      cur.total += o.cost;
+      map.set(name, cur);
+    }
+    return Array.from(map.values()).sort((a, b) => b.total - a.total);
+  }, [prevOrders]);
+
+  const prevStationTotals = useMemo(() => {
+    const totals = Object.fromEntries(STATIONS.map((s) => [s, 0])) as Record<string, number>;
+    for (const o of prevOrders) totals[o.station] += o.cost;
+    return totals;
+  }, [prevOrders]);
+
+  const prevGrand = useMemo(() => prevOrders.reduce((s, o) => s + o.cost, 0), [prevOrders]);
+
+  const prevMatrixCsv = useMemo(
+    () =>
+      prevMatrix.map((r) => ({
+        Service: r.name,
+        ...Object.fromEntries(STATIONS.map((s) => [s, Math.round(r.perStation[s])])),
+        Total: Math.round(r.total),
+      })),
+    [prevMatrix],
+  );
+
   // CSV: one row per service × station × month
   const csvRows = useMemo(() => {
     const map = new Map<string, { Month: string; Station: string; Service: string; Category: string; Count: number; Material: number; Labor: number; Total: number }>();
@@ -221,6 +264,57 @@ export function ServiceCostsClient() {
           </div>
         </Card>
       </div>
+
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] p-4">
+          <div>
+            <h3 className="text-sm font-semibold">Preventive Maintenance — Cost per Station</h3>
+            <p className="text-xs text-slate-400">
+              {monthFilter ? monthLabel(monthFilter) : "All months"} · each preventive service across the 7 stations
+            </p>
+          </div>
+          <ExportButton rows={prevMatrixCsv} filename="preventive-cost-by-station.csv" label="Export matrix" />
+        </div>
+        {loading ? (
+          <p className="p-8 text-center text-sm text-slate-400">Loading…</p>
+        ) : prevMatrix.length === 0 ? (
+          <EmptyState title="No preventive services for this selection" />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Service</Th>
+                  {STATIONS.map((s) => (
+                    <Th key={s}>{s}</Th>
+                  ))}
+                  <Th>Total</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {prevMatrix.map((r) => (
+                  <tr key={r.name} className="hover:bg-slate-50">
+                    <Td className="font-medium whitespace-nowrap">{r.name}</Td>
+                    {STATIONS.map((s) => (
+                      <Td key={s} className="text-slate-600">
+                        {r.perStation[s] ? formatCurrency(r.perStation[s]) : "—"}
+                      </Td>
+                    ))}
+                    <Td className="font-semibold">{formatCurrency(r.total)}</Td>
+                  </tr>
+                ))}
+                <tr className="border-t-2 border-[var(--color-border)] bg-slate-50 font-semibold">
+                  <Td>Total</Td>
+                  {STATIONS.map((s) => (
+                    <Td key={s}>{prevStationTotals[s] ? formatCurrency(prevStationTotals[s]) : "—"}</Td>
+                  ))}
+                  <Td>{formatCurrency(prevGrand)}</Td>
+                </tr>
+              </tbody>
+            </Table>
+          </div>
+        )}
+      </Card>
 
       <Card>
         <CardHeader title="Cost by Station" subtitle="Material + labor per station" />
