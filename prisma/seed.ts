@@ -363,8 +363,30 @@ async function main() {
     });
   }
 
-  // ----- work orders + schedules -----
-  // Map a service group to a MaintenanceType for the legacy filter.
+  // ----- work orders from real service history -----
+  type SvcRow = {
+    dxNumber: string;
+    vin: string | null;
+    serviceType: string | null;
+    odometer: number;
+    provider: string | null;
+    date: string | null;
+    invoiceNumber: string | null;
+    materialCost: number;
+    serviceCost: number;
+    totalCost: number;
+    description: string | null;
+    station: string | null;
+    poNumber: string | null;
+    category: string | null;
+    subcategory: string | null;
+  };
+  const svcHistory: SvcRow[] = JSON.parse(
+    readFileSync(join(__dirname, "services-history.json"), "utf-8"),
+  );
+  const vehicleByDx = new Map(vehicles.map((v) => [v.dxNumber, v]));
+  const serviceByName = new Map(services.map((s) => [s.name, s]));
+
   function typeForService(s: (typeof services)[number]): "SCHEDULED_SERVICE" | "REPAIR" | "INSPECTION" | "TIRE" | "OIL_CHANGE" | "RECALL" {
     const n = s.name.toLowerCase();
     if (n.includes("tire")) return "TIRE";
@@ -373,77 +395,69 @@ async function main() {
     if (s.category === "PREVENTIVE") return "SCHEDULED_SERVICE";
     return "REPAIR";
   }
-  const vendors = ["FleetCare Service", "Lone Star Diesel", "QuickLube Pro", "In-house Shop", "Gulf Coast Truck"];
-  const techNames = ["Miguel Torres", "Sam Patel", "Jordan Lee", "Chris Nguyen", "Andre Bell"];
-  const LABOR_RATE = 95;
-  // Spread completed work orders across the last 6 months for per-month/per-station reporting.
+
+  let woImported = 0;
+  for (const row of svcHistory) {
+    const vehicle = vehicleByDx.get(row.dxNumber);
+    if (!vehicle) continue;
+    const svc = row.subcategory ? serviceByName.get(row.subcategory) : null;
+    const stationKey = row.station ?? vehicle.station;
+    const validStations = ["IAH", "AUS", "HRL", "LRD", "CLL", "BPT", "ACT"];
+    const station = validStations.includes(stationKey) ? stationKey : vehicle.station;
+    const completedAt = row.date ? new Date(row.date) : new Date();
+
+    await prisma.workOrder.create({
+      data: {
+        vehicleId: vehicle.id,
+        serviceId: svc?.id ?? null,
+        station: station as StationCode,
+        type: svc ? typeForService(svc) : "OIL_CHANGE",
+        title: row.subcategory ?? row.serviceType ?? "Service",
+        description: row.description ?? null,
+        status: "COMPLETED",
+        priority: "MEDIUM",
+        materialCost: row.materialCost,
+        laborHours: 0,
+        laborRate: 0,
+        laborCost: row.serviceCost,
+        cost: row.totalCost,
+        performedBy: null,
+        odometerAt: row.odometer,
+        vendor: row.provider,
+        vin: row.vin ?? vehicle.vin,
+        poNumber: row.poNumber,
+        invoiceNumber: row.invoiceNumber,
+        completedAt,
+        createdAt: completedAt,
+      },
+    });
+    woImported++;
+  }
+
+  // Add a few currently-open/scheduled work orders for the maintenance board
+  for (const v of vehicles.slice(0, 40)) {
+    const s = pick(services);
+    const status = pick(["OPEN", "SCHEDULED", "IN_PROGRESS"]) as "OPEN" | "SCHEDULED" | "IN_PROGRESS";
+    await prisma.workOrder.create({
+      data: {
+        vehicleId: v.id,
+        serviceId: s.id,
+        station: v.station,
+        type: typeForService(s),
+        title: s.name,
+        description: `${s.category === "PREVENTIVE" ? "Preventive" : "Corrective"} — ${s.group}`,
+        status,
+        priority: pick(["LOW", "MEDIUM", "HIGH"]),
+        materialCost: Math.round(s.materialCost * rand(0.8, 1.25)),
+        odometerAt: v.odometer,
+        vendor: "Take5",
+        scheduledFor: daysFromNow(randInt(1, 30)),
+      },
+    });
+  }
+
+  // Recurring maintenance schedules
   for (const v of vehicles) {
-    for (let monthsAgo = 0; monthsAgo < 6; monthsAgo++) {
-      const count = randInt(0, 3);
-      for (let j = 0; j < count; j++) {
-        const s = pick(services);
-        const material = Math.round(s.materialCost * rand(0.8, 1.25));
-        const laborRate = LABOR_RATE;
-        const labor = Math.round(s.laborCost * rand(0.85, 1.2));
-        const laborHours = Math.round((labor / laborRate) * 10) / 10;
-        const day = new Date();
-        day.setMonth(day.getMonth() - monthsAgo);
-        day.setDate(randInt(1, 28));
-        await prisma.workOrder.create({
-          data: {
-            vehicleId: v.id,
-            serviceId: s.id,
-            station: v.station,
-            type: typeForService(s),
-            title: s.name,
-            description: `${s.category === "PREVENTIVE" ? "Preventive" : "Corrective"} — ${s.group}`,
-            status: "COMPLETED",
-            priority: pick(["LOW", "MEDIUM", "MEDIUM", "HIGH"]),
-            materialCost: material,
-            laborHours,
-            laborRate,
-            laborCost: laborHours * laborRate,
-            cost: material + laborHours * laborRate,
-            performedBy: pick(techNames),
-            odometerAt: v.odometer - randInt(0, 5000),
-            vendor: pick(vendors),
-            completedAt: day,
-            createdAt: day,
-          },
-        });
-      }
-    }
-    // a few currently-open / scheduled work orders for the maintenance board
-    const openCount = randInt(0, 2);
-    for (let j = 0; j < openCount; j++) {
-      const s = pick(services);
-      const material = Math.round(s.materialCost * rand(0.8, 1.25));
-      const laborRate = LABOR_RATE;
-      const labor = Math.round(s.laborCost * rand(0.85, 1.2));
-      const laborHours = Math.round((labor / laborRate) * 10) / 10;
-      const status = pick(["OPEN", "SCHEDULED", "IN_PROGRESS"]) as "OPEN" | "SCHEDULED" | "IN_PROGRESS";
-      await prisma.workOrder.create({
-        data: {
-          vehicleId: v.id,
-          serviceId: s.id,
-          station: v.station,
-          type: typeForService(s),
-          title: s.name,
-          description: `${s.category === "PREVENTIVE" ? "Preventive" : "Corrective"} — ${s.group}`,
-          status,
-          priority: pick(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
-          materialCost: material,
-          laborHours,
-          laborRate,
-          laborCost: laborHours * laborRate,
-          cost: material + laborHours * laborRate,
-          odometerAt: v.odometer - randInt(0, 5000),
-          vendor: pick(vendors),
-          scheduledFor: daysFromNow(randInt(1, 30)),
-        },
-      });
-    }
-    // a couple of recurring schedules
     await prisma.maintenanceSchedule.create({
       data: {
         vehicleId: v.id,
@@ -457,6 +471,8 @@ async function main() {
       },
     });
   }
+
+  console.log(`  Imported ${woImported} real service history work orders`);
 
   // ----- fuel logs -----
   for (const v of vehicles) {
