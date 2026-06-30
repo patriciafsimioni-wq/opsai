@@ -206,6 +206,7 @@ model Vehicle {
   alerts             Alert[]
   telemetry          TelemetryLog[]
   woRequests         WorkOrderRequest[]
+  pmDismissals       PmAlertDismissal[]
   createdAt          DateTime       @default(now())
 }
 
@@ -374,6 +375,21 @@ model FareyeRoute {
 
   @@index([date])
   @@index([station])
+}
+
+model PmAlertDismissal {
+  id        String   @id @default(cuid())
+  vehicleId String
+  service   String
+  action    String   @default("done") // "done" or "skip"
+  note      String?
+  mileageAt Float?
+  createdAt DateTime @default(now())
+
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@unique([vehicleId, service])
+  @@index([vehicleId])
 }
 
 model WorkOrderRequest {

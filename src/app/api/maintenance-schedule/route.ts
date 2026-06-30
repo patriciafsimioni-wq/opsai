@@ -57,7 +57,9 @@ type ServiceStatus = {
   lastPerformedDate: string | null;
   nextDue: number;
   milesUntil: number;
-  status: "overdue" | "upcoming" | "on_track" | "never_performed";
+  status: "overdue" | "upcoming" | "on_track" | "never_performed" | "dismissed";
+  dismissedAction: string | null;
+  dismissedNote: string | null;
 };
 
 type TimeServiceStatus = {
@@ -66,7 +68,9 @@ type TimeServiceStatus = {
   lastPerformedDate: string | null;
   nextDueDate: string | null;
   daysUntil: number | null;
-  status: "overdue" | "upcoming" | "on_track" | "never_performed";
+  status: "overdue" | "upcoming" | "on_track" | "never_performed" | "dismissed";
+  dismissedAction: string | null;
+  dismissedNote: string | null;
 };
 
 type VehicleSchedule = {
@@ -83,6 +87,7 @@ type VehicleSchedule = {
   overdueCount: number;
   upcomingCount: number;
   neverPerformedCount: number;
+  dismissedCount: number;
   alertCount: number;
   nextService: ServiceStatus | null;
   mileageServices: ServiceStatus[];
@@ -128,6 +133,14 @@ export async function GET(req: NextRequest) {
     woByVehicle[wo.vehicleId].push(wo);
   }
 
+  // Get all dismissals
+  const dismissals = await prisma.pmAlertDismissal.findMany();
+  const dismissalMap: Record<string, Record<string, { action: string; note: string | null }>> = {};
+  for (const d of dismissals) {
+    if (!dismissalMap[d.vehicleId]) dismissalMap[d.vehicleId] = {};
+    dismissalMap[d.vehicleId][d.service] = { action: d.action, note: d.note };
+  }
+
   const now = new Date();
 
   const schedules: VehicleSchedule[] = vehicles
@@ -146,9 +159,12 @@ export async function GET(req: NextRequest) {
         }
       }
 
+      const vehicleDismissals = dismissalMap[v.id] ?? {};
+
       // Compute status for each mileage-based service
       const mileageServices: ServiceStatus[] = SERVICE_INTERVALS.map(([interval, service, firstDue]) => {
         const last = lastPerformed[service];
+        const dismissed = vehicleDismissals[service];
 
         let nextDue: number;
         let lastPerformedAt: number | null = null;
@@ -156,19 +172,18 @@ export async function GET(req: NextRequest) {
         let status: ServiceStatus["status"];
 
         if (last) {
-          // Service was performed before: next due = last performed mileage + interval
           lastPerformedAt = Math.round(last.odometerAt);
           lastPerformedDate = last.completedAt.toISOString().slice(0, 10);
           nextDue = lastPerformedAt + interval;
         } else {
-          // Never performed: next due = first occurrence in schedule
           nextDue = firstDue;
         }
 
         const milesUntil = Math.round(nextDue - odo);
 
-        if (!last && odo >= firstDue) {
-          // Should have had this service by now but never did
+        if (dismissed) {
+          status = "dismissed";
+        } else if (!last && odo >= firstDue) {
           status = "never_performed";
         } else if (milesUntil < 0) {
           status = "overdue";
@@ -187,6 +202,8 @@ export async function GET(req: NextRequest) {
           nextDue: Math.round(nextDue),
           milesUntil,
           status,
+          dismissedAction: dismissed?.action ?? null,
+          dismissedNote: dismissed?.note ?? null,
         };
       });
 
@@ -194,6 +211,7 @@ export async function GET(req: NextRequest) {
       const onboarded = v.onboardedDate ? new Date(v.onboardedDate) : null;
       const timeServices: TimeServiceStatus[] = TIME_SCHEDULE.map(([intervalMonths, service]) => {
         const lastWiper = lastPerformed[service];
+        const dismissed = vehicleDismissals[service];
 
         let lastPerformedDate: string | null = null;
         let nextDueDate: string | null = null;
@@ -206,37 +224,35 @@ export async function GET(req: NextRequest) {
           nextDue.setMonth(nextDue.getMonth() + intervalMonths);
           nextDueDate = nextDue.toISOString().slice(0, 10);
           daysUntil = Math.round((nextDue.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          status = daysUntil < 0 ? "overdue" : daysUntil <= 30 ? "upcoming" : "on_track";
+          status = dismissed ? "dismissed" : daysUntil < 0 ? "overdue" : daysUntil <= 30 ? "upcoming" : "on_track";
         } else if (onboarded) {
-          // Never performed — check if overdue based on onboarded date
           const monthsSinceOnboard = (now.getFullYear() - onboarded.getFullYear()) * 12 + (now.getMonth() - onboarded.getMonth());
           if (monthsSinceOnboard >= intervalMonths) {
-            // Should have been done by now
             const shouldHaveDone = new Date(onboarded);
             shouldHaveDone.setMonth(shouldHaveDone.getMonth() + intervalMonths);
             nextDueDate = shouldHaveDone.toISOString().slice(0, 10);
             daysUntil = Math.round((shouldHaveDone.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-            status = "never_performed";
+            status = dismissed ? "dismissed" : "never_performed";
           } else {
             const nextDue = new Date(onboarded);
             nextDue.setMonth(nextDue.getMonth() + intervalMonths);
             nextDueDate = nextDue.toISOString().slice(0, 10);
             daysUntil = Math.round((nextDue.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-            status = daysUntil <= 30 ? "upcoming" : "on_track";
+            status = dismissed ? "dismissed" : daysUntil <= 30 ? "upcoming" : "on_track";
           }
         } else {
-          status = "on_track";
+          status = dismissed ? "dismissed" : "on_track";
         }
 
-        return { service, intervalMonths, lastPerformedDate, nextDueDate, daysUntil, status };
+        return { service, intervalMonths, lastPerformedDate, nextDueDate, daysUntil, status, dismissedAction: dismissed?.action ?? null, dismissedNote: dismissed?.note ?? null };
       });
 
       const overdueCount = mileageServices.filter((s) => s.status === "overdue").length + timeServices.filter((s) => s.status === "overdue").length;
       const upcomingCount = mileageServices.filter((s) => s.status === "upcoming").length + timeServices.filter((s) => s.status === "upcoming").length;
       const neverPerformedCount = mileageServices.filter((s) => s.status === "never_performed").length + timeServices.filter((s) => s.status === "never_performed").length;
+      const dismissedCount = mileageServices.filter((s) => s.status === "dismissed").length + timeServices.filter((s) => s.status === "dismissed").length;
       const alertCount = overdueCount + neverPerformedCount;
 
-      // Next service = first overdue or never_performed, then first upcoming
       const nextService =
         mileageServices.find((s) => s.status === "never_performed") ??
         mileageServices.find((s) => s.status === "overdue") ??
@@ -257,6 +273,7 @@ export async function GET(req: NextRequest) {
         overdueCount,
         upcomingCount,
         neverPerformedCount,
+        dismissedCount,
         alertCount,
         nextService,
         mileageServices,

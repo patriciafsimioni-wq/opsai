@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useData } from "@/lib/use-data";
-import { AlertTriangle } from "lucide-react";
+import { useData, apiSend } from "@/lib/use-data";
+import { AlertTriangle, Check, SkipForward, Undo2 } from "lucide-react";
 
 const STATIONS = ["ALL", "IAH", "AUS", "HRL", "LRD", "ACT", "CLL", "BPT"];
 
@@ -14,7 +14,9 @@ type ServiceStatus = {
   lastPerformedDate: string | null;
   nextDue: number;
   milesUntil: number;
-  status: "overdue" | "upcoming" | "on_track" | "never_performed";
+  status: "overdue" | "upcoming" | "on_track" | "never_performed" | "dismissed";
+  dismissedAction: string | null;
+  dismissedNote: string | null;
 };
 
 type TimeServiceStatus = {
@@ -23,7 +25,9 @@ type TimeServiceStatus = {
   lastPerformedDate: string | null;
   nextDueDate: string | null;
   daysUntil: number | null;
-  status: "overdue" | "upcoming" | "on_track" | "never_performed";
+  status: "overdue" | "upcoming" | "on_track" | "never_performed" | "dismissed";
+  dismissedAction: string | null;
+  dismissedNote: string | null;
 };
 
 type VehicleSchedule = {
@@ -40,6 +44,7 @@ type VehicleSchedule = {
   overdueCount: number;
   upcomingCount: number;
   neverPerformedCount: number;
+  dismissedCount: number;
   alertCount: number;
   nextService: ServiceStatus | null;
   mileageServices: ServiceStatus[];
@@ -64,6 +69,7 @@ const STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> 
   overdue: { bg: "bg-orange-100", text: "text-orange-700", label: "Overdue" },
   upcoming: { bg: "bg-amber-100", text: "text-amber-700", label: "Upcoming" },
   on_track: { bg: "bg-green-100", text: "text-green-700", label: "On Track" },
+  dismissed: { bg: "bg-slate-100", text: "text-slate-500", label: "Dismissed" },
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -75,7 +81,12 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function VehicleDetail({ vehicle, onClose }: { vehicle: VehicleSchedule; onClose: () => void }) {
+function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss }: {
+  vehicle: VehicleSchedule;
+  onClose: () => void;
+  onDismiss: (vehicleId: string, service: string, action: "done" | "skip") => void;
+  onUndismiss: (vehicleId: string, service: string) => void;
+}) {
   const [showAll, setShowAll] = useState(false);
   const services = showAll
     ? vehicle.mileageServices
@@ -111,6 +122,11 @@ function VehicleDetail({ vehicle, onClose }: { vehicle: VehicleSchedule; onClose
               {vehicle.upcomingCount} Upcoming
             </span>
           )}
+          {vehicle.dismissedCount > 0 && (
+            <span className="rounded-lg bg-slate-100 px-3 py-1 text-sm font-medium text-slate-500">
+              {vehicle.dismissedCount} Dismissed
+            </span>
+          )}
         </div>
 
         {/* Time-based services */}
@@ -124,10 +140,21 @@ function VehicleDetail({ vehicle, onClose }: { vehicle: VehicleSchedule; onClose
                   <span className="text-sm font-medium text-slate-800">{ts.service}</span>
                   <span className="text-xs text-slate-400">Every {ts.intervalMonths} months</span>
                 </div>
-                <div className="text-right text-xs text-slate-500">
-                  {ts.lastPerformedDate && <span className="mr-3">Last: {ts.lastPerformedDate}</span>}
-                  {ts.nextDueDate ? `Due: ${ts.nextDueDate}` : "—"}
-                  {ts.daysUntil !== null && ` (${ts.daysUntil > 0 ? `in ${ts.daysUntil}d` : `${Math.abs(ts.daysUntil)}d ago`})`}
+                <div className="flex items-center gap-2">
+                  <span className="text-right text-xs text-slate-500">
+                    {ts.lastPerformedDate && <span className="mr-3">Last: {ts.lastPerformedDate}</span>}
+                    {ts.nextDueDate ? `Due: ${ts.nextDueDate}` : "—"}
+                    {ts.daysUntil !== null && ` (${ts.daysUntil > 0 ? `in ${ts.daysUntil}d` : `${Math.abs(ts.daysUntil)}d ago`})`}
+                  </span>
+                  {(ts.status === "never_performed" || ts.status === "overdue") && (
+                    <div className="flex gap-1">
+                      <button onClick={() => onDismiss(vehicle.id, ts.service, "done")} className="rounded px-2 py-1 text-[10px] font-medium text-green-700 hover:bg-green-50" title="Mark as done"><Check size={12} /> Done</button>
+                      <button onClick={() => onDismiss(vehicle.id, ts.service, "skip")} className="rounded px-2 py-1 text-[10px] font-medium text-slate-500 hover:bg-slate-100" title="Skip"><SkipForward size={12} /> Skip</button>
+                    </div>
+                  )}
+                  {ts.status === "dismissed" && (
+                    <button onClick={() => onUndismiss(vehicle.id, ts.service)} className="flex items-center gap-1 rounded px-2 py-1 text-[10px] font-medium text-blue-600 hover:bg-blue-50" title="Undo dismiss"><Undo2 size={12} /> Undo</button>
+                  )}
                 </div>
               </div>
             ))}
@@ -157,13 +184,19 @@ function VehicleDetail({ vehicle, onClose }: { vehicle: VehicleSchedule; onClose
                   <th className="px-3 py-2 text-right">Last Done At</th>
                   <th className="px-3 py-2 text-right">Next Due At</th>
                   <th className="px-3 py-2 text-right">Miles Until</th>
+                  <th className="px-3 py-2 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {services.map((s, i) => (
-                  <tr key={`${s.service}-${s.nextDue}-${i}`} className={`border-b border-slate-100 hover:bg-slate-50 ${s.status === "never_performed" ? "bg-red-50/50" : ""}`}>
+                  <tr key={`${s.service}-${s.nextDue}-${i}`} className={`border-b border-slate-100 hover:bg-slate-50 ${s.status === "never_performed" ? "bg-red-50/50" : s.status === "dismissed" ? "opacity-50" : ""}`}>
                     <td className="px-3 py-2"><StatusBadge status={s.status} /></td>
-                    <td className="px-3 py-2 font-medium text-slate-700">{s.service}</td>
+                    <td className="px-3 py-2 font-medium text-slate-700">
+                      {s.service}
+                      {s.status === "dismissed" && s.dismissedAction && (
+                        <span className="ml-1 text-[10px] text-slate-400">({s.dismissedAction}{s.dismissedNote ? `: ${s.dismissedNote}` : ""})</span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right text-xs text-slate-400">Every {s.interval.toLocaleString()} mi</td>
                     <td className="px-3 py-2 text-right text-slate-600">
                       {s.lastPerformedAt != null ? (
@@ -176,14 +209,25 @@ function VehicleDetail({ vehicle, onClose }: { vehicle: VehicleSchedule; onClose
                       )}
                     </td>
                     <td className="px-3 py-2 text-right font-medium text-slate-700">{s.nextDue.toLocaleString()} mi</td>
-                    <td className={`px-3 py-2 text-right font-medium ${s.milesUntil < 0 ? "text-red-600" : s.milesUntil <= 2000 ? "text-amber-600" : "text-slate-500"}`}>
+                    <td className={`px-3 py-2 text-right font-medium ${s.status === "dismissed" ? "text-slate-400" : s.milesUntil < 0 ? "text-red-600" : s.milesUntil <= 2000 ? "text-amber-600" : "text-slate-500"}`}>
                       {s.milesUntil > 0 ? `${s.milesUntil.toLocaleString()} mi` : `${Math.abs(s.milesUntil).toLocaleString()} mi past`}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      {(s.status === "never_performed" || s.status === "overdue" || s.status === "upcoming") && (
+                        <div className="flex justify-end gap-1">
+                          <button onClick={() => onDismiss(vehicle.id, s.service, "done")} className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-green-700 hover:bg-green-50" title="Mark as done"><Check size={11} /></button>
+                          <button onClick={() => onDismiss(vehicle.id, s.service, "skip")} className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-slate-500 hover:bg-slate-100" title="Skip this service"><SkipForward size={11} /></button>
+                        </div>
+                      )}
+                      {s.status === "dismissed" && (
+                        <button onClick={() => onUndismiss(vehicle.id, s.service)} className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-blue-600 hover:bg-blue-50" title="Undo dismiss"><Undo2 size={11} /></button>
+                      )}
                     </td>
                   </tr>
                 ))}
                 {services.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-3 py-6 text-center text-slate-400">All services on track</td>
+                    <td colSpan={7} className="px-3 py-6 text-center text-slate-400">All services on track</td>
                   </tr>
                 )}
               </tbody>
@@ -197,9 +241,25 @@ function VehicleDetail({ vehicle, onClose }: { vehicle: VehicleSchedule; onClose
 
 export function MaintenanceScheduleClient() {
   const [station, setStation] = useState("ALL");
-  const { data, loading } = useData<ScheduleData>(`/api/maintenance-schedule?station=${station}`);
+  const { data, loading, reload } = useData<ScheduleData>(`/api/maintenance-schedule?station=${station}`);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleSchedule | null>(null);
   const [filter, setFilter] = useState<"all" | "alerts" | "overdue" | "upcoming" | "never_performed">("all");
+
+  async function handleDismiss(vehicleId: string, service: string, action: "done" | "skip") {
+    const res = await apiSend("/api/maintenance-schedule/dismiss", "POST", { vehicleId, service, action });
+    if (res.ok) {
+      reload();
+      setSelectedVehicle(null);
+    }
+  }
+
+  async function handleUndismiss(vehicleId: string, service: string) {
+    const res = await apiSend(`/api/maintenance-schedule/dismiss?vehicleId=${vehicleId}&service=${encodeURIComponent(service)}`, "DELETE");
+    if (res.ok) {
+      reload();
+      setSelectedVehicle(null);
+    }
+  }
 
   if (loading) return <div className="flex h-64 items-center justify-center text-slate-400">Loading schedule...</div>;
   if (!data) return null;
@@ -348,7 +408,12 @@ export function MaintenanceScheduleClient() {
       </div>
 
       {selectedVehicle && (
-        <VehicleDetail vehicle={selectedVehicle} onClose={() => setSelectedVehicle(null)} />
+        <VehicleDetail
+          vehicle={selectedVehicle}
+          onClose={() => setSelectedVehicle(null)}
+          onDismiss={handleDismiss}
+          onUndismiss={handleUndismiss}
+        />
       )}
     </div>
   );
