@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useData } from "@/lib/use-data";
+import { SlidePresentation } from "./SlidePresentation";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const STATION_ORDER = ["ALL", "IAH", "AUS", "HRL", "LRD", "ACT", "CLL", "BPT"];
@@ -392,6 +393,7 @@ export function FinanceReportClient() {
   const [activeStation, setActiveStation] = useState("ALL");
   const [chartStation, setChartStation] = useState("ALL");
   const [exporting, setExporting] = useState(false);
+  const [showSlides, setShowSlides] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
 
   const handleExportPDF = useCallback(async () => {
@@ -534,13 +536,21 @@ export function FinanceReportClient() {
           </div>
         )}
 
-        <button
-          onClick={handleExportPDF}
-          disabled={exporting}
-          className="ml-auto rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {exporting ? "Preparing..." : "Export PDF"}
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setShowSlides(true)}
+            className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+          >
+            Generate Slides
+          </button>
+          <button
+            onClick={handleExportPDF}
+            disabled={exporting}
+            className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {exporting ? "Preparing..." : "Export PDF"}
+          </button>
+        </div>
       </div>
 
       <div ref={reportRef}>
@@ -634,6 +644,15 @@ export function FinanceReportClient() {
         )}
       </div>
       </div>{/* close reportRef */}
+
+      {showSlides && (
+        <SlidePresentation
+          year={year}
+          month={month}
+          reportType={reportType}
+          onClose={() => setShowSlides(false)}
+        />
+      )}
     </div>
   );
 }
