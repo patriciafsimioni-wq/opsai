@@ -185,34 +185,42 @@ export async function GET(req: NextRequest) {
     include: { vehicle: { select: { station: true } } },
   });
 
-  const monthlyTotals: { month: number; actual: number; prevYear: number; budget: number }[] = [];
-  for (let m = 1; m <= 12; m++) {
-    let actual = 0;
-    let prev = 0;
-    let bud = 0;
+  // Build monthly totals per station (including ALL)
+  const monthlyByStation: Record<string, { month: number; actual: number; prevYear: number; budget: number }[]> = {};
+  for (const station of ["ALL", ...ALL_STATIONS]) {
+    const totals: { month: number; actual: number; prevYear: number; budget: number }[] = [];
+    for (let m = 1; m <= 12; m++) {
+      let actual = 0;
+      let prev = 0;
+      let bud = 0;
 
-    for (const wo of woFullYear) {
-      const woMonth = wo.completedAt ? new Date(wo.completedAt).getMonth() + 1 : 0;
-      if (woMonth === m) {
-        const cat = classify(wo.title);
-        if (cat) actual += wo.cost ?? 0;
+      for (const wo of woFullYear) {
+        const woMonth = wo.completedAt ? new Date(wo.completedAt).getMonth() + 1 : 0;
+        const woStation = wo.vehicle?.station ?? "IAH";
+        if (woMonth === m && (station === "ALL" || woStation === station)) {
+          const cat = classify(wo.title);
+          if (cat) actual += wo.cost ?? 0;
+        }
       }
-    }
 
-    for (const wo of woFullPrev) {
-      const woMonth = wo.completedAt ? new Date(wo.completedAt).getMonth() + 1 : 0;
-      if (woMonth === m) {
-        const cat = classify(wo.title);
-        if (cat) prev += wo.cost ?? 0;
+      for (const wo of woFullPrev) {
+        const woMonth = wo.completedAt ? new Date(wo.completedAt).getMonth() + 1 : 0;
+        const woStation = wo.vehicle?.station ?? "IAH";
+        if (woMonth === m && (station === "ALL" || woStation === station)) {
+          const cat = classify(wo.title);
+          if (cat) prev += wo.cost ?? 0;
+        }
       }
-    }
 
-    for (const b of budgets) {
-      if (b.month === m) bud += b.amount;
-    }
+      for (const b of budgets) {
+        if (b.month === m && (station === "ALL" || b.station === station)) bud += b.amount;
+      }
 
-    monthlyTotals.push({ month: m, actual: Math.round(actual), prevYear: Math.round(prev), budget: Math.round(bud) });
+      totals.push({ month: m, actual: Math.round(actual), prevYear: Math.round(prev), budget: Math.round(bud) });
+    }
+    monthlyByStation[station] = totals;
   }
+  const monthlyTotals = monthlyByStation["ALL"];
 
   // Build response with station breakdowns
   type CategoryRow = {
@@ -293,6 +301,7 @@ export async function GET(req: NextRequest) {
     prevYear,
     stations,
     monthlyTotals,
+    monthlyByStation,
     ...(weekStart && weekEnd ? { weekStart: weekStart.toISOString(), weekEnd: weekEnd.toISOString() } : {}),
   });
 }

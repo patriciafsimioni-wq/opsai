@@ -44,6 +44,7 @@ type ReportData = {
   prevYear: number;
   stations: Record<string, StationBlock>;
   monthlyTotals: MonthlyTotal[];
+  monthlyByStation: Record<string, MonthlyTotal[]>;
   weekStart?: string;
   weekEnd?: string;
 };
@@ -216,11 +217,11 @@ function BarChart({ data, year }: { data: MonthlyTotal[]; year: number }) {
     }
 
     const barGroupW = chartW / 12;
-    const barW = barGroupW * 0.22;
-    const gap = barGroupW * 0.04;
+    const barW = barGroupW * 0.25;
+    const gap = barGroupW * 0.05;
 
     data.forEach((d, i) => {
-      const x = pad.left + barGroupW * i + barGroupW * 0.15;
+      const x = pad.left + barGroupW * i + barGroupW * 0.1;
 
       // Prev year bar
       const h1 = (d.prevYear / maxVal) * chartH;
@@ -268,7 +269,7 @@ function BarChart({ data, year }: { data: MonthlyTotal[]; year: number }) {
     ctx.fillText(`${year} Actual vs Budget | PM Expenses Monthly`, w / 2, 12 + 10);
   }, [data, year, prevYear]);
 
-  return <canvas ref={canvasRef} className="h-[280px] w-full" />;
+  return <canvas ref={canvasRef} className="h-[340px] w-full" />;
 }
 
 function YtdChart({ data, year }: { data: MonthlyTotal[]; year: number }) {
@@ -323,11 +324,11 @@ function YtdChart({ data, year }: { data: MonthlyTotal[]; year: number }) {
     }
 
     const barGroupW = chartW / 12;
-    const barW = barGroupW * 0.22;
-    const gap2 = barGroupW * 0.04;
+    const barW = barGroupW * 0.25;
+    const gap2 = barGroupW * 0.05;
 
     data.forEach((_, i) => {
-      const x = pad.left + barGroupW * i + barGroupW * 0.15;
+      const x = pad.left + barGroupW * i + barGroupW * 0.1;
 
       const h1 = (cumPrev[i] / maxVal) * chartH;
       ctx.fillStyle = "#93c5fd";
@@ -369,7 +370,7 @@ function YtdChart({ data, year }: { data: MonthlyTotal[]; year: number }) {
     ctx.fillText(`${year} YTD Actual vs Budget | PM Expenses Cumulative`, w / 2, 12 + 10);
   }, [data, year, prevYear]);
 
-  return <canvas ref={canvasRef} className="h-[280px] w-full" />;
+  return <canvas ref={canvasRef} className="h-[340px] w-full" />;
 }
 
 function getMonday(d: Date): Date {
@@ -387,6 +388,7 @@ export function FinanceReportClient() {
   const weekParam = viewMode === "week" ? `&view=week&weekDate=${weekDate}` : "";
   const { data, loading } = useData<ReportData>(`/api/finance-report?year=${year}&month=${month}${weekParam}`);
   const [activeStation, setActiveStation] = useState("ALL");
+  const [chartStation, setChartStation] = useState("ALL");
   const [exporting, setExporting] = useState(false);
 
   const handlePrint = () => {
@@ -527,12 +529,24 @@ export function FinanceReportClient() {
       </div>
 
       {/* Charts */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
-          <BarChart data={data.monthlyTotals} year={year} />
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-slate-600">Chart Station</span>
+          <select
+            value={chartStation}
+            onChange={(e) => setChartStation(e.target.value)}
+            className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm"
+          >
+            {STATION_ORDER.map((s) => (
+              <option key={s} value={s}>{s === "ALL" ? "All Stations" : s}</option>
+            ))}
+          </select>
         </div>
-        <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
-          <YtdChart data={data.monthlyTotals} year={year} />
+        <div className="rounded-xl border border-[var(--color-border)] bg-white p-6">
+          <BarChart data={data.monthlyByStation?.[chartStation] ?? data.monthlyTotals} year={year} />
+        </div>
+        <div className="rounded-xl border border-[var(--color-border)] bg-white p-6">
+          <YtdChart data={data.monthlyByStation?.[chartStation] ?? data.monthlyTotals} year={year} />
         </div>
       </div>
 
