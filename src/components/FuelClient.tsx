@@ -207,7 +207,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
         <StatCard label="Gas (Unleaded)" value={formatCurrency(gasCost)} icon={<Fuel size={18} />} accent="#f59e0b" />
         <StatCard label="Diesel" value={formatCurrency(dieselCost)} icon={<Fuel size={18} />} accent="#6366f1" />
         <StatCard label="Total Volume" value={`${formatNumber(stats.gal)} Gal`} icon={<Fuel size={18} />} accent="#2563eb" />
-        <StatCard label="Avg Price/Gal" value={`$${stats.avg.toFixed(2)}`} icon={<Fuel size={18} />} accent="#7c3aed" />
+        <StatCard label="Avg Price/Gal" value={formatCurrency(stats.avg)} icon={<Fuel size={18} />} accent="#7c3aed" />
         <StatCard label="Fill-ups" value={stats.count} icon={<Fuel size={18} />} accent="#16a34a" />
       </div>
 
@@ -265,7 +265,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
                   </Td>
                   <Td className="text-slate-600">{l.vehicle.station ?? "—"}</Td>
                   <Td>{formatNumber(l.liters, 1)} Gal</Td>
-                  <Td>${l.pricePerLiter.toFixed(2)}</Td>
+                  <Td>{formatCurrency(l.pricePerLiter)}</Td>
                   <Td className="font-medium">{formatCurrency(l.totalCost)}</Td>
                   <Td className="text-slate-600">{l.location ?? "—"}</Td>
                   <Td>
