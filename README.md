@@ -13,7 +13,10 @@ analytics — all in one place.
 - **Vehicles** — full CRUD, status, fuel level, odometer, compliance docs, per-vehicle detail with maintenance/fuel/trip history.
 - **Drivers** — full CRUD, license tracking, safety scores, ratings, assignments, per-driver detail.
 - **Trips & Dispatch** — schedule trips, assign vehicles/drivers, update status, track distance.
-- **Maintenance** — work orders with type/priority/status/cost, service scheduling, overdue tracking.
+- **Maintenance** — work orders with type/priority/status, station, service link, and full cost breakdown (material + labor), service scheduling, overdue tracking.
+- **Service Catalog** — Preventive and Corrective services (74 seeded) with default material and labor costs, fully editable (CRUD).
+- **Log Service** — dedicated page for technicians to record a service performed on a vehicle: pick station + vehicle + service, enter material cost and labor (hours × rate); auto-totals and saves as a completed work order.
+- **Service Costs** — reporting by **service, month, and station** (material + labor), preventive-vs-corrective split, trend chart, and CSV export.
 - **Fuel** — fuel logs with cost analytics (spend, volume, avg price).
 - **Geofencing** — depot/customer/service/restricted zones drawn on the live map.
 - **Alerts** — speeding, geofence, low-fuel, maintenance-due, document-expiry notifications with read/resolve.

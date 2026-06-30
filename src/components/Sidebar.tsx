@@ -13,6 +13,9 @@ import {
   Hexagon,
   Bell,
   BarChart3,
+  ListChecks,
+  ClipboardCheck,
+  Receipt,
   Truck as TruckLogo,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +27,9 @@ const NAV = [
   { href: "/drivers", label: "Drivers", icon: Users },
   { href: "/trips", label: "Trips", icon: Route },
   { href: "/maintenance", label: "Maintenance", icon: Wrench },
+  { href: "/log-service", label: "Log Service", icon: ClipboardCheck },
+  { href: "/services", label: "Service Catalog", icon: ListChecks },
+  { href: "/service-costs", label: "Service Costs", icon: Receipt },
   { href: "/fuel", label: "Fuel", icon: Fuel },
   { href: "/geofences", label: "Geofences", icon: Hexagon },
   { href: "/alerts", label: "Alerts", icon: Bell },

@@ -6,6 +6,7 @@ import type {
   FuelLog,
   Geofence,
   Alert,
+  Service,
 } from "@prisma/client";
 
 // JSON-serialized variants (Dates become strings over the wire).
@@ -33,6 +34,11 @@ export type TripDTO = Json<Trip> & {
 
 export type WorkOrderDTO = Json<WorkOrder> & {
   vehicle: Json<Vehicle>;
+  service?: Json<Service> | null;
+};
+
+export type ServiceDTO = Json<Service> & {
+  _count?: { workOrders: number };
 };
 
 export type FuelLogDTO = Json<FuelLog> & {

@@ -63,6 +63,102 @@ const VEHICLE_MODELS: Array<{
   { make: "Blue Bird", model: "Vision", type: "BUS", fuel: "CNG", tank: 150 },
 ];
 
+const STATIONS = ["AUS", "ACT", "IAH", "CLL", "BPT", "HRL", "LRD"] as const;
+type StationCode = (typeof STATIONS)[number];
+
+// Service catalog: each service tracks a default Material Cost + Labor cost.
+type ServiceDef = {
+  name: string;
+  category: "PREVENTIVE" | "CORRECTIVE";
+  group: string;
+  material: number;
+  labor: number;
+};
+const SERVICE_CATALOG: ServiceDef[] = [
+  // ----- Preventive -----
+  { name: "Brake Pad Replacement", category: "PREVENTIVE", group: "Brakes & Tires", material: 180, labor: 150 },
+  { name: "Brake Rotor Replacement", category: "PREVENTIVE", group: "Brakes & Tires", material: 320, labor: 200 },
+  { name: "Air Brake Cleaning", category: "PREVENTIVE", group: "Brakes & Tires", material: 40, labor: 120 },
+  { name: "Tire Rotation", category: "PREVENTIVE", group: "Brakes & Tires", material: 0, labor: 80 },
+  { name: "Tire Pressure Check / Fill", category: "PREVENTIVE", group: "Brakes & Tires", material: 0, labor: 25 },
+  { name: "Tire Replacement", category: "PREVENTIVE", group: "Brakes & Tires", material: 1200, labor: 200 },
+  { name: "PM A – Basic Oil Change & Inspection", category: "PREVENTIVE", group: "PM Packages", material: 90, labor: 110 },
+  { name: "PM B – Oil Change + Filters + Tire Rotation", category: "PREVENTIVE", group: "PM Packages", material: 160, labor: 180 },
+  { name: "PM C – Full Preventive Maintenance", category: "PREVENTIVE", group: "PM Packages", material: 380, labor: 400 },
+  { name: "Brake Caliper Replacement", category: "PREVENTIVE", group: "Brakes & Tires", material: 260, labor: 180 },
+  { name: "Drivetrain Overhaul PM", category: "PREVENTIVE", group: "Drivetrain & Engine", material: 1500, labor: 1200 },
+  { name: "Transmission Fluid PM", category: "PREVENTIVE", group: "Drivetrain & Engine", material: 180, labor: 150 },
+  { name: "Coolant + Spark Plugs PM", category: "PREVENTIVE", group: "Drivetrain & Engine", material: 160, labor: 180 },
+  { name: "Timing Belt PM", category: "PREVENTIVE", group: "Drivetrain & Engine", material: 320, labor: 450 },
+  { name: "Diesel Filter Cleaning PM", category: "PREVENTIVE", group: "Drivetrain & Engine", material: 120, labor: 130 },
+  { name: "Engine Air Filter PM", category: "PREVENTIVE", group: "Drivetrain & Engine", material: 60, labor: 50 },
+  { name: "Battery Test", category: "PREVENTIVE", group: "Electrical", material: 0, labor: 40 },
+  { name: "Battery Replacement", category: "PREVENTIVE", group: "Electrical", material: 220, labor: 80 },
+  { name: "Fluid Check / Fill up", category: "PREVENTIVE", group: "General", material: 40, labor: 50 },
+  { name: "Wiper Blades", category: "PREVENTIVE", group: "General", material: 35, labor: 25 },
+  { name: "Turbocharger Inspection PM", category: "PREVENTIVE", group: "Drivetrain & Engine", material: 0, labor: 160 },
+  // ----- Corrective: Mechanical Repairs -----
+  { name: "Suspension Repair", category: "CORRECTIVE", group: "Mechanical Repairs", material: 620, labor: 480 },
+  { name: "Steering Repair", category: "CORRECTIVE", group: "Mechanical Repairs", material: 540, labor: 420 },
+  { name: "Radiator / Cooling System Repair", category: "CORRECTIVE", group: "Mechanical Repairs", material: 480, labor: 360 },
+  { name: "Fuel System Repair", category: "CORRECTIVE", group: "Mechanical Repairs", material: 560, labor: 440 },
+  { name: "Transmission Service", category: "CORRECTIVE", group: "Mechanical Repairs", material: 900, labor: 700 },
+  { name: "Exhaust System Repair", category: "CORRECTIVE", group: "Mechanical Repairs", material: 420, labor: 300 },
+  { name: "Alternator Replacement", category: "CORRECTIVE", group: "Mechanical Repairs", material: 380, labor: 220 },
+  { name: "Starter Replacement", category: "CORRECTIVE", group: "Mechanical Repairs", material: 340, labor: 200 },
+  // ----- Corrective: Engine Services -----
+  { name: "Engine Oil & Filter Change", category: "CORRECTIVE", group: "Engine Services", material: 90, labor: 90 },
+  { name: "Spark Plug Replacement", category: "CORRECTIVE", group: "Engine Services", material: 120, labor: 150 },
+  { name: "Timing Belt / Chain Replacement", category: "CORRECTIVE", group: "Engine Services", material: 360, labor: 520 },
+  { name: "Engine Diagnostics (Check Engine Light)", category: "CORRECTIVE", group: "Engine Services", material: 0, labor: 140 },
+  { name: "Air Intake Cleaning", category: "CORRECTIVE", group: "Engine Services", material: 60, labor: 110 },
+  { name: "Purge Valve", category: "CORRECTIVE", group: "Engine Services", material: 140, labor: 120 },
+  { name: "Throttle Body Service", category: "CORRECTIVE", group: "Engine Services", material: 160, labor: 160 },
+  { name: "Engine Repair", category: "CORRECTIVE", group: "Engine Services", material: 2200, labor: 1800 },
+  { name: "New Engine", category: "CORRECTIVE", group: "Engine Services", material: 9500, labor: 3500 },
+  { name: "DEF System", category: "CORRECTIVE", group: "Engine Services", material: 680, labor: 420 },
+  { name: "DEF Tank Repair", category: "CORRECTIVE", group: "Engine Services", material: 520, labor: 360 },
+  { name: "Turbo / Actuator", category: "CORRECTIVE", group: "Engine Services", material: 1400, labor: 700 },
+  { name: "Catalytic Converter", category: "CORRECTIVE", group: "Engine Services", material: 1300, labor: 400 },
+  { name: "Muffler", category: "CORRECTIVE", group: "Engine Services", material: 320, labor: 220 },
+  // ----- Corrective: Electrical Repairs -----
+  { name: "Headlight / Taillight Replacement", category: "CORRECTIVE", group: "Electrical Repairs", material: 140, labor: 80 },
+  { name: "Interior Light Repair", category: "CORRECTIVE", group: "Electrical Repairs", material: 40, labor: 60 },
+  { name: "Power Door Locks / Windows Repair", category: "CORRECTIVE", group: "Electrical Repairs", material: 220, labor: 180 },
+  { name: "ECU / Module Diagnostics", category: "CORRECTIVE", group: "Electrical Repairs", material: 0, labor: 180 },
+  { name: "Wiring Inspection", category: "CORRECTIVE", group: "Electrical Repairs", material: 0, labor: 150 },
+  // ----- Corrective: A/C & Heating -----
+  { name: "A/C System Check", category: "CORRECTIVE", group: "A/C & Heating", material: 0, labor: 90 },
+  { name: "A/C Recharge", category: "CORRECTIVE", group: "A/C & Heating", material: 120, labor: 110 },
+  { name: "Heater Repair", category: "CORRECTIVE", group: "A/C & Heating", material: 280, labor: 240 },
+  { name: "Cabin Air Filter Replacement", category: "CORRECTIVE", group: "A/C & Heating", material: 45, labor: 50 },
+  { name: "A/C Full repair", category: "CORRECTIVE", group: "A/C & Heating", material: 620, labor: 480 },
+  // ----- Corrective: Cosmetic / Utility -----
+  { name: "Vehicle Wash", category: "CORRECTIVE", group: "Cosmetic / Utility", material: 0, labor: 40 },
+  { name: "Interior Detail", category: "CORRECTIVE", group: "Cosmetic / Utility", material: 30, labor: 120 },
+  { name: "Decal / Sticker Application", category: "CORRECTIVE", group: "Cosmetic / Utility", material: 180, labor: 140 },
+  { name: "Samsara Device Install / Uninstall", category: "CORRECTIVE", group: "Cosmetic / Utility", material: 250, labor: 150 },
+  { name: "Key Replacement or Programming", category: "CORRECTIVE", group: "Cosmetic / Utility", material: 220, labor: 130 },
+  { name: "Body service - Fix Damage, Dent and Paint", category: "CORRECTIVE", group: "Cosmetic / Utility", material: 700, labor: 900 },
+  { name: "Doors - Panel and Latch", category: "CORRECTIVE", group: "Cosmetic / Utility", material: 380, labor: 320 },
+  { name: "Rollers - Fix Roller Bed", category: "CORRECTIVE", group: "Cosmetic / Utility", material: 460, labor: 380 },
+  { name: "Windshield Replacement", category: "CORRECTIVE", group: "Cosmetic / Utility", material: 420, labor: 220 },
+  { name: "Replace Part - Bumper, headlight, Trims, etc", category: "CORRECTIVE", group: "Cosmetic / Utility", material: 540, labor: 300 },
+  // ----- Corrective: Admin, Accidents & Insurance Claim -----
+  { name: "Registration Renewal", category: "CORRECTIVE", group: "Admin, Accidents & Insurance Claim", material: 0, labor: 60 },
+  { name: "Emissions / Smog Test", category: "CORRECTIVE", group: "Admin, Accidents & Insurance Claim", material: 0, labor: 70 },
+  { name: "Insurance Photo Inspection", category: "CORRECTIVE", group: "Admin, Accidents & Insurance Claim", material: 0, labor: 50 },
+  { name: "Accident Claim Inspection", category: "CORRECTIVE", group: "Admin, Accidents & Insurance Claim", material: 0, labor: 120 },
+  { name: "Vehicle Turn-in Inspection", category: "CORRECTIVE", group: "Admin, Accidents & Insurance Claim", material: 0, labor: 140 },
+  // ----- Corrective: Safety & Compliance -----
+  { name: "DOT Annual Inspection", category: "CORRECTIVE", group: "Safety & Compliance", material: 0, labor: 220 },
+  { name: "Monthly Safety Inspection", category: "CORRECTIVE", group: "Safety & Compliance", material: 0, labor: 90 },
+  { name: "Brake Inspection", category: "CORRECTIVE", group: "Safety & Compliance", material: 0, labor: 110 },
+  { name: "Light & Signal Inspection", category: "CORRECTIVE", group: "Safety & Compliance", material: 0, labor: 70 },
+  { name: "Windshield Wiper Replacement", category: "CORRECTIVE", group: "Safety & Compliance", material: 35, labor: 30 },
+  { name: "First Aid / Fire Extinguisher Check", category: "CORRECTIVE", group: "Safety & Compliance", material: 25, labor: 40 },
+];
+
 function vin() {
   const chars = "ABCDEFGHJKLMNPRSTUVWXYZ0123456789";
   let v = "";
@@ -84,6 +180,7 @@ async function main() {
   await prisma.fuelLog.deleteMany();
   await prisma.maintenanceSchedule.deleteMany();
   await prisma.workOrder.deleteMany();
+  await prisma.service.deleteMany();
   await prisma.trip.deleteMany();
   await prisma.user.deleteMany();
   await prisma.vehicle.deleteMany();
@@ -110,6 +207,21 @@ async function main() {
         color: f.color,
       },
     });
+  }
+
+  // ----- service catalog -----
+  const services: Awaited<ReturnType<typeof prisma.service.create>>[] = [];
+  for (const s of SERVICE_CATALOG) {
+    const svc = await prisma.service.create({
+      data: {
+        name: s.name,
+        category: s.category,
+        group: s.group,
+        materialCost: s.material,
+        laborCost: s.labor,
+      },
+    });
+    services.push(svc);
   }
 
   // ----- drivers -----
@@ -182,6 +294,7 @@ async function main() {
         odometer: randInt(5000, 320000),
         fuelLevel: m.fuel === "ELECTRIC" ? randInt(15, 100) : randInt(8, 100),
         tankCapacity: m.tank || 100,
+        station: STATIONS[i % STATIONS.length] as StationCode,
         registrationExpiry: daysFromNow(randInt(-15, 700)),
         insuranceExpiry: daysFromNow(randInt(-10, 500)),
         purchaseDate: daysFromNow(-randInt(200, 2800)),
@@ -232,33 +345,82 @@ async function main() {
   }
 
   // ----- work orders + schedules -----
-  const woTitles = {
-    SCHEDULED_SERVICE: ["50k mile service", "Annual service", "Brake inspection"],
-    REPAIR: ["Transmission repair", "AC compressor replacement", "Alternator replacement", "Suspension repair"],
-    INSPECTION: ["DOT inspection", "Safety inspection", "Emissions test"],
-    TIRE: ["Tire rotation", "Tire replacement (x4)", "Wheel alignment"],
-    OIL_CHANGE: ["Oil & filter change"],
-    RECALL: ["Manufacturer recall fix"],
-  };
+  // Map a service group to a MaintenanceType for the legacy filter.
+  function typeForService(s: (typeof services)[number]): "SCHEDULED_SERVICE" | "REPAIR" | "INSPECTION" | "TIRE" | "OIL_CHANGE" | "RECALL" {
+    const n = s.name.toLowerCase();
+    if (n.includes("tire")) return "TIRE";
+    if (n.includes("oil")) return "OIL_CHANGE";
+    if (n.includes("inspection") || n.includes("test") || n.includes("diagnostic")) return "INSPECTION";
+    if (s.category === "PREVENTIVE") return "SCHEDULED_SERVICE";
+    return "REPAIR";
+  }
+  const vendors = ["FleetCare Service", "Lone Star Diesel", "QuickLube Pro", "In-house Shop", "Gulf Coast Truck"];
+  const techNames = ["Miguel Torres", "Sam Patel", "Jordan Lee", "Chris Nguyen", "Andre Bell"];
+  const LABOR_RATE = 95;
+  // Spread completed work orders across the last 6 months for per-month/per-station reporting.
   for (const v of vehicles) {
-    const count = randInt(1, 4);
-    for (let j = 0; j < count; j++) {
-      const type = pick(Object.keys(woTitles) as (keyof typeof woTitles)[]);
-      const status = pick(["OPEN", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "COMPLETED"]) as
-        "OPEN" | "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+    for (let monthsAgo = 0; monthsAgo < 6; monthsAgo++) {
+      const count = randInt(0, 3);
+      for (let j = 0; j < count; j++) {
+        const s = pick(services);
+        const material = Math.round(s.materialCost * rand(0.8, 1.25));
+        const laborRate = LABOR_RATE;
+        const labor = Math.round(s.laborCost * rand(0.85, 1.2));
+        const laborHours = Math.round((labor / laborRate) * 10) / 10;
+        const day = new Date();
+        day.setMonth(day.getMonth() - monthsAgo);
+        day.setDate(randInt(1, 28));
+        await prisma.workOrder.create({
+          data: {
+            vehicleId: v.id,
+            serviceId: s.id,
+            station: v.station,
+            type: typeForService(s),
+            title: s.name,
+            description: `${s.category === "PREVENTIVE" ? "Preventive" : "Corrective"} — ${s.group}`,
+            status: "COMPLETED",
+            priority: pick(["LOW", "MEDIUM", "MEDIUM", "HIGH"]),
+            materialCost: material,
+            laborHours,
+            laborRate,
+            laborCost: laborHours * laborRate,
+            cost: material + laborHours * laborRate,
+            performedBy: pick(techNames),
+            odometerAt: v.odometer - randInt(0, 5000),
+            vendor: pick(vendors),
+            completedAt: day,
+            createdAt: day,
+          },
+        });
+      }
+    }
+    // a few currently-open / scheduled work orders for the maintenance board
+    const openCount = randInt(0, 2);
+    for (let j = 0; j < openCount; j++) {
+      const s = pick(services);
+      const material = Math.round(s.materialCost * rand(0.8, 1.25));
+      const laborRate = LABOR_RATE;
+      const labor = Math.round(s.laborCost * rand(0.85, 1.2));
+      const laborHours = Math.round((labor / laborRate) * 10) / 10;
+      const status = pick(["OPEN", "SCHEDULED", "IN_PROGRESS"]) as "OPEN" | "SCHEDULED" | "IN_PROGRESS";
       await prisma.workOrder.create({
         data: {
           vehicleId: v.id,
-          type,
-          title: pick(woTitles[type]),
-          description: "Auto-generated work order from fleet maintenance system.",
+          serviceId: s.id,
+          station: v.station,
+          type: typeForService(s),
+          title: s.name,
+          description: `${s.category === "PREVENTIVE" ? "Preventive" : "Corrective"} — ${s.group}`,
           status,
-          priority: pick(["LOW", "MEDIUM", "MEDIUM", "HIGH", "CRITICAL"]),
-          cost: status === "COMPLETED" ? randInt(120, 4200) : randInt(0, 3000),
+          priority: pick(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
+          materialCost: material,
+          laborHours,
+          laborRate,
+          laborCost: laborHours * laborRate,
+          cost: material + laborHours * laborRate,
           odometerAt: v.odometer - randInt(0, 5000),
-          vendor: pick(["FleetCare Service", "Bay Area Diesel", "QuickLube Pro", "In-house Shop"]),
-          scheduledFor: status === "SCHEDULED" || status === "OPEN" ? daysFromNow(randInt(1, 30)) : null,
-          completedAt: status === "COMPLETED" ? daysFromNow(-randInt(1, 120)) : null,
+          vendor: pick(vendors),
+          scheduledFor: daysFromNow(randInt(1, 30)),
         },
       });
     }
@@ -334,7 +496,7 @@ async function main() {
   }
 
   console.log(
-    `✅ Seeded: ${vehicles.length} vehicles, ${drivers.length} drivers, 40 trips, work orders, fuel logs, alerts, ${fenceDefs.length} geofences.`,
+    `✅ Seeded: ${vehicles.length} vehicles, ${drivers.length} drivers, ${services.length} services, 40 trips, work orders, fuel logs, alerts, ${fenceDefs.length} geofences.`,
   );
   console.log("👤 Logins: admin@livefleet.ai / admin123 · manager@livefleet.ai / manager123 · driver@livefleet.ai / driver123");
 }

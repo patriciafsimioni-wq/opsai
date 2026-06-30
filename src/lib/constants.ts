@@ -35,6 +35,23 @@ export const WO_STATUS = {
 export const WO_STATUSES = ["OPEN", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as const;
 export const WO_TYPES = ["SCHEDULED_SERVICE", "REPAIR", "INSPECTION", "TIRE", "OIL_CHANGE", "RECALL"] as const;
 
+export const STATIONS = ["AUS", "ACT", "IAH", "CLL", "BPT", "HRL", "LRD"] as const;
+export const STATION_LABEL: Record<string, string> = {
+  AUS: "AUS — Austin",
+  ACT: "ACT — Waco",
+  IAH: "IAH — Houston",
+  CLL: "CLL — College Station",
+  BPT: "BPT — Beaumont",
+  HRL: "HRL — Harlingen",
+  LRD: "LRD — Laredo",
+};
+
+export const SERVICE_CATEGORY = {
+  PREVENTIVE: { label: "Preventive", bg: "#dcfce7", fg: "#166534" },
+  CORRECTIVE: { label: "Corrective", bg: "#fee2e2", fg: "#991b1b" },
+} as const;
+export const SERVICE_CATEGORIES = ["PREVENTIVE", "CORRECTIVE"] as const;
+
 export const PRIORITY = {
   LOW: { label: "Low", bg: "#f1f5f9", fg: "#475569" },
   MEDIUM: { label: "Medium", bg: "#dbeafe", fg: "#1e40af" },

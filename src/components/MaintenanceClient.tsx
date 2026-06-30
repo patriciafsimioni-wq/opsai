@@ -5,18 +5,34 @@ import { Plus, Search, Trash2, Wrench } from "lucide-react";
 import { Card, Button, Badge, Table, Th, Td, EmptyState, StatCard } from "@/components/ui";
 import { Field, Input, Select, Textarea, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
-import type { WorkOrderDTO, VehicleDTO } from "@/lib/types";
-import { WO_STATUS, WO_STATUSES, WO_TYPES, PRIORITY, PRIORITIES, titleCase } from "@/lib/constants";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import type { WorkOrderDTO, VehicleDTO, ServiceDTO } from "@/lib/types";
+import {
+  WO_STATUS,
+  WO_STATUSES,
+  WO_TYPES,
+  PRIORITY,
+  PRIORITIES,
+  STATIONS,
+  STATION_LABEL,
+  SERVICE_CATEGORY,
+  titleCase,
+} from "@/lib/constants";
+import { formatCurrency } from "@/lib/utils";
+
+const DEFAULT_RATE = "95";
 
 const emptyForm = {
   vehicleId: "",
+  serviceId: "",
+  station: "AUS",
   type: "SCHEDULED_SERVICE",
   title: "",
   description: "",
   status: "OPEN",
   priority: "MEDIUM",
-  cost: "0",
+  materialCost: "0",
+  laborHours: "0",
+  laborRate: DEFAULT_RATE,
   vendor: "",
   scheduledFor: "",
 };
@@ -24,8 +40,10 @@ const emptyForm = {
 export function MaintenanceClient({ canManage }: { canManage: boolean }) {
   const { data: orders, loading, reload } = useData<WorkOrderDTO[]>("/api/maintenance");
   const { data: vehicles } = useData<VehicleDTO[]>("/api/vehicles");
+  const { data: services } = useData<ServiceDTO[]>("/api/services");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [stationFilter, setStationFilter] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
@@ -37,9 +55,13 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
     return orders.filter((o) => {
       const matchSearch =
         !q || o.title.toLowerCase().includes(q) || o.vehicle.name.toLowerCase().includes(q);
-      return matchSearch && (!statusFilter || o.status === statusFilter);
+      return (
+        matchSearch &&
+        (!statusFilter || o.status === statusFilter) &&
+        (!stationFilter || o.station === stationFilter)
+      );
     });
-  }, [orders, search, statusFilter]);
+  }, [orders, search, statusFilter, stationFilter]);
 
   const stats = useMemo(() => {
     const list = orders ?? [];
@@ -57,6 +79,27 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
         .reduce((s, o) => s + o.cost, 0),
     };
   }, [orders]);
+
+  const laborTotal = Number(form.laborHours || 0) * Number(form.laborRate || 0);
+  const total = Number(form.materialCost || 0) + laborTotal;
+
+  function onSelectService(serviceId: string) {
+    const svc = (services ?? []).find((s) => s.id === serviceId);
+    if (!svc) {
+      setForm((f) => ({ ...f, serviceId }));
+      return;
+    }
+    const rate = Number(form.laborRate || DEFAULT_RATE) || Number(DEFAULT_RATE);
+    setForm((f) => ({
+      ...f,
+      serviceId,
+      title: svc.name,
+      type: svc.category === "PREVENTIVE" ? "SCHEDULED_SERVICE" : "REPAIR",
+      materialCost: String(svc.materialCost),
+      laborRate: String(rate),
+      laborHours: rate > 0 ? String(Math.round((svc.laborCost / rate) * 10) / 10) : "0",
+    }));
+  }
 
   async function save() {
     setSaving(true);
@@ -100,6 +143,16 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
             />
           </div>
           <select
+            value={stationFilter}
+            onChange={(e) => setStationFilter(e.target.value)}
+            className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm"
+          >
+            <option value="">All stations</option>
+            {STATIONS.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+          <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm"
@@ -126,63 +179,73 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
               <tr>
                 <Th>Work Order</Th>
                 <Th>Vehicle</Th>
-                <Th>Priority</Th>
-                <Th>Scheduled</Th>
-                <Th>Cost</Th>
+                <Th>Station</Th>
+                <Th>Material</Th>
+                <Th>Labor</Th>
+                <Th>Total</Th>
                 <Th>Status</Th>
                 <Th />
               </tr>
             </thead>
             <tbody>
-              {filtered.map((o) => (
-                <tr key={o.id} className="hover:bg-slate-50">
-                  <Td>
-                    <p className="font-medium">{o.title}</p>
-                    <p className="text-xs text-slate-400">{titleCase(o.type)}</p>
-                  </Td>
-                  <Td className="text-slate-600">{o.vehicle.name}</Td>
-                  <Td>
-                    <Badge
-                      bg={PRIORITY[o.priority as keyof typeof PRIORITY].bg}
-                      fg={PRIORITY[o.priority as keyof typeof PRIORITY].fg}
-                    >
-                      {PRIORITY[o.priority as keyof typeof PRIORITY].label}
-                    </Badge>
-                  </Td>
-                  <Td className="text-slate-600">{formatDate(o.scheduledFor)}</Td>
-                  <Td>{formatCurrency(o.cost)}</Td>
-                  <Td>
-                    {canManage ? (
-                      <select
-                        value={o.status}
-                        onChange={(e) => setStatus(o, e.target.value)}
-                        className="rounded-md border border-[var(--color-border)] bg-white px-2 py-1 text-xs"
-                      >
-                        {WO_STATUSES.map((s) => (
-                          <option key={s} value={s}>{WO_STATUS[s].label}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <Badge
-                        bg={WO_STATUS[o.status as keyof typeof WO_STATUS].bg}
-                        fg={WO_STATUS[o.status as keyof typeof WO_STATUS].fg}
-                      >
-                        {WO_STATUS[o.status as keyof typeof WO_STATUS].label}
-                      </Badge>
-                    )}
-                  </Td>
-                  <Td>
-                    {canManage && (
-                      <button
-                        onClick={() => remove(o)}
-                        className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    )}
-                  </Td>
-                </tr>
-              ))}
+              {filtered.map((o) => {
+                const cat = o.service?.category;
+                return (
+                  <tr key={o.id} className="hover:bg-slate-50">
+                    <Td>
+                      <p className="font-medium">{o.title}</p>
+                      <p className="text-xs text-slate-400">
+                        {cat ? SERVICE_CATEGORY[cat as keyof typeof SERVICE_CATEGORY].label + " · " : ""}
+                        {titleCase(o.type)}
+                      </p>
+                    </Td>
+                    <Td className="text-slate-600">{o.vehicle.name}</Td>
+                    <Td>
+                      <Badge bg="#eef2ff" fg="#3730a3">{o.station}</Badge>
+                    </Td>
+                    <Td className="text-slate-600">{formatCurrency(o.materialCost)}</Td>
+                    <Td className="text-slate-600">
+                      {formatCurrency(o.laborCost)}
+                      {o.laborHours > 0 && (
+                        <span className="block text-xs text-slate-400">
+                          {o.laborHours}h × {formatCurrency(o.laborRate)}
+                        </span>
+                      )}
+                    </Td>
+                    <Td className="font-semibold">{formatCurrency(o.cost)}</Td>
+                    <Td>
+                      {canManage ? (
+                        <select
+                          value={o.status}
+                          onChange={(e) => setStatus(o, e.target.value)}
+                          className="rounded-md border border-[var(--color-border)] bg-white px-2 py-1 text-xs"
+                        >
+                          {WO_STATUSES.map((s) => (
+                            <option key={s} value={s}>{WO_STATUS[s].label}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <Badge
+                          bg={WO_STATUS[o.status as keyof typeof WO_STATUS].bg}
+                          fg={WO_STATUS[o.status as keyof typeof WO_STATUS].fg}
+                        >
+                          {WO_STATUS[o.status as keyof typeof WO_STATUS].label}
+                        </Badge>
+                      )}
+                    </Td>
+                    <Td>
+                      {canManage && (
+                        <button
+                          onClick={() => remove(o)}
+                          className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </Td>
+                  </tr>
+                );
+              })}
             </tbody>
           </Table>
         )}
@@ -211,11 +274,24 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
               ]}
             />
           </Field>
-          <Field label="Type">
+          <Field label="Station" required>
             <Select
-              value={form.type}
-              onChange={(e) => setForm({ ...form, type: e.target.value })}
-              options={WO_TYPES.map((t) => ({ value: t, label: titleCase(t) }))}
+              value={form.station}
+              onChange={(e) => setForm({ ...form, station: e.target.value })}
+              options={STATIONS.map((s) => ({ value: s, label: STATION_LABEL[s] }))}
+            />
+          </Field>
+          <Field label="Service" className="col-span-2">
+            <Select
+              value={form.serviceId}
+              onChange={(e) => onSelectService(e.target.value)}
+              options={[
+                { value: "", label: "Custom / none — enter title below" },
+                ...(services ?? []).map((s) => ({
+                  value: s.id,
+                  label: `${SERVICE_CATEGORY[s.category as keyof typeof SERVICE_CATEGORY].label} · ${s.name}`,
+                })),
+              ]}
             />
           </Field>
           <Field label="Title" required className="col-span-2">
@@ -235,13 +311,30 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
               options={WO_STATUSES.map((s) => ({ value: s, label: WO_STATUS[s].label }))}
             />
           </Field>
-          <Field label="Cost ($)">
-            <Input type="number" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} />
+          <Field label="Material cost ($)">
+            <Input type="number" min="0" value={form.materialCost} onChange={(e) => setForm({ ...form, materialCost: e.target.value })} />
           </Field>
+          <Field label="Type">
+            <Select
+              value={form.type}
+              onChange={(e) => setForm({ ...form, type: e.target.value })}
+              options={WO_TYPES.map((t) => ({ value: t, label: titleCase(t) }))}
+            />
+          </Field>
+          <Field label="Labor hours">
+            <Input type="number" min="0" step="0.1" value={form.laborHours} onChange={(e) => setForm({ ...form, laborHours: e.target.value })} />
+          </Field>
+          <Field label="Labor rate ($/hr)">
+            <Input type="number" min="0" value={form.laborRate} onChange={(e) => setForm({ ...form, laborRate: e.target.value })} />
+          </Field>
+          <div className="col-span-2 flex items-center justify-between rounded-lg bg-slate-50 px-4 py-2.5 text-sm">
+            <span className="text-slate-500">Labor {formatCurrency(laborTotal)} + Material {formatCurrency(Number(form.materialCost || 0))}</span>
+            <span className="font-semibold">Total {formatCurrency(total)}</span>
+          </div>
           <Field label="Scheduled For">
             <Input type="date" value={form.scheduledFor} onChange={(e) => setForm({ ...form, scheduledFor: e.target.value })} />
           </Field>
-          <Field label="Vendor" className="col-span-2">
+          <Field label="Vendor">
             <Input value={form.vendor} onChange={(e) => setForm({ ...form, vendor: e.target.value })} />
           </Field>
           <Field label="Description" className="col-span-2">
