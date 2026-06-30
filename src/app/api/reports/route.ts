@@ -65,8 +65,7 @@ export async function GET(req: NextRequest) {
   ]);
 
   // Get available stations
-  const stationGroupWhere: Record<string, unknown> = { station: { not: null } };
-  const stationsResult = await prisma.vehicle.groupBy({ by: ["station"], where: stationGroupWhere });
+  const stationsResult = await prisma.vehicle.groupBy({ by: ["station"], orderBy: { station: "asc" } });
   const stations = stationsResult.map((s) => s.station).filter(Boolean).sort() as string[];
 
   // Period stats
