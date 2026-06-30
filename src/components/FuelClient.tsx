@@ -56,7 +56,6 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const logs = data?.logs ?? [];
   const availableStations = data?.stations ?? [];
 
   function navigate(dir: -1 | 1) {
@@ -68,6 +67,8 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
     }
     setRefDate(d.toISOString().slice(0, 10));
   }
+
+  const logs = useMemo(() => data?.logs ?? [], [data]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();

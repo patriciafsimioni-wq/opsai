@@ -18,6 +18,7 @@ import {
   Receipt,
   DollarSign,
   Settings2,
+  Upload,
   Truck as TruckLogo,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,7 @@ const NAV = [
   { href: "/service-costs", label: "Service Costs", icon: Receipt },
   { href: "/finance-report", label: "Finance Report", icon: DollarSign },
   { href: "/budget-editor", label: "PM Budgets", icon: Settings2 },
+  { href: "/uploads", label: "Smart Upload", icon: Upload },
   { href: "/fuel", label: "Fuel", icon: Fuel },
   { href: "/alerts", label: "Alerts", icon: Bell },
   { href: "/reports", label: "Reports", icon: BarChart3 },
