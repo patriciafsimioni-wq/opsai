@@ -52,6 +52,32 @@ export const SERVICE_CATEGORY = {
 } as const;
 export const SERVICE_CATEGORIES = ["PREVENTIVE", "CORRECTIVE"] as const;
 
+// Maps the preventive service catalog into the report's headline buckets,
+// in display order. Catalog services not listed fall back to their own name.
+export const PREVENTIVE_GROUPS: { label: string; services: string[] }[] = [
+  { label: "Brakes", services: ["Brake Pad Replacement", "Brake Rotor Replacement", "Air Brake Cleaning"] },
+  { label: "Tire Replacement", services: ["Tire Replacement", "Tire Rotation", "Tire Pressure Check / Fill"] },
+  {
+    label: "Oil Change",
+    services: [
+      "PM A – Basic Oil Change & Inspection",
+      "PM B – Oil Change + Filters + Tire Rotation",
+      "PM C – Full Preventive Maintenance",
+    ],
+  },
+  { label: "Brake Calipers", services: ["Brake Caliper Replacement"] },
+  { label: "Drivetrain Overhaul", services: ["Drivetrain Overhaul PM"] },
+  { label: "Transmission Fluid", services: ["Transmission Fluid PM"] },
+  { label: "Coolant + Spark Plugs", services: ["Coolant + Spark Plugs PM"] },
+  { label: "Timing Belt", services: ["Timing Belt PM"] },
+  { label: "Diesel Filter Cleaning", services: ["Diesel Filter Cleaning PM"] },
+  { label: "Engine Air Filter", services: ["Engine Air Filter PM"] },
+  { label: "Battery Replacement", services: ["Battery Replacement", "Battery Test"] },
+  { label: "Fluids", services: ["Fluid Check / Fill up"] },
+  { label: "Wiper Blades", services: ["Wiper Blades"] },
+  { label: "Turbocharger Inspection", services: ["Turbocharger Inspection PM"] },
+];
+
 export const PRIORITY = {
   LOW: { label: "Low", bg: "#f1f5f9", fg: "#475569" },
   MEDIUM: { label: "Medium", bg: "#dbeafe", fg: "#1e40af" },

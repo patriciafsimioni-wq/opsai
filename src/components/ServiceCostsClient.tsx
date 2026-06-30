@@ -6,7 +6,7 @@ import { MultiLineChart, BarChartCard } from "@/components/charts";
 import { ExportButton } from "@/components/ReportsExport";
 import { useData } from "@/lib/use-data";
 import type { WorkOrderDTO } from "@/lib/types";
-import { STATIONS, STATION_LABEL, SERVICE_CATEGORY, SERVICE_CATEGORIES } from "@/lib/constants";
+import { STATIONS, STATION_LABEL, SERVICE_CATEGORY, SERVICE_CATEGORIES, PREVENTIVE_GROUPS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 
 function monthKey(d: Date) {
@@ -131,17 +131,21 @@ export function ServiceCostsClient() {
   );
 
   const prevMatrix = useMemo(() => {
+    const zero = () => Object.fromEntries(STATIONS.map((s) => [s, 0])) as Record<string, number>;
+    const labelFor = new Map<string, string>();
+    for (const g of PREVENTIVE_GROUPS) for (const s of g.services) labelFor.set(s, g.label);
     const map = new Map<string, { name: string; perStation: Record<string, number>; total: number }>();
+    // Seed the headline buckets in display order so they always appear.
+    for (const g of PREVENTIVE_GROUPS) map.set(g.label, { name: g.label, perStation: zero(), total: 0 });
     for (const o of prevOrders) {
-      const name = o.service?.name ?? o.title;
-      const cur =
-        map.get(name) ??
-        { name, perStation: Object.fromEntries(STATIONS.map((s) => [s, 0])) as Record<string, number>, total: 0 };
+      const svcName = o.service?.name ?? o.title;
+      const label = labelFor.get(svcName) ?? svcName;
+      const cur = map.get(label) ?? { name: label, perStation: zero(), total: 0 };
       cur.perStation[o.station] += o.cost;
       cur.total += o.cost;
-      map.set(name, cur);
+      map.set(label, cur);
     }
-    return Array.from(map.values()).sort((a, b) => b.total - a.total);
+    return Array.from(map.values());
   }, [prevOrders]);
 
   const prevStationTotals = useMemo(() => {
@@ -270,7 +274,7 @@ export function ServiceCostsClient() {
           <div>
             <h3 className="text-sm font-semibold">Preventive Maintenance — Cost per Station</h3>
             <p className="text-xs text-slate-400">
-              {monthFilter ? monthLabel(monthFilter) : "All months"} · each preventive service across the 7 stations
+              {monthFilter ? monthLabel(monthFilter) : "All months"} · cost per station for each preventive service group
             </p>
           </div>
           <ExportButton rows={prevMatrixCsv} filename="preventive-cost-by-station.csv" label="Export matrix" />
