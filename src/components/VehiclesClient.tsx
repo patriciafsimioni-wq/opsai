@@ -21,6 +21,7 @@ import {
   VEHICLE_STATUSES,
   VEHICLE_TYPES,
   FUEL_TYPES,
+  STATION_LABEL,
   titleCase,
 } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
@@ -62,7 +63,8 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
         v.make.toLowerCase().includes(q) ||
         v.model.toLowerCase().includes(q) ||
         v.licensePlate.toLowerCase().includes(q) ||
-        v.vin.toLowerCase().includes(q);
+        v.vin.toLowerCase().includes(q) ||
+        (v.dxNumber ?? "").toLowerCase().includes(q);
       const matchStatus = !statusFilter || v.status === statusFilter;
       return matchSearch && matchStatus;
     });
@@ -165,9 +167,10 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
           <thead>
             <tr>
               <Th>Vehicle</Th>
+              <Th>Station</Th>
               <Th>Type</Th>
               <Th>Status</Th>
-              <Th>Driver</Th>
+              <Th>Leasing</Th>
               <Th>Odometer</Th>
               <Th>Fuel</Th>
               <Th />
@@ -186,6 +189,9 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
                     </p>
                   </Link>
                 </Td>
+                <Td className="text-slate-600">
+                  {STATION_LABEL[v.station as keyof typeof STATION_LABEL]?.split(" - ")[0] ?? v.station}
+                </Td>
                 <Td className="text-slate-600">{titleCase(v.type)}</Td>
                 <Td>
                   <Badge
@@ -195,13 +201,11 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
                     {VEHICLE_STATUS[v.status as keyof typeof VEHICLE_STATUS].label}
                   </Badge>
                 </Td>
-                <Td className="text-slate-600">
-                  {v.assignedDriver
-                    ? `${v.assignedDriver.firstName} ${v.assignedDriver.lastName}`
-                    : "—"}
+                <Td className="text-slate-600 text-xs">
+                  {v.leasingCompany ?? "—"}
                 </Td>
                 <Td className="text-slate-600">
-                  {formatNumber(v.odometer)} km
+                  {formatNumber(v.odometer)} mi
                 </Td>
                 <Td>
                   <div className="w-24">

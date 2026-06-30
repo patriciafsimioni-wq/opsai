@@ -71,6 +71,7 @@ export default async function VehicleDetailPage({
           </div>
           <p className="mt-1 text-sm text-[var(--color-muted)]">
             {v.year} {v.make} {v.model} · {titleCase(v.type)} · {v.licensePlate}
+            {v.dxNumber ? ` · ${v.dxNumber}` : ""}
           </p>
         </div>
       </div>
@@ -116,13 +117,17 @@ export default async function VehicleDetailPage({
         <Card>
           <CardHeader title="Specifications" />
           <dl className="divide-y divide-[var(--color-border)] text-sm">
-            {[
+            {([
               ["VIN", v.vin],
+              ["DX #", v.dxNumber ?? "—"],
               ["Fuel type", titleCase(v.fuelType)],
               ["Tank capacity", `${v.tankCapacity} L`],
-              ["Purchase date", formatDate(v.purchaseDate)],
-              ["Purchase price", v.purchasePrice ? formatCurrency(v.purchasePrice) : "—"],
-            ].map(([k, val]) => (
+              ["Leasing Company", v.leasingCompany ?? "—"],
+              ["Samsara ID", v.samsaraId ?? "—"],
+              ["Onboarded", v.onboardedDate ? formatDate(v.onboardedDate) : "—"],
+              ["Lease End", v.leaseEndDate ? formatDate(v.leaseEndDate) : "—"],
+              ["Registration Month", v.registrationMonth ?? "—"],
+            ] as [string, string][]).map(([k, val]) => (
               <div key={k} className="flex justify-between px-5 py-2.5">
                 <dt className="text-slate-400">{k}</dt>
                 <dd className="font-medium">{val}</dd>

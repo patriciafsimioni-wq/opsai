@@ -161,6 +161,7 @@ model Driver {
 model Vehicle {
   id                 String         @id @default(cuid())
   name               String
+  dxNumber           String?        @unique
   make               String
   model              String
   year               Int
@@ -173,6 +174,11 @@ model Vehicle {
   fuelLevel          Float          @default(100)
   tankCapacity       Float          @default(200)
   station            Station        @default(AUS)
+  leasingCompany     String?
+  samsaraId          String?
+  onboardedDate      DateTime?
+  leaseEndDate       DateTime?
+  registrationMonth  String?
   registrationExpiry DateTime?
   insuranceExpiry    DateTime?
   purchaseDate       DateTime?

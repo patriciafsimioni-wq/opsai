@@ -1,5 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 const prisma = new PrismaClient();
 
@@ -17,17 +19,16 @@ function daysFromNow(days: number) {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 }
 
-// San Francisco Bay Area as the operating region
-const CENTER = { lat: 37.7749, lng: -122.4194 };
+// Texas operating region
 const CITY_POINTS: Record<string, { lat: number; lng: number }> = {
-  "Downtown SF Depot": { lat: 37.7793, lng: -122.4193 },
-  "Oakland Hub": { lat: 37.8044, lng: -122.2712 },
-  "San Jose Yard": { lat: 37.3382, lng: -121.8863 },
-  "Daly City Stop": { lat: 37.6879, lng: -122.4702 },
-  "Berkeley Stop": { lat: 37.8715, lng: -122.273 },
-  "Fremont Warehouse": { lat: 37.5485, lng: -121.9886 },
-  "Palo Alto Client": { lat: 37.4419, lng: -122.143 },
-  "Richmond Plant": { lat: 37.9358, lng: -122.3477 },
+  "IAH Depot - Houston": { lat: 29.9844, lng: -95.3414 },
+  "AUS Hub - Austin": { lat: 30.2672, lng: -97.7431 },
+  "HRL Yard - Harlingen": { lat: 26.1906, lng: -97.6961 },
+  "LRD Stop - Laredo": { lat: 27.5036, lng: -99.5076 },
+  "ACT Stop - Waco": { lat: 31.5493, lng: -97.1467 },
+  "CLL Warehouse - College Station": { lat: 30.6280, lng: -96.3344 },
+  "BPT Plant - Beaumont": { lat: 30.0802, lng: -94.1266 },
+  "San Antonio Client": { lat: 29.4241, lng: -98.4936 },
 };
 const PLACE_NAMES = Object.keys(CITY_POINTS);
 
@@ -40,27 +41,6 @@ const LAST = [
   "Smith", "Johnson", "Williams", "Brown", "Garcia", "Miller", "Davis",
   "Rodriguez", "Martinez", "Chen", "Khan", "Nguyen", "Okafor", "Patel",
   "Silva", "Kim", "Lopez", "Adams", "Ferreira", "Singh",
-];
-
-const VEHICLE_MODELS: Array<{
-  make: string;
-  model: string;
-  type: "TRUCK" | "VAN" | "CAR" | "BUS" | "PICKUP" | "TRAILER";
-  fuel: "DIESEL" | "GASOLINE" | "ELECTRIC" | "HYBRID" | "CNG";
-  tank: number;
-}> = [
-  { make: "Freightliner", model: "Cascadia", type: "TRUCK", fuel: "DIESEL", tank: 380 },
-  { make: "Volvo", model: "VNL 760", type: "TRUCK", fuel: "DIESEL", tank: 400 },
-  { make: "Ford", model: "Transit", type: "VAN", fuel: "GASOLINE", tank: 90 },
-  { make: "Mercedes-Benz", model: "Sprinter", type: "VAN", fuel: "DIESEL", tank: 93 },
-  { make: "Tesla", model: "Semi", type: "TRUCK", fuel: "ELECTRIC", tank: 0 },
-  { make: "Rivian", model: "EDV 700", type: "VAN", fuel: "ELECTRIC", tank: 0 },
-  { make: "Ford", model: "F-150 Lightning", type: "PICKUP", fuel: "ELECTRIC", tank: 0 },
-  { make: "Toyota", model: "Prius", type: "CAR", fuel: "HYBRID", tank: 43 },
-  { make: "Chevrolet", model: "Silverado", type: "PICKUP", fuel: "GASOLINE", tank: 98 },
-  { make: "RAM", model: "ProMaster", type: "VAN", fuel: "GASOLINE", tank: 90 },
-  { make: "Kenworth", model: "T680", type: "TRUCK", fuel: "DIESEL", tank: 450 },
-  { make: "Blue Bird", model: "Vision", type: "BUS", fuel: "CNG", tank: 150 },
 ];
 
 const STATIONS = ["AUS", "ACT", "IAH", "CLL", "BPT", "HRL", "LRD"] as const;
@@ -159,18 +139,6 @@ const SERVICE_CATALOG: ServiceDef[] = [
   { name: "First Aid / Fire Extinguisher Check", category: "CORRECTIVE", group: "Safety & Compliance", material: 25, labor: 40 },
 ];
 
-function vin() {
-  const chars = "ABCDEFGHJKLMNPRSTUVWXYZ0123456789";
-  let v = "";
-  for (let i = 0; i < 17; i++) v += chars[randInt(0, chars.length - 1)];
-  return v;
-}
-function plate() {
-  const n = randInt(0, 9);
-  const l = "ABCDEFGHJKLMNPRSTUVWXYZ";
-  return `${randInt(1, 9)}${l[randInt(0, 22)]}${l[randInt(0, 22)]}${l[randInt(0, 22)]}${randInt(100, 999)}${n}`;
-}
-
 async function main() {
   console.log("🌱 Seeding fleet database...");
 
@@ -189,11 +157,11 @@ async function main() {
 
   // ----- geofences -----
   const fenceDefs: Array<{ name: string; type: "DEPOT" | "CUSTOMER" | "SERVICE" | "RESTRICTED"; key: string; radius: number; color: string }> = [
-    { name: "Downtown SF Depot", type: "DEPOT", key: "Downtown SF Depot", radius: 700, color: "#2563eb" },
-    { name: "Oakland Hub", type: "DEPOT", key: "Oakland Hub", radius: 650, color: "#7c3aed" },
-    { name: "San Jose Yard", type: "SERVICE", key: "San Jose Yard", radius: 800, color: "#0891b2" },
-    { name: "Palo Alto Client Site", type: "CUSTOMER", key: "Palo Alto Client", radius: 400, color: "#16a34a" },
-    { name: "Richmond Restricted Zone", type: "RESTRICTED", key: "Richmond Plant", radius: 500, color: "#dc2626" },
+    { name: "IAH Depot - Houston", type: "DEPOT", key: "IAH Depot - Houston", radius: 700, color: "#2563eb" },
+    { name: "AUS Hub - Austin", type: "DEPOT", key: "AUS Hub - Austin", radius: 650, color: "#7c3aed" },
+    { name: "HRL Yard - Harlingen", type: "SERVICE", key: "HRL Yard - Harlingen", radius: 800, color: "#0891b2" },
+    { name: "San Antonio Client", type: "CUSTOMER", key: "San Antonio Client", radius: 400, color: "#16a34a" },
+    { name: "BPT Plant - Beaumont", type: "RESTRICTED", key: "BPT Plant - Beaumont", radius: 500, color: "#dc2626" },
   ];
   for (const f of fenceDefs) {
     const p = CITY_POINTS[f.key];
@@ -270,37 +238,88 @@ async function main() {
     },
   });
 
-  // ----- vehicles -----
+  // ----- vehicles (from real fleet data) -----
+  type FleetRow = {
+    dxNumber: string;
+    licensePlate: string;
+    vin: string;
+    status: string;
+    year: number;
+    make: string;
+    model: string;
+    station: string;
+    type: string;
+    leasingCompany: string | null;
+    samsaraId: string | null;
+    tollEnabled: boolean;
+    odometer: number;
+    onboardedDate: string | null;
+    leaseEndDate: string | null;
+    registrationMonth: string | null;
+  };
+  const fleetData: FleetRow[] = JSON.parse(
+    readFileSync(join(__dirname, "fleet-data.json"), "utf-8"),
+  );
+
+  // Station center coordinates for telemetry scatter
+  const STATION_COORDS: Record<string, { lat: number; lng: number }> = {
+    IAH: { lat: 29.9844, lng: -95.3414 },
+    AUS: { lat: 30.2672, lng: -97.7431 },
+    HRL: { lat: 26.1906, lng: -97.6961 },
+    LRD: { lat: 27.5036, lng: -99.5076 },
+    ACT: { lat: 31.5493, lng: -97.1467 },
+    CLL: { lat: 30.6280, lng: -96.3344 },
+    BPT: { lat: 30.0802, lng: -94.1266 },
+  };
+
+  // Fuel type heuristic from make/model
+  function guessFuel(make: string, model: string): "DIESEL" | "GASOLINE" | "ELECTRIC" | "HYBRID" | "CNG" {
+    const m = `${make} ${model}`.toLowerCase();
+    if (m.includes("freightliner") || m.includes("international") || m.includes("peterbilt") || m.includes("f650") || m.includes("f-650")) return "DIESEL";
+    return "GASOLINE";
+  }
+
+  // Tank capacity heuristic
+  function guessTank(type: string, fuel: string): number {
+    if (fuel === "ELECTRIC") return 0;
+    if (type === "TRUCK") return 380;
+    return 90; // Van
+  }
+
   const vehicles = [];
-  const VEHICLE_COUNT = 24;
-  for (let i = 0; i < VEHICLE_COUNT; i++) {
-    const m = pick(VEHICLE_MODELS);
-    const status = pick([
-      "ACTIVE", "ACTIVE", "ACTIVE", "ACTIVE", "IDLE", "IDLE", "MAINTENANCE", "OUT_OF_SERVICE",
-    ]) as "ACTIVE" | "IDLE" | "MAINTENANCE" | "OUT_OF_SERVICE";
-    const assigned = status === "OUT_OF_SERVICE" ? null : pick(drivers);
-    const isMoving = status === "ACTIVE";
+  for (const row of fleetData) {
+    const stationKey = STATIONS.includes(row.station as StationCode) ? row.station : "IAH";
+    const statusVal = (row.status === "ACTIVE" ? "ACTIVE" : "OUT_OF_SERVICE") as "ACTIVE" | "IDLE" | "MAINTENANCE" | "OUT_OF_SERVICE";
+    const vType = (row.type === "TRUCK" ? "TRUCK" : "VAN") as "TRUCK" | "VAN";
+    const fuel = guessFuel(row.make, row.model);
+    const tank = guessTank(row.type, fuel);
+    const isMoving = statusVal === "ACTIVE" && Math.random() > 0.5;
+    const coords = STATION_COORDS[stationKey] ?? STATION_COORDS.IAH;
+    const assigned = statusVal === "OUT_OF_SERVICE" ? null : pick(drivers);
+
     const v = await prisma.vehicle.create({
       data: {
-        name: `Unit ${String(i + 1).padStart(3, "0")}`,
-        make: m.make,
-        model: m.model,
-        year: randInt(2017, 2025),
-        vin: vin(),
-        licensePlate: plate(),
-        type: m.type,
-        status,
-        fuelType: m.fuel,
-        odometer: randInt(5000, 320000),
-        fuelLevel: m.fuel === "ELECTRIC" ? randInt(15, 100) : randInt(8, 100),
-        tankCapacity: m.tank || 100,
-        station: STATIONS[i % STATIONS.length] as StationCode,
-        registrationExpiry: daysFromNow(randInt(-15, 700)),
-        insuranceExpiry: daysFromNow(randInt(-10, 500)),
-        purchaseDate: daysFromNow(-randInt(200, 2800)),
-        purchasePrice: randInt(35000, 185000),
-        lat: CENTER.lat + rand(-0.18, 0.18),
-        lng: CENTER.lng + rand(-0.22, 0.22),
+        name: row.dxNumber,
+        dxNumber: row.dxNumber,
+        make: row.make,
+        model: row.model,
+        year: row.year,
+        vin: row.vin,
+        licensePlate: row.licensePlate,
+        type: vType,
+        status: statusVal,
+        fuelType: fuel,
+        odometer: row.odometer,
+        fuelLevel: fuel === "ELECTRIC" ? randInt(15, 100) : randInt(8, 100),
+        tankCapacity: tank,
+        station: stationKey as StationCode,
+        leasingCompany: row.leasingCompany,
+        samsaraId: row.samsaraId,
+        onboardedDate: row.onboardedDate ? new Date(row.onboardedDate) : null,
+        leaseEndDate: row.leaseEndDate ? new Date(row.leaseEndDate) : null,
+        registrationMonth: row.registrationMonth,
+        lat: coords.lat + rand(-0.05, 0.05),
+        lng: coords.lng + rand(-0.05, 0.05),
         heading: rand(0, 360),
         speed: isMoving ? randInt(15, 75) : 0,
         engineOn: isMoving,
@@ -455,7 +474,7 @@ async function main() {
           pricePerLiter: price,
           totalCost: Math.round(liters * price * 100) / 100,
           odometer: v.odometer - randInt(0, 8000),
-          location: pick(["Shell - Market St", "Chevron - Oakland", "BP - San Jose", "Costco Fuel", "76 - Berkeley"]),
+          location: pick(["Shell - Houston", "Chevron - Austin", "BP - Harlingen", "Buc-ee's - Waco", "Valero - Laredo"]),
         },
       });
     }
@@ -471,8 +490,8 @@ async function main() {
     ]) as "SPEEDING" | "GEOFENCE_ENTER" | "GEOFENCE_EXIT" | "MAINTENANCE_DUE" | "DOCUMENT_EXPIRY" | "LOW_FUEL" | "IDLE" | "HARSH_DRIVING";
     const messages: Record<string, string> = {
       SPEEDING: `${v.name} exceeded speed limit (${randInt(78, 96)} mph in a 65 zone)`,
-      GEOFENCE_ENTER: `${v.name} entered geofence "Downtown SF Depot"`,
-      GEOFENCE_EXIT: `${v.name} left geofence "Oakland Hub"`,
+      GEOFENCE_ENTER: `${v.name} entered geofence "IAH Depot - Houston"`,
+      GEOFENCE_EXIT: `${v.name} left geofence "AUS Hub - Austin"`,
       MAINTENANCE_DUE: `${v.name} is due for scheduled service`,
       DOCUMENT_EXPIRY: `${v.name} registration expires soon`,
       LOW_FUEL: `${v.name} fuel level below 15%`,
