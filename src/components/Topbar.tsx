@@ -33,7 +33,7 @@ export function Topbar({
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)]/80 px-5 backdrop-blur">
       <div className="flex items-center gap-2 lg:hidden">
-        <span className="text-lg font-bold">FleetOps</span>
+        <span className="text-lg font-bold">Live Fleet AI</span>
       </div>
       <div className="hidden lg:block">
         <p className="text-sm text-[var(--color-muted)]">

@@ -46,7 +46,7 @@ export default function LoginPage() {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
             <Truck size={22} />
           </div>
-          FleetOps
+          Live Fleet AI
         </div>
         <div className="space-y-6">
           <h1 className="text-4xl font-bold leading-tight">
@@ -70,14 +70,14 @@ export default function LoginPage() {
             ))}
           </div>
         </div>
-        <p className="text-xs text-blue-200">© {new Date().getFullYear()} FleetOps. Built with Next.js.</p>
+        <p className="text-xs text-blue-200">© {new Date().getFullYear()} Live Fleet AI. Built with Next.js.</p>
       </div>
 
       {/* Form panel */}
       <div className="flex items-center justify-center bg-[var(--color-bg)] p-6">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-2 text-lg font-bold lg:hidden">
-            <Truck size={22} className="text-blue-600" /> FleetOps
+            <Truck size={22} className="text-blue-600" /> Live Fleet AI
           </div>
           <h2 className="text-2xl font-bold">Sign in</h2>
           <p className="mt-1 text-sm text-[var(--color-muted)]">

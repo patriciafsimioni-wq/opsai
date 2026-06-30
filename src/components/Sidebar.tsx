@@ -39,7 +39,7 @@ export function Sidebar({ alertCount }: { alertCount: number }) {
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white">
           <TruckLogo size={18} />
         </div>
-        <span className="text-lg font-bold tracking-tight">FleetOps</span>
+        <span className="text-lg font-bold tracking-tight">Live Fleet AI</span>
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
         {NAV.map((item) => {

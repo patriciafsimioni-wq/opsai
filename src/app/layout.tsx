@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FleetOps — Fleet Management",
+  title: "Live Fleet AI — Fleet Management",
   description:
     "Complete fleet management platform: live GPS tracking, maintenance, drivers, trips, fuel and analytics.",
 };

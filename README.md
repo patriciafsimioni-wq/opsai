@@ -1,4 +1,4 @@
-# FleetOps — Fleet Management Platform
+# Live Fleet AI — Fleet Management Platform
 
 A complete, production-grade fleet management web application: live GPS tracking,
 maintenance & work orders, drivers, trips/dispatch, fuel, geofencing, alerts, and
