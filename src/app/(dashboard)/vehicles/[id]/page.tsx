@@ -53,7 +53,7 @@ function matchService(woTitle: string): string | null {
   if (lower.includes("oil change") || lower.includes("oil + filter") || lower.includes("pm a") || lower.includes("pm b") || lower.includes("pm c") || lower.includes("tire rotation") || lower.includes("oil filter")) return "Oil + Filter + Tire Rotation";
   if (lower.includes("fluid") && !lower.includes("transmission")) return "Fluids";
   if (lower.includes("brake pad") || lower.includes("brake pads")) return "Brake Pads Replacement";
-  if (lower.includes("brake inspection") || lower.includes("cabin air")) return "Brake Inspection + Cabin Air";
+  if (lower.includes("brake inspection") || lower.includes("cabin air") || lower.includes("brake rotor")) return "Brake Inspection + Cabin Air";
   if (lower.includes("engine air filter") || lower.includes("engine filter")) return "Engine Air Filter";
   if (lower.includes("air brake") || lower.includes("purge brake")) return "Air Brake Cleaning";
   if (lower.includes("tire replacement") || lower.includes("tires replacement") || lower.includes("tire install") || lower.includes("new tires")) return "Tire Replacement";
@@ -61,7 +61,7 @@ function matchService(woTitle: string): string | null {
   if (lower.includes("transmission")) return "Transmission Fluid";
   if (lower.includes("turbo") || lower.includes("actuator")) return "Turbocharger Inspection";
   if (lower.includes("battery") && !lower.includes("terminal")) return "Battery Replacement";
-  if (lower.includes("coolant") || lower.includes("spark plug")) return "Coolant + Spark Plugs";
+  if (lower.includes("coolant") || lower.includes("spark plug") || lower.includes("radiator") || lower.includes("cooling system")) return "Coolant + Spark Plugs";
   if (lower.includes("timing belt") || lower.includes("time belt")) return "Timing Belt";
   if (lower.includes("diesel filter")) return "Diesel Filter Cleaning";
   if (lower.includes("drivetrain")) return "Drivetrain Overhaul";
@@ -146,26 +146,39 @@ export default async function VehicleDetailPage({
   // Sort by date ascending
   knownOdoPoints.sort((a, b) => a.date - b.date);
 
+  // Fallback: estimate average daily miles from vehicle year and current odo
+  const vehicleStartMs = new Date(v.year, 0, 1).getTime();
+  const avgDailyMiles = v.odometer > 0
+    ? v.odometer / Math.max(1, (now.getTime() - vehicleStartMs) / 86400000)
+    : 70; // default ~25k miles/year
+
   function estimateOdoAtDate(dateMs: number): number | null {
-    if (knownOdoPoints.length < 2) return null;
-    // If before earliest point, extrapolate using first two points' rate
-    if (dateMs <= knownOdoPoints[0].date) {
-      const rate = (knownOdoPoints[1].odo - knownOdoPoints[0].odo) / (knownOdoPoints[1].date - knownOdoPoints[0].date);
-      return Math.max(0, Math.round(knownOdoPoints[0].odo + rate * (dateMs - knownOdoPoints[0].date)));
-    }
-    // If after latest point, extrapolate
-    if (dateMs >= knownOdoPoints[knownOdoPoints.length - 1].date) {
-      const last = knownOdoPoints[knownOdoPoints.length - 1];
-      const prev = knownOdoPoints[knownOdoPoints.length - 2];
-      const rate = (last.odo - prev.odo) / (last.date - prev.date);
-      return Math.round(last.odo + rate * (dateMs - last.date));
-    }
-    // Interpolate between two closest points
-    for (let i = 0; i < knownOdoPoints.length - 1; i++) {
-      if (dateMs >= knownOdoPoints[i].date && dateMs <= knownOdoPoints[i + 1].date) {
-        const ratio = (dateMs - knownOdoPoints[i].date) / (knownOdoPoints[i + 1].date - knownOdoPoints[i].date);
-        return Math.round(knownOdoPoints[i].odo + ratio * (knownOdoPoints[i + 1].odo - knownOdoPoints[i].odo));
+    if (knownOdoPoints.length >= 2) {
+      // If before earliest point, extrapolate using first two points' rate
+      if (dateMs <= knownOdoPoints[0].date) {
+        const rate = (knownOdoPoints[1].odo - knownOdoPoints[0].odo) / (knownOdoPoints[1].date - knownOdoPoints[0].date);
+        return Math.max(0, Math.round(knownOdoPoints[0].odo + rate * (dateMs - knownOdoPoints[0].date)));
       }
+      // If after latest point, extrapolate
+      if (dateMs >= knownOdoPoints[knownOdoPoints.length - 1].date) {
+        const last = knownOdoPoints[knownOdoPoints.length - 1];
+        const prev = knownOdoPoints[knownOdoPoints.length - 2];
+        const rate = (last.odo - prev.odo) / (last.date - prev.date);
+        return Math.round(last.odo + rate * (dateMs - last.date));
+      }
+      // Interpolate between two closest points
+      for (let i = 0; i < knownOdoPoints.length - 1; i++) {
+        if (dateMs >= knownOdoPoints[i].date && dateMs <= knownOdoPoints[i + 1].date) {
+          const ratio = (dateMs - knownOdoPoints[i].date) / (knownOdoPoints[i + 1].date - knownOdoPoints[i].date);
+          return Math.round(knownOdoPoints[i].odo + ratio * (knownOdoPoints[i + 1].odo - knownOdoPoints[i].odo));
+        }
+      }
+    }
+    // Fallback: use average daily mileage from vehicle age
+    const currentOdo = v!.odometer;
+    if (currentOdo > 0) {
+      const daysDiff = (now.getTime() - dateMs) / 86400000;
+      return Math.max(0, Math.round(currentOdo - avgDailyMiles * daysDiff));
     }
     return null;
   }
