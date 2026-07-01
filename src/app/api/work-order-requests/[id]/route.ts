@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { sendEmail, buildApprovalEmail } from "@/lib/email";
 
 const userSelect = { id: true, name: true, email: true, role: true } as const;
 
@@ -62,6 +63,21 @@ export async function PATCH(
       reviewedBy: { select: userSelect },
     },
   });
+
+  // Send email notification to requester
+  if (updated.requestedBy?.email) {
+    const emailData = buildApprovalEmail({
+      requesterName: updated.requestedBy.name || "Team Member",
+      poNumber: updated.poNumber || "N/A",
+      status: parsed.data.status,
+      vehicleName: updated.vehicle?.name || updated.vehicle?.dxNumber || "N/A",
+      serviceTitle: updated.service?.name || "Service Request",
+      approverName: auth.user.name || undefined,
+      notes: parsed.data.reviewNote || undefined,
+    });
+    sendEmail({ to: updated.requestedBy.email, ...emailData }).catch(() => {});
+  }
+
   return NextResponse.json(updated);
 }
 

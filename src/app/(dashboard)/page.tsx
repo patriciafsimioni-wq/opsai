@@ -7,6 +7,7 @@ import {
   Fuel,
   Users,
   TrendingUp,
+  ShieldAlert,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { Card, CardHeader, StatCard, Badge, Avatar } from "@/components/ui";
@@ -105,6 +106,17 @@ export default async function DashboardPage() {
     vehicles.length > 0
       ? Math.round((statusCounts.ACTIVE / vehicles.length) * 100)
       : 0;
+
+  // Compliance audit — registration & insurance
+  const nowDate = new Date();
+  const in60Date = new Date(nowDate.getTime() + 60 * 86400000);
+  const activeVehicles = vehicles.filter((v) => v.status === "ACTIVE" || v.status === "IDLE");
+  const regExpired = activeVehicles.filter((v) => v.registrationExpiry && new Date(v.registrationExpiry) < nowDate);
+  const regExpiringSoon = activeVehicles.filter((v) => v.registrationExpiry && new Date(v.registrationExpiry) >= nowDate && new Date(v.registrationExpiry) <= in60Date);
+  const regMissing = activeVehicles.filter((v) => !v.registrationExpiry);
+  const insExpired = activeVehicles.filter((v) => v.insuranceExpiry && new Date(v.insuranceExpiry) < nowDate);
+  const insExpiringSoon = activeVehicles.filter((v) => v.insuranceExpiry && new Date(v.insuranceExpiry) >= nowDate && new Date(v.insuranceExpiry) <= in60Date);
+  const complianceIssues = regExpired.length + regMissing.length + insExpired.length;
 
   const topDrivers = drivers.slice(0, 5);
   const upcomingMaint = workOrders
@@ -230,8 +242,13 @@ export default async function DashboardPage() {
             )}
             {alerts.map((a) => {
               const sev = ALERT_SEVERITY[a.severity];
+              const href = a.vehicleId
+                ? `/vehicles/${a.vehicleId}`
+                : a.driverId
+                  ? `/drivers/${a.driverId}`
+                  : "/alerts";
               return (
-                <div key={a.id} className="flex items-center gap-3 px-5 py-3">
+                <Link key={a.id} href={href} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors">
                   <span
                     className="h-2 w-2 shrink-0 rounded-full"
                     style={{ backgroundColor: sev.color }}
@@ -245,7 +262,7 @@ export default async function DashboardPage() {
                   <Badge bg={sev.bg} fg={sev.fg}>
                     {sev.label}
                   </Badge>
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -289,6 +306,71 @@ export default async function DashboardPage() {
           </div>
         </Card>
       </div>
+
+      {/* Compliance Audit */}
+      {(complianceIssues > 0 || regExpiringSoon.length > 0 || insExpiringSoon.length > 0) && (
+        <div className="mt-6">
+          <Card className="border-red-200 bg-red-50/30">
+            <CardHeader
+              title="Compliance Audit"
+              subtitle="Registration & Insurance — Priority"
+              action={
+                <Link href="/vehicles" className="text-xs font-medium text-red-600 hover:underline">
+                  View Vehicles
+                </Link>
+              }
+            />
+            <div className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-5">
+              <div className="rounded-lg border border-red-200 bg-white p-3">
+                <p className="text-xs font-medium text-red-600">Reg. Expired</p>
+                <p className="mt-1 text-2xl font-bold text-red-700">{regExpired.length}</p>
+              </div>
+              <div className="rounded-lg border border-amber-200 bg-white p-3">
+                <p className="text-xs font-medium text-amber-600">Reg. Expiring (60d)</p>
+                <p className="mt-1 text-2xl font-bold text-amber-700">{regExpiringSoon.length}</p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white p-3">
+                <p className="text-xs font-medium text-slate-600">Reg. Missing</p>
+                <p className="mt-1 text-2xl font-bold text-slate-700">{regMissing.length}</p>
+              </div>
+              <div className="rounded-lg border border-red-200 bg-white p-3">
+                <p className="text-xs font-medium text-red-600">Ins. Expired</p>
+                <p className="mt-1 text-2xl font-bold text-red-700">{insExpired.length}</p>
+              </div>
+              <div className="rounded-lg border border-amber-200 bg-white p-3">
+                <p className="text-xs font-medium text-amber-600">Ins. Expiring (60d)</p>
+                <p className="mt-1 text-2xl font-bold text-amber-700">{insExpiringSoon.length}</p>
+              </div>
+            </div>
+            {regExpired.length > 0 && (
+              <div className="border-t border-red-200 px-5 py-3">
+                <p className="mb-2 flex items-center gap-1 text-xs font-bold uppercase text-red-600"><ShieldAlert size={12} /> Expired Registrations</p>
+                <div className="flex flex-wrap gap-2">
+                  {regExpired.slice(0, 15).map((v) => (
+                    <Link key={v.id} href={`/vehicles/${v.id}`} className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 transition-colors">
+                      {v.dxNumber ?? v.name} <span className="text-red-400">· exp {formatDate(v.registrationExpiry)}</span>
+                    </Link>
+                  ))}
+                  {regExpired.length > 15 && <span className="px-3 py-1.5 text-xs text-red-400">+{regExpired.length - 15} more</span>}
+                </div>
+              </div>
+            )}
+            {regMissing.length > 0 && (
+              <div className="border-t border-red-200 px-5 py-3">
+                <p className="mb-2 text-xs font-bold uppercase text-slate-500">Missing Registration Date</p>
+                <div className="flex flex-wrap gap-2">
+                  {regMissing.slice(0, 15).map((v) => (
+                    <Link key={v.id} href={`/vehicles/${v.id}`} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                      {v.dxNumber ?? v.name}
+                    </Link>
+                  ))}
+                  {regMissing.length > 15 && <span className="px-3 py-1.5 text-xs text-slate-400">+{regMissing.length - 15} more</span>}
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
 
       {/* upcoming maintenance */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">

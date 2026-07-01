@@ -321,6 +321,14 @@ async function main() {
         onboardedDate: row.onboardedDate ? new Date(row.onboardedDate) : null,
         leaseEndDate: row.leaseEndDate ? new Date(row.leaseEndDate) : null,
         registrationMonth: row.registrationMonth,
+        registrationExpiry: row.registrationMonth
+          ? (() => {
+              const monthMap: Record<string, number> = { January: 0, February: 1, March: 2, April: 3, May: 4, June: 5, July: 6, August: 7, September: 8, October: 9, November: 10, December: 11 };
+              const m = monthMap[row.registrationMonth];
+              return m !== undefined ? new Date(2026, m, 28) : null;
+            })()
+          : null,
+        insuranceExpiry: new Date("2026-10-31"),
         lat: coords.lat + rand(-0.05, 0.05),
         lng: coords.lng + rand(-0.05, 0.05),
         heading: rand(0, 360),
