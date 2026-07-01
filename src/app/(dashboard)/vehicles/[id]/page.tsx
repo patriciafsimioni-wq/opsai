@@ -154,7 +154,9 @@ export default async function VehicleDetailPage({
       lastDate = last.completedAt.toISOString().slice(0, 10);
       nextDue = lastAt + interval;
     } else {
-      nextDue = firstDue;
+      // Never done: show the NEXT upcoming due (most recent interval point past current odo + interval)
+      const periodsPassed = Math.floor((odo - firstDue) / interval);
+      nextDue = firstDue + Math.max(0, periodsPassed + 1) * interval;
     }
     const milesUntil = Math.round(nextDue - odo);
     if (!last && odo >= firstDue) svcStatus = "never_performed";
@@ -601,8 +603,10 @@ export default async function VehicleDetailPage({
                       <span className="font-medium text-slate-800">{r.service}</span>
                     </div>
                     <div className="text-right text-xs">
-                      <span className="text-slate-500">Due at {r.nextDue.toLocaleString()} mi</span>
-                      <span className="ml-2 font-semibold text-red-600">{Math.abs(r.milesUntil).toLocaleString()} mi past</span>
+                      <span className="text-slate-500">Next due at {r.nextDue.toLocaleString()} mi</span>
+                      {r.milesUntil > 0
+                        ? <span className="ml-2 font-semibold text-amber-600">{r.milesUntil.toLocaleString()} mi until</span>
+                        : <span className="ml-2 font-semibold text-red-600">{Math.abs(r.milesUntil).toLocaleString()} mi past</span>}
                     </div>
                   </div>
                 ))}
