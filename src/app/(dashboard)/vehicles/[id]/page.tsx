@@ -82,7 +82,7 @@ export default async function VehicleDetailPage({
     include: {
       assignedDriver: true,
       maintenance: { orderBy: { createdAt: "desc" } },
-      fuelLogs: { orderBy: { date: "desc" }, take: 10 },
+      fuelLogs: { orderBy: { date: "desc" } },
       trips: { orderBy: { scheduledStart: "desc" }, take: 8, include: { driver: true } },
     },
   });
@@ -400,10 +400,11 @@ export default async function VehicleDetailPage({
 
             <div className="mt-4">
               <p className="mb-2 text-xs font-semibold uppercase text-slate-500">Lifetime Cost Breakdown</p>
-              <div className="grid grid-cols-2 gap-2 md:grid-cols-3 text-xs">
-                <div className="flex justify-between border-b border-slate-100 pb-1"><span className="text-slate-500">Maintenance (Parts)</span><span className="font-medium">{formatCurrency(totalMaterialCost)}</span></div>
-                <div className="flex justify-between border-b border-slate-100 pb-1"><span className="text-slate-500">Maintenance (Labor)</span><span className="font-medium">{formatCurrency(totalLaborCost)}</span></div>
-                <div className="flex justify-between border-b border-slate-100 pb-1"><span className="text-slate-500">Fuel</span><span className="font-medium">{formatCurrency(totalFuelCost)}</span></div>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between border-b border-slate-100 pb-1"><span className="text-slate-500">Maintenance</span><span className="font-medium">{formatCurrency(totalMaintCost)}</span></div>
+                {totalMaterialCost > 0 && <div className="flex justify-between border-b border-slate-100 pb-1 pl-4"><span className="text-slate-400">Parts</span><span className="text-slate-500">{formatCurrency(totalMaterialCost)}</span></div>}
+                {totalLaborCost > 0 && <div className="flex justify-between border-b border-slate-100 pb-1 pl-4"><span className="text-slate-400">Labor</span><span className="text-slate-500">{formatCurrency(totalLaborCost)}</span></div>}
+                <div className="flex justify-between border-b border-slate-100 pb-1"><span className="text-slate-500">Fuel ({v.fuelLogs.length} fills)</span><span className="font-medium">{formatCurrency(totalFuelCost)}</span></div>
                 {totalLeasePaid > 0 && <div className="flex justify-between border-b border-slate-100 pb-1"><span className="text-slate-500">Leasing</span><span className="font-medium">{formatCurrency(totalLeasePaid)}</span></div>}
               </div>
             </div>
