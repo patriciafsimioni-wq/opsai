@@ -5,11 +5,11 @@ import { Card, CardHeader, Badge } from "@/components/ui";
 import { ClipboardCheck, AlertTriangle, Camera, CheckCircle2, XCircle } from "lucide-react";
 import { apiSend } from "@/lib/use-data";
 
-type Vehicle = { id: string; name: string; dxNumber: string | null };
+type Vehicle = { id: string; name: string; dxNumber: string | null; station?: string };
 type DvirReport = {
   id: string;
   vehicleId: string;
-  vehicle: { id: string; name: string; dxNumber: string | null };
+  vehicle: { id: string; name: string; dxNumber: string | null; station?: string };
   submittedBy: { id: string; name: string };
   odometer: number | null;
   tires: string;
@@ -51,11 +51,14 @@ const INSPECTION_ITEMS = [
   { key: "ac", label: "A/C & Heating" },
 ] as const;
 
+const STATIONS = ["ALL", "IAH", "AUS", "HRL", "LRD", "CLL", "BPT", "ACT"] as const;
+
 export default function DvirPage() {
   const [tab, setTab] = useState<"form" | "history" | "alerts">("form");
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [reports, setReports] = useState<DvirReport[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stationFilter, setStationFilter] = useState<string>("ALL");
 
   // Form state
   const [vehicleId, setVehicleId] = useState("");
@@ -108,8 +111,9 @@ export default function DvirPage() {
     }
   }
 
-  const alertReports = reports.filter((r) => r.hasAlert && !r.alertResolved);
-  const failedReports = reports.filter((r) => r.overallStatus === "FAIL");
+  const filtered = stationFilter === "ALL" ? reports : reports.filter((r) => r.vehicle.station === stationFilter);
+  const alertReports = filtered.filter((r) => r.hasAlert && !r.alertResolved);
+  const failedReports = filtered.filter((r) => r.overallStatus === "FAIL");
 
   return (
     <div className="space-y-6 p-6">
@@ -122,19 +126,33 @@ export default function DvirPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2">
-        {(["form", "history", "alerts"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              tab === t ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
+      {/* Station Filter + Tabs */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2">
+          {(["form", "history", "alerts"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                tab === t ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              {t === "form" ? "New Inspection" : t === "history" ? `History (${filtered.length})` : `Alerts (${alertReports.length})`}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-semibold uppercase text-slate-500">Station</label>
+          <select
+            value={stationFilter}
+            onChange={(e) => setStationFilter(e.target.value)}
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
           >
-            {t === "form" ? "New Inspection" : t === "history" ? `History (${reports.length})` : `Alerts (${alertReports.length})`}
-          </button>
-        ))}
+            {STATIONS.map((s) => (
+              <option key={s} value={s}>{s === "ALL" ? "All Stations" : s}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* New Inspection Form */}
@@ -283,7 +301,7 @@ export default function DvirPage() {
                 </tr>
               </thead>
               <tbody>
-                {reports.map((r) => {
+                {filtered.map((r) => {
                   const failedItems = INSPECTION_ITEMS.filter(({ key }) => (r as Record<string, unknown>)[key] === "FAIL").map(({ label }) => label);
                   return (
                     <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50">
@@ -308,7 +326,7 @@ export default function DvirPage() {
                     </tr>
                   );
                 })}
-                {reports.length === 0 && (
+                {filtered.length === 0 && (
                   <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">No inspections yet</td></tr>
                 )}
               </tbody>

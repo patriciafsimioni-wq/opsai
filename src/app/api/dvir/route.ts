@@ -34,7 +34,7 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
     take: 200,
     include: {
-      vehicle: { select: { id: true, name: true, dxNumber: true } },
+      vehicle: { select: { id: true, name: true, dxNumber: true, station: true } },
       submittedBy: { select: { id: true, name: true } },
     },
   });
