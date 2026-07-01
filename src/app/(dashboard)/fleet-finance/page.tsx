@@ -3,11 +3,26 @@ import { Card, CardHeader } from "@/components/ui";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { LIFECYCLE_STATUS } from "@/lib/constants";
 import Link from "next/link";
+import { getSession, getUserStationFilter } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { FleetFinanceStationFilter } from "@/components/FleetFinanceStationFilter";
+import type { Station } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
-export default async function FleetFinancePage() {
+export default async function FleetFinancePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const user = await getSession();
+  if (!user) redirect("/login");
+
+  const params = await searchParams;
+  const userStation = getUserStationFilter(user);
+  const selectedStation = userStation ?? (typeof params.station === "string" ? params.station : "");
+
+  const whereClause: Record<string, unknown> = {};
+  if (selectedStation) whereClause.station = selectedStation as Station;
+
   const vehicles = await prisma.vehicle.findMany({
+    where: whereClause,
     include: {
       maintenance: { where: { status: "COMPLETED" } },
       fuelLogs: true,
@@ -112,6 +127,7 @@ export default async function FleetFinancePage() {
           <h1 className="text-2xl font-bold">Executive Fleet Finance</h1>
           <p className="text-sm text-[var(--color-muted)]">Complete financial overview and decision support</p>
         </div>
+        {!userStation && <FleetFinanceStationFilter current={selectedStation} />}
       </div>
 
       {/* Top KPIs */}
