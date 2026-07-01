@@ -16,18 +16,19 @@ export async function POST() {
 
   const samsaraVehicles = await getSamsaraVehicles();
 
-  // Build lookup of samsara vehicles by DX number
-  const cameraStatus = new Map<string, boolean>();
+  // Build set of all Samsara vehicle identifiers (DX numbers + license plates)
+  const samsaraIdentifiers = new Set<string>();
   for (const sv of samsaraVehicles) {
     const dx = extractDxNumber(sv.name);
-    if (dx) {
-      cameraStatus.set(dx, !!sv.cameraSerial);
-    }
+    if (dx) samsaraIdentifiers.add(dx);
+    if (sv.licensePlate) samsaraIdentifiers.add(sv.licensePlate.toUpperCase().replace(/\s+/g, ""));
+    // Also add the full name as-is (some are named by plate)
+    if (sv.name) samsaraIdentifiers.add(sv.name.toUpperCase().replace(/\s+/g, ""));
   }
 
   // Get local vehicles
   const vehicles = await prisma.vehicle.findMany({
-    select: { id: true, dxNumber: true, name: true, hasSamsaraCamera: true, samsaraId: true },
+    select: { id: true, dxNumber: true, licensePlate: true, name: true, hasSamsaraCamera: true, samsaraId: true },
   });
 
   let updated = 0;
@@ -37,9 +38,15 @@ export async function POST() {
 
   for (const v of vehicles) {
     const dx = v.dxNumber?.toUpperCase();
-    if (!dx) continue;
+    const plate = v.licensePlate?.toUpperCase().replace(/\s+/g, "");
 
-    const hasCamera = cameraStatus.get(dx) ?? false;
+    // Vehicle is in Samsara if matched by DX, plate, or already has samsaraId
+    const hasCamera = !!(
+      v.samsaraId ||
+      (dx && samsaraIdentifiers.has(dx)) ||
+      (plate && samsaraIdentifiers.has(plate))
+    );
+
     if (hasCamera) withCamera++;
     else {
       withoutCamera++;

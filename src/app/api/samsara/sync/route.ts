@@ -21,11 +21,12 @@ export async function POST() {
 
   const stats = await getSamsaraVehicleStats();
   const vehicles = await prisma.vehicle.findMany({
-    select: { id: true, dxNumber: true, samsaraId: true },
+    select: { id: true, dxNumber: true, licensePlate: true, samsaraId: true },
   });
 
   // Build lookup maps
   const byDx = new Map(vehicles.map((v) => [v.dxNumber?.toUpperCase(), v]));
+  const byPlate = new Map(vehicles.map((v) => [v.licensePlate?.toUpperCase().replace(/\s+/g, ""), v]));
   const bySamsaraId = new Map(
     vehicles.filter((v) => v.samsaraId).map((v) => [v.samsaraId!, v]),
   );
@@ -35,11 +36,15 @@ export async function POST() {
   const results: { name: string; dxNumber: string | null; odometer: number; source: string }[] = [];
 
   for (const s of stats) {
-    // Match by samsaraId first, then DX number
+    // Match by samsaraId first, then DX number, then license plate
     let vehicle = bySamsaraId.get(s.id);
     if (!vehicle) {
       const dx = extractDxNumber(s.name);
       if (dx) vehicle = byDx.get(dx);
+    }
+    if (!vehicle) {
+      const plate = s.name?.toUpperCase().replace(/\s+/g, "");
+      if (plate) vehicle = byPlate.get(plate);
     }
     if (!vehicle) continue;
     matched++;
@@ -57,6 +62,7 @@ export async function POST() {
     const updateData: Record<string, unknown> = {
       odometer: miles,
       samsaraId: s.id,
+      hasSamsaraCamera: true,
       lastSeen: new Date(),
     };
 
