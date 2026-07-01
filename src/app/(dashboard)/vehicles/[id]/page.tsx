@@ -131,15 +131,61 @@ export default async function VehicleDetailPage({
   const regDays = daysUntil(v.registrationExpiry);
   const insDays = daysUntil(v.insuranceExpiry);
 
+  // Build odometer estimation from known data points
+  // Collect all WOs with known odometer + date, plus current odometer
+  const knownOdoPoints: { date: number; odo: number }[] = [];
+  for (const wo of v.maintenance) {
+    if (wo.odometerAt && wo.odometerAt > 0 && wo.completedAt) {
+      knownOdoPoints.push({ date: new Date(wo.completedAt).getTime(), odo: wo.odometerAt });
+    }
+  }
+  // Add current odometer as latest data point
+  if (v.odometer > 0) {
+    knownOdoPoints.push({ date: now.getTime(), odo: v.odometer });
+  }
+  // Sort by date ascending
+  knownOdoPoints.sort((a, b) => a.date - b.date);
+
+  function estimateOdoAtDate(dateMs: number): number | null {
+    if (knownOdoPoints.length < 2) return null;
+    // If before earliest point, extrapolate using first two points' rate
+    if (dateMs <= knownOdoPoints[0].date) {
+      const rate = (knownOdoPoints[1].odo - knownOdoPoints[0].odo) / (knownOdoPoints[1].date - knownOdoPoints[0].date);
+      return Math.max(0, Math.round(knownOdoPoints[0].odo + rate * (dateMs - knownOdoPoints[0].date)));
+    }
+    // If after latest point, extrapolate
+    if (dateMs >= knownOdoPoints[knownOdoPoints.length - 1].date) {
+      const last = knownOdoPoints[knownOdoPoints.length - 1];
+      const prev = knownOdoPoints[knownOdoPoints.length - 2];
+      const rate = (last.odo - prev.odo) / (last.date - prev.date);
+      return Math.round(last.odo + rate * (dateMs - last.date));
+    }
+    // Interpolate between two closest points
+    for (let i = 0; i < knownOdoPoints.length - 1; i++) {
+      if (dateMs >= knownOdoPoints[i].date && dateMs <= knownOdoPoints[i + 1].date) {
+        const ratio = (dateMs - knownOdoPoints[i].date) / (knownOdoPoints[i + 1].date - knownOdoPoints[i].date);
+        return Math.round(knownOdoPoints[i].odo + ratio * (knownOdoPoints[i + 1].odo - knownOdoPoints[i].odo));
+      }
+    }
+    return null;
+  }
+
   // Compute maintenance schedule for this vehicle
   const completedWOs = v.maintenance.filter((w) => w.status === "COMPLETED");
-  const lastPerformed: Record<string, { odometerAt: number; completedAt: Date }> = {};
+  const lastPerformed: Record<string, { odometerAt: number; completedAt: Date; estimated?: boolean }> = {};
   for (const wo of completedWOs) {
     const svcName = matchService(wo.title);
     if (!svcName) continue;
-    // odometerAt must be > 0 (0 means not recorded)
-    if (!lastPerformed[svcName] && wo.odometerAt != null && wo.odometerAt > 0 && wo.completedAt) {
-      lastPerformed[svcName] = { odometerAt: wo.odometerAt, completedAt: wo.completedAt };
+    if (!lastPerformed[svcName] && wo.completedAt) {
+      if (wo.odometerAt != null && wo.odometerAt > 0) {
+        lastPerformed[svcName] = { odometerAt: wo.odometerAt, completedAt: wo.completedAt };
+      } else {
+        // Estimate odometer from service date
+        const est = estimateOdoAtDate(new Date(wo.completedAt).getTime());
+        if (est !== null) {
+          lastPerformed[svcName] = { odometerAt: est, completedAt: wo.completedAt, estimated: true };
+        }
+      }
     }
   }
   const odo = v.odometer;
@@ -730,7 +776,11 @@ export default async function VehicleDetailPage({
                       <p className="text-xs text-slate-400">{titleCase(w.type)}{w.completedAt ? ` · ${formatDate(w.completedAt)}` : ""}</p>
                     </Td>
                     <Td className="text-slate-600">
-                      {w.odometerAt ? `${Number(w.odometerAt).toLocaleString()} mi` : <span className="text-slate-300">—</span>}
+                      {w.odometerAt && w.odometerAt > 0
+                        ? `${Number(w.odometerAt).toLocaleString()} mi`
+                        : w.completedAt && estimateOdoAtDate(new Date(w.completedAt).getTime()) !== null
+                          ? <span className="text-blue-500" title="Estimated from date">~{estimateOdoAtDate(new Date(w.completedAt).getTime())!.toLocaleString()} mi</span>
+                          : <span className="text-slate-300">—</span>}
                     </Td>
                     <Td>
                       <Badge
