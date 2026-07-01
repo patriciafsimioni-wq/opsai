@@ -171,9 +171,10 @@ export async function GET() {
   const leaseMAWs = XLSX.utils.aoa_to_sheet([LEASE_MIKE_ALBERT_HEADERS]);
   XLSX.utils.book_append_sheet(wb, leaseMAWs, "Lease - Mike Albert");
 
-  const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+  const arrayBuf = XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer;
+  const uint8 = new Uint8Array(arrayBuf);
 
-  return new NextResponse(buf, {
+  return new NextResponse(uint8, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "Content-Disposition": "attachment; filename=LiveFleetAI_Upload_Template.xlsx",
