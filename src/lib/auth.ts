@@ -95,7 +95,7 @@ export async function requireUser(): Promise<SessionUser> {
 }
 
 // Role hierarchy — higher roles include lower-tier permissions
-const MANAGEMENT_ROLES: Role[] = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER"];
+const MANAGEMENT_ROLES: Role[] = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "MECHANIC"];
 const APPROVAL_ROLES: Role[] = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "MANAGER"];
 const SERVICE_ROLES: Role[] = [...MANAGEMENT_ROLES, "MECHANIC", "VENDOR"];
 

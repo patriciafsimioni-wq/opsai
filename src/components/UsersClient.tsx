@@ -161,7 +161,7 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
                 {[
                   ["View Dashboard & Reports", true, true, true, false, false],
                   ["View Finance Reports", true, true, true, false, false],
-                  ["Manage Vehicles & Drivers", true, true, true, false, false],
+                  ["Manage Vehicles & Drivers", true, true, true, true, false],
                   ["Approve WO/PO Requests", true, true, false, false, false],
                   ["Submit WO/PO Requests", true, true, true, true, true],
                   ["Log Services & Maintenance", true, true, true, true, true],
