@@ -82,6 +82,53 @@ export function extractDxNumber(name: string): string | null {
   return match ? match[1].toUpperCase() : null;
 }
 
+export interface SamsaraDriver {
+  id: string;
+  name: string;
+  username?: string;
+  driverActivationStatus: string;
+  phone?: string;
+  tags?: { id: string; name: string }[];
+  profileImageUrl?: string;
+  createdAtTime?: string;
+  carrierSettings?: { carrierName?: string; homeTerminalName?: string };
+}
+
+export async function getSamsaraDrivers(): Promise<SamsaraDriver[]> {
+  const all: SamsaraDriver[] = [];
+  let cursor: string | undefined;
+  do {
+    const params: Record<string, string> = { limit: "200" };
+    if (cursor) params.after = cursor;
+    const res = await samsaraFetch<{ data: SamsaraDriver[]; pagination: { endCursor: string; hasNextPage: boolean } }>(
+      "/fleet/drivers",
+      params,
+    );
+    all.push(...res.data);
+    cursor = res.pagination.hasNextPage ? res.pagination.endCursor : undefined;
+  } while (cursor);
+  return all;
+}
+
+export async function getSamsaraGpsPositions(): Promise<SamsaraVehicleStat[]> {
+  const all: SamsaraVehicleStat[] = [];
+  let cursor: string | undefined;
+  do {
+    const params: Record<string, string> = {
+      types: "gps,engineStates",
+      limit: "200",
+    };
+    if (cursor) params.after = cursor;
+    const res = await samsaraFetch<{ data: SamsaraVehicleStat[]; pagination: { endCursor: string; hasNextPage: boolean } }>(
+      "/fleet/vehicles/stats",
+      params,
+    );
+    all.push(...res.data);
+    cursor = res.pagination.hasNextPage ? res.pagination.endCursor : undefined;
+  } while (cursor);
+  return all;
+}
+
 export function isConfigured(): boolean {
   return !!API_KEY;
 }

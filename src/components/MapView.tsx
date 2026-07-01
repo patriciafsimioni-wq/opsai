@@ -70,24 +70,21 @@ export function MapView() {
     };
   }, []);
 
-  // poll positions
+  // poll real Samsara GPS positions
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     let cancelled = false;
 
     async function tick() {
       try {
-        const endpoint = liveRef.current ? "/api/simulate" : "/api/positions";
-        const res = await fetch(endpoint, {
-          method: liveRef.current ? "POST" : "GET",
-        });
+        const res = await fetch("/api/samsara/positions");
         const data = await res.json();
-        const pos: PositionDTO[] = liveRef.current ? data.positions : data;
+        const pos: PositionDTO[] = data.positions || [];
         if (!cancelled) setPositions(pos);
       } catch {
         /* ignore */
       }
-      if (!cancelled) timer = setTimeout(tick, 3000);
+      if (!cancelled) timer = setTimeout(tick, liveRef.current ? 10000 : 30000);
     }
     tick();
     return () => {

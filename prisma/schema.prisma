@@ -162,6 +162,8 @@ model Driver {
   trips         Trip[]
   fuelLogs      FuelLog[]
   alerts        Alert[]
+  samsaraId     String?
+  station       String?
   createdAt     DateTime     @default(now())
 }
 
