@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { getUserStationFilter } from "@/lib/auth";
 
 function getMonday(d: Date): Date {
   const day = d.getDay();
@@ -14,7 +15,8 @@ export async function GET(req: NextRequest) {
   if ("error" in auth) return auth.error;
 
   const url = new URL(req.url);
-  const station = url.searchParams.get("station") ?? "";
+  const userStation = getUserStationFilter(auth.user);
+  const station = userStation ?? (url.searchParams.get("station") ?? "");
   const range = url.searchParams.get("range") ?? "month";
   const dateParam = url.searchParams.get("date") ?? "";
 

@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { requireApiUser, requireManager, badRequest, stationWhere } from "@/lib/api";
 
 export async function GET() {
   const auth = await requireApiUser();
   if ("error" in auth) return auth.error;
+  const sw = stationWhere(auth.user);
   const orders = await prisma.workOrder.findMany({
+    where: sw ? { vehicle: { is: sw } } : undefined,
     orderBy: { createdAt: "desc" },
     include: { vehicle: true, service: true },
   });

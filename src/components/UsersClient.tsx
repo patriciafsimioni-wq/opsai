@@ -74,7 +74,7 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
         name: form.name,
         email: form.email,
         role: form.role,
-        station: form.role === "STATION_MANAGER" ? form.station : null,
+        station: ["STATION_MANAGER", "MECHANIC", "DRIVER"].includes(form.role) ? form.station || null : null,
       };
       if (form.password) payload.password = form.password;
       const res = await apiSend(`/api/users/${editingUser.id}`, "PATCH", payload);
@@ -91,7 +91,7 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
     } else {
       const res = await apiSend("/api/users", "POST", {
         ...form,
-        station: form.role === "STATION_MANAGER" ? form.station : null,
+        station: ["STATION_MANAGER", "MECHANIC", "DRIVER"].includes(form.role) ? form.station || null : null,
       });
       setSaving(false);
       if (res.ok) {
@@ -285,13 +285,14 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
           <Field label="Role">
             <Select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} options={ROLES} />
           </Field>
-          {form.role === "STATION_MANAGER" && (
+          {["STATION_MANAGER", "MECHANIC", "DRIVER"].includes(form.role) && (
             <Field label="Assigned Station">
               <Select
                 value={form.station}
                 onChange={(e) => setForm({ ...form, station: e.target.value })}
                 options={[{ value: "", label: "Select station…" }, ...STATIONS.map((s) => ({ value: s, label: s }))]}
               />
+              <p className="mt-1 text-[10px] text-slate-400">This user will only see data for this station</p>
             </Field>
           )}
           {error && <p className="text-sm text-red-600">{error}</p>}

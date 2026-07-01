@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
-import { getSession, canManage, canLogService, canApprove } from "@/lib/auth";
+import { getSession, canManage, canLogService, canApprove, getUserStationFilter } from "@/lib/auth";
 import type { SessionUser } from "@/lib/auth";
+import type { Station } from "@prisma/client";
+
+/** Returns a Prisma `where` clause fragment to scope queries by the user's station.
+ *  Returns `null` for users who can see all stations. */
+export function stationWhere(user: SessionUser): { station: Station } | null {
+  const s = getUserStationFilter(user);
+  return s ? { station: s as Station } : null;
+}
 
 export async function requireApiUser(): Promise<
   { user: SessionUser } | { error: NextResponse }

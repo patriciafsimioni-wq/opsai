@@ -11,7 +11,7 @@ export function Topbar({
   user,
   alertCount,
 }: {
-  user: { name: string; email: string; role: Role };
+  user: { name: string; email: string; role: Role; station: string | null };
   alertCount: number;
 }) {
   const router = useRouter();
@@ -23,12 +23,18 @@ export function Topbar({
     router.refresh();
   }
 
-  const roleLabel =
-    user.role === "ADMIN"
-      ? "Administrator"
-      : user.role === "MANAGER"
-        ? "Fleet Manager"
-        : "Driver";
+  const ROLE_MAP: Record<string, string> = {
+    ADMIN: "Administrator",
+    GENERAL_MANAGER: "General Manager",
+    FLEET_MANAGER: "Fleet Manager",
+    STATION_MANAGER: "Station Manager",
+    MECHANIC: "Mechanic",
+    VENDOR: "Vendor",
+    MANAGER: "Manager",
+    DRIVER: "Driver",
+  };
+  const roleLabel = ROLE_MAP[user.role] ?? user.role;
+  const stationLabel = user.station ? ` — ${user.station}` : "";
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)]/80 px-5 backdrop-blur">
@@ -68,7 +74,7 @@ export function Topbar({
             <div className="hidden text-left sm:block">
               <p className="text-sm font-medium leading-tight">{user.name}</p>
               <p className="text-xs leading-tight text-[var(--color-muted)]">
-                {roleLabel}
+                {roleLabel}{stationLabel}
               </p>
             </div>
             <ChevronDown size={15} className="text-slate-400" />

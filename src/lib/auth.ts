@@ -119,6 +119,18 @@ export function canViewSafety(role: Role) {
   return role !== "VENDOR";
 }
 
+// Roles that see ALL stations vs only their assigned station
+const ALL_STATION_ROLES: Role[] = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"];
+
+export function isStationScoped(role: Role): boolean {
+  return !ALL_STATION_ROLES.includes(role);
+}
+
+export function getUserStationFilter(user: SessionUser): string | null {
+  if (!isStationScoped(user.role)) return null; // sees all
+  return user.station ?? null; // scoped to assigned station
+}
+
 export function getRoleLabel(role: Role): string {
   const labels: Record<Role, string> = {
     ADMIN: "Administrator",

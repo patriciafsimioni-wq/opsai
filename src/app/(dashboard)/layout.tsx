@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getSession, getUserStationFilter } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
@@ -14,14 +14,17 @@ export default async function DashboardLayout({
   const user = await getSession();
   if (!user) redirect("/login");
 
-  const alertCount = await prisma.alert.count({ where: { read: false, type: { notIn: ["SPEEDING", "HARSH_DRIVING"] } } });
+  const userStation = getUserStationFilter(user);
+  const alertWhere: Record<string, unknown> = { read: false, type: { notIn: ["SPEEDING", "HARSH_DRIVING"] } };
+  if (userStation) alertWhere.vehicle = { station: userStation };
+  const alertCount = await prisma.alert.count({ where: alertWhere });
 
   return (
     <div className="flex h-screen w-full overflow-hidden">
       <Sidebar alertCount={alertCount} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
-          user={{ name: user.name, email: user.email, role: user.role }}
+          user={{ name: user.name, email: user.email, role: user.role, station: user.station }}
           alertCount={alertCount}
         />
         <main className="flex-1 overflow-y-auto p-5 lg:p-7">{children}</main>

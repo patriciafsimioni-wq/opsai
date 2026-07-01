@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireApiUser, badRequest } from "@/lib/api";
+import { requireApiUser, badRequest, stationWhere } from "@/lib/api";
 
 const STATUS_VALUES = ["PASS", "FAIL", "NA"] as const;
 
@@ -30,7 +30,9 @@ export async function GET() {
   const auth = await requireApiUser();
   if ("error" in auth) return auth.error;
 
+  const sw = stationWhere(auth.user);
   const reports = await prisma.dvirReport.findMany({
+    where: sw ? { vehicle: { is: sw } } : undefined,
     orderBy: { createdAt: "desc" },
     take: 200,
     include: {

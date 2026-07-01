@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiUser } from "@/lib/api";
+import { getUserStationFilter } from "@/lib/auth";
 import { TIME_SCHEDULE } from "@/lib/constants";
 
 /**
@@ -99,7 +100,8 @@ export async function GET(req: NextRequest) {
   if ("error" in auth) return auth.error;
 
   const url = new URL(req.url);
-  const stationFilter = url.searchParams.get("station") ?? "ALL";
+  const userStation = getUserStationFilter(auth.user);
+  const stationFilter = userStation ?? (url.searchParams.get("station") ?? "ALL");
 
   const vehicles = await prisma.vehicle.findMany({
     where: stationFilter !== "ALL" ? { station: stationFilter as never } : undefined,
