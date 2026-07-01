@@ -149,6 +149,20 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const insExpiringSoon = activeVehicles.filter((v) => v.insuranceExpiry && new Date(v.insuranceExpiry) >= nowDate && new Date(v.insuranceExpiry) <= in60Date);
   const complianceIssues = regExpired.length + regMissing.length + insExpired.length;
 
+  // Recently onboarded & offboarded vehicles (last 30 days)
+  const recentOnboarded = vehicles
+    .filter((v) => v.onboardedDate && now - new Date(v.onboardedDate).getTime() < 30 * 86400000)
+    .sort((a, b) => new Date(b.onboardedDate!).getTime() - new Date(a.onboardedDate!).getTime())
+    .slice(0, 8);
+  const recentOffboarded = vehicles
+    .filter((v) => v.offboardedDate && now - new Date(v.offboardedDate).getTime() < 30 * 86400000)
+    .sort((a, b) => new Date(b.offboardedDate!).getTime() - new Date(a.offboardedDate!).getTime())
+    .slice(0, 8);
+
+  // Vehicles missing Samsara camera or not transmitting (no lastSeen in 24h)
+  const noCamera = vehicles.filter((v) => (v.status === "ACTIVE" || v.status === "IDLE") && !v.hasSamsaraCamera);
+  const notTransmitting = vehicles.filter((v) => (v.status === "ACTIVE" || v.status === "IDLE") && v.samsaraId && v.lastSeen && now - new Date(v.lastSeen).getTime() > 24 * 3600000);
+
   const topDrivers = drivers.slice(0, 5);
   const upcomingMaint = workOrders
     .filter((w) => w.scheduledFor && (w.status === "OPEN" || w.status === "SCHEDULED"))
@@ -440,6 +454,92 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </Card>
         </div>
       )}
+
+      {/* Vehicle Onboarding / Offboarding & Samsara Status */}
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {/* Recently Onboarded */}
+        <Card>
+          <CardHeader title="Recently Onboarded" subtitle="Last 30 days" />
+          <div className="divide-y divide-[var(--color-border)]">
+            {recentOnboarded.length === 0 && (
+              <p className="px-5 py-6 text-center text-sm text-slate-400">No recent onboards.</p>
+            )}
+            {recentOnboarded.map((v) => (
+              <Link key={v.id} href={`/vehicles/${v.id}`} className="flex items-center gap-3 px-5 py-2.5 hover:bg-slate-50 transition-colors">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-green-50 text-green-600 text-xs font-bold">+</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{v.dxNumber ?? v.name}</p>
+                  <p className="text-xs text-slate-400">{v.year} {v.make} {v.model}</p>
+                </div>
+                <span className="text-[10px] text-slate-400">{formatDate(v.onboardedDate)}</span>
+              </Link>
+            ))}
+          </div>
+        </Card>
+
+        {/* Recently Offboarded */}
+        <Card>
+          <CardHeader title="Recently Offboarded" subtitle="Last 30 days" />
+          <div className="divide-y divide-[var(--color-border)]">
+            {recentOffboarded.length === 0 && (
+              <p className="px-5 py-6 text-center text-sm text-slate-400">No recent offboards.</p>
+            )}
+            {recentOffboarded.map((v) => (
+              <Link key={v.id} href={`/vehicles/${v.id}`} className="flex items-center gap-3 px-5 py-2.5 hover:bg-slate-50 transition-colors">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-red-50 text-red-600 text-xs font-bold">−</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{v.dxNumber ?? v.name}</p>
+                  <p className="text-xs text-slate-400">{v.offboardReason ?? "No reason"}</p>
+                </div>
+                <span className="text-[10px] text-slate-400">{formatDate(v.offboardedDate)}</span>
+              </Link>
+            ))}
+          </div>
+        </Card>
+
+        {/* Samsara Camera / Transmission Issues */}
+        <Card className={noCamera.length + notTransmitting.length > 0 ? "border-amber-200" : ""}>
+          <CardHeader title="Samsara Status" subtitle="Camera & Transmission" />
+          <div className="p-5 space-y-3">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-xs font-medium text-amber-700">Missing Camera</p>
+              <p className="text-2xl font-bold text-amber-800">{noCamera.length}</p>
+              <p className="text-[10px] text-amber-600 mt-0.5">active vehicles without Samsara camera</p>
+            </div>
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+              <p className="text-xs font-medium text-red-700">Not Transmitting</p>
+              <p className="text-2xl font-bold text-red-800">{notTransmitting.length}</p>
+              <p className="text-[10px] text-red-600 mt-0.5">no data in 24h</p>
+            </div>
+            {noCamera.length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold uppercase text-slate-500 mb-1">No Camera:</p>
+                <div className="flex flex-wrap gap-1">
+                  {noCamera.slice(0, 10).map((v) => (
+                    <Link key={v.id} href={`/vehicles/${v.id}`} className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800 hover:bg-amber-200">
+                      {v.dxNumber ?? v.name}
+                    </Link>
+                  ))}
+                  {noCamera.length > 10 && <span className="text-[10px] text-slate-400 px-1">+{noCamera.length - 10}</span>}
+                </div>
+              </div>
+            )}
+            {notTransmitting.length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold uppercase text-slate-500 mb-1">Not Transmitting:</p>
+                <div className="flex flex-wrap gap-1">
+                  {notTransmitting.slice(0, 10).map((v) => (
+                    <Link key={v.id} href={`/vehicles/${v.id}`} className="rounded bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-800 hover:bg-red-200">
+                      {v.dxNumber ?? v.name}
+                    </Link>
+                  ))}
+                  {notTransmitting.length > 10 && <span className="text-[10px] text-slate-400 px-1">+{notTransmitting.length - 10}</span>}
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
 
       {/* upcoming maintenance */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
