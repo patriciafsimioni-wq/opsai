@@ -100,11 +100,18 @@ export async function GET(req: NextRequest) {
   if ("error" in auth) return auth.error;
 
   const url = new URL(req.url);
-  const userStation = getUserStationFilter(auth.user);
-  const stationFilter = userStation ?? (url.searchParams.get("station") ?? "ALL");
+  const userStations = getUserStationFilter(auth.user);
+  const stationFilter = userStations ? "" : (url.searchParams.get("station") ?? "ALL");
+
+  const vehicleWhere: Record<string, unknown> = {};
+  if (userStations) {
+    vehicleWhere.station = { in: userStations };
+  } else if (stationFilter && stationFilter !== "ALL") {
+    vehicleWhere.station = stationFilter;
+  }
 
   const vehicles = await prisma.vehicle.findMany({
-    where: stationFilter !== "ALL" ? { station: stationFilter as never } : undefined,
+    where: Object.keys(vehicleWhere).length > 0 ? vehicleWhere : undefined,
     select: {
       id: true,
       name: true,

@@ -126,9 +126,11 @@ export function isStationScoped(role: Role): boolean {
   return !ALL_STATION_ROLES.includes(role);
 }
 
-export function getUserStationFilter(user: SessionUser): string | null {
+export function getUserStationFilter(user: SessionUser): string[] | null {
   if (!isStationScoped(user.role)) return null; // sees all
-  return user.station ?? null; // scoped to assigned station
+  if (!user.station) return null;
+  // Support comma-separated multi-station values
+  return user.station.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
 export function getRoleLabel(role: Role): string {

@@ -54,7 +54,8 @@ const emptyForm = {
   email: "",
   password: "",
   role: "STATION_MANAGER",
-  station: "",
+  station: "" as string,
+  stations: [] as string[],
 };
 
 export function UsersClient({ users: initialUsers, currentRole }: { users: UserRow[]; currentRole: string }) {
@@ -66,6 +67,11 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
+  function getStationValue(): string | null {
+    if (!["STATION_MANAGER", "MECHANIC", "DRIVER"].includes(form.role)) return null;
+    return form.stations.length > 0 ? form.stations.join(",") : null;
+  }
+
   async function save() {
     setSaving(true);
     setError("");
@@ -74,7 +80,7 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
         name: form.name,
         email: form.email,
         role: form.role,
-        station: ["STATION_MANAGER", "MECHANIC", "DRIVER"].includes(form.role) ? form.station || null : null,
+        station: getStationValue(),
       };
       if (form.password) payload.password = form.password;
       const res = await apiSend(`/api/users/${editingUser.id}`, "PATCH", payload);
@@ -91,7 +97,7 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
     } else {
       const res = await apiSend("/api/users", "POST", {
         ...form,
-        station: ["STATION_MANAGER", "MECHANIC", "DRIVER"].includes(form.role) ? form.station || null : null,
+        station: getStationValue(),
       });
       setSaving(false);
       if (res.ok) {
@@ -116,7 +122,14 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
 
   function openEdit(u: UserRow) {
     setEditingUser(u);
-    setForm({ name: u.name, email: u.email, password: "", role: u.role, station: u.station ?? "" });
+    setForm({
+      name: u.name,
+      email: u.email,
+      password: "",
+      role: u.role,
+      station: u.station ?? "",
+      stations: u.station ? u.station.split(",").map((s) => s.trim()).filter(Boolean) : [],
+    });
     setError("");
     setModalOpen(true);
   }
@@ -172,7 +185,7 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
                     {ROLE_LABELS[u.role] ?? u.role}
                   </Badge>
                 </Td>
-                <Td className="text-slate-600">{u.station ?? "All"}</Td>
+                <Td className="text-slate-600">{u.station ? u.station.split(",").join(", ") : "All"}</Td>
                 <Td className="text-slate-600">{formatDate(u.createdAt)}</Td>
                 {canCreate && (
                   <Td>
@@ -286,13 +299,26 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
             <Select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} options={ROLES} />
           </Field>
           {["STATION_MANAGER", "MECHANIC", "DRIVER"].includes(form.role) && (
-            <Field label="Assigned Station">
-              <Select
-                value={form.station}
-                onChange={(e) => setForm({ ...form, station: e.target.value })}
-                options={[{ value: "", label: "Select station…" }, ...STATIONS.map((s) => ({ value: s, label: s }))]}
-              />
-              <p className="mt-1 text-[10px] text-slate-400">This user will only see data for this station</p>
+            <Field label="Assigned Station(s)">
+              <div className="grid grid-cols-4 gap-2">
+                {STATIONS.map((s) => (
+                  <label key={s} className="flex items-center gap-1.5 cursor-pointer text-sm">
+                    <input
+                      type="checkbox"
+                      checked={form.stations.includes(s)}
+                      onChange={(e) => {
+                        const next = e.target.checked
+                          ? [...form.stations, s]
+                          : form.stations.filter((x) => x !== s);
+                        setForm({ ...form, stations: next });
+                      }}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                    />
+                    {s}
+                  </label>
+                ))}
+              </div>
+              <p className="mt-1 text-[10px] text-slate-400">Select one or more stations — user will only see data for selected stations</p>
             </Field>
           )}
           {error && <p className="text-sm text-red-600">{error}</p>}

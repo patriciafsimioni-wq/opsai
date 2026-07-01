@@ -3,11 +3,12 @@ import { getSession, canManage, canLogService, canApprove, getUserStationFilter 
 import type { SessionUser } from "@/lib/auth";
 import type { Station } from "@prisma/client";
 
-/** Returns a Prisma `where` clause fragment to scope queries by the user's station.
+/** Returns a Prisma `where` clause fragment to scope queries by the user's station(s).
  *  Returns `null` for users who can see all stations. */
-export function stationWhere(user: SessionUser): { station: Station } | null {
+export function stationWhere(user: SessionUser): { station: { in: Station[] } } | null {
   const s = getUserStationFilter(user);
-  return s ? { station: s as Station } : null;
+  if (!s || s.length === 0) return null;
+  return { station: { in: s as Station[] } };
 }
 
 export async function requireApiUser(): Promise<

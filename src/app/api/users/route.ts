@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireManager, badRequest } from "@/lib/api";
 import { hashPassword } from "@/lib/auth";
+import { sendEmail, buildInviteEmail } from "@/lib/email";
 
 export async function GET() {
   const auth = await requireManager();
@@ -53,6 +54,20 @@ export async function POST(req: Request) {
       station: d.station || null,
     },
   });
+
+  // Send invite email (non-blocking — don't fail if email fails)
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "https://opsai-opal.vercel.app";
+  const invite = buildInviteEmail({
+    name: d.name,
+    email: d.email.toLowerCase(),
+    password: d.password,
+    role: d.role,
+    stations: d.station || null,
+    appUrl,
+  });
+  sendEmail({ to: d.email.toLowerCase(), ...invite }).catch(() => {});
 
   return NextResponse.json({
     id: user.id,

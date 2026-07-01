@@ -15,11 +15,15 @@ export default async function FleetFinancePage({ searchParams }: { searchParams:
   if (!user) redirect("/login");
 
   const params = await searchParams;
-  const userStation = getUserStationFilter(user);
-  const selectedStation = userStation ?? (typeof params.station === "string" ? params.station : "");
+  const userStations = getUserStationFilter(user);
+  const selectedStation = userStations ? userStations.join(",") : (typeof params.station === "string" ? params.station : "");
 
   const whereClause: Record<string, unknown> = {};
-  if (selectedStation) whereClause.station = selectedStation as Station;
+  if (userStations) {
+    whereClause.station = { in: userStations as Station[] };
+  } else if (selectedStation) {
+    whereClause.station = selectedStation as Station;
+  }
 
   const vehicles = await prisma.vehicle.findMany({
     where: whereClause,
@@ -127,7 +131,7 @@ export default async function FleetFinancePage({ searchParams }: { searchParams:
           <h1 className="text-2xl font-bold">Executive Fleet Finance</h1>
           <p className="text-sm text-[var(--color-muted)]">Complete financial overview and decision support</p>
         </div>
-        {!userStation && <FleetFinanceStationFilter current={selectedStation} />}
+        {!userStations && <FleetFinanceStationFilter current={selectedStation} />}
       </div>
 
       {/* Top KPIs */}

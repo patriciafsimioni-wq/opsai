@@ -15,8 +15,8 @@ export async function GET(req: NextRequest) {
   if ("error" in auth) return auth.error;
 
   const url = new URL(req.url);
-  const userStation = getUserStationFilter(auth.user);
-  const station = userStation ?? (url.searchParams.get("station") ?? "");
+  const userStations = getUserStationFilter(auth.user);
+  const station = userStations ? "" : (url.searchParams.get("station") ?? "");
   const range = url.searchParams.get("range") ?? "month";
   const dateParam = url.searchParams.get("date") ?? "";
 
@@ -40,7 +40,9 @@ export async function GET(req: NextRequest) {
   const where: Record<string, unknown> = {
     date: { gte: dateStart, lte: dateEnd },
   };
-  if (station) {
+  if (userStations) {
+    where.vehicle = { station: { in: userStations } };
+  } else if (station) {
     where.vehicle = { station };
   }
   if (purchaseType) {

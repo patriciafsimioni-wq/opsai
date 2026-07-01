@@ -14,9 +14,9 @@ export default async function DashboardLayout({
   const user = await getSession();
   if (!user) redirect("/login");
 
-  const userStation = getUserStationFilter(user);
+  const userStations = getUserStationFilter(user);
   const alertWhere: Record<string, unknown> = { read: false, type: { notIn: ["SPEEDING", "HARSH_DRIVING"] } };
-  if (userStation) alertWhere.vehicle = { station: userStation };
+  if (userStations) alertWhere.vehicle = { station: { in: userStations } };
   const alertCount = await prisma.alert.count({ where: alertWhere });
 
   return (
