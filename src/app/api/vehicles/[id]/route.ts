@@ -20,17 +20,22 @@ export async function GET(
 
 const patchSchema = z.object({
   name: z.string().min(1).optional(),
+  dxNumber: z.string().optional().nullable(),
   make: z.string().min(1).optional(),
   model: z.string().min(1).optional(),
   year: z.coerce.number().int().optional(),
   vin: z.string().min(1).optional(),
-  licensePlate: z.string().min(1).optional(),
+  licensePlate: z.string().optional().nullable(),
   type: z.enum(["TRUCK", "VAN", "CAR", "BUS", "PICKUP", "TRAILER"]).optional(),
   status: z.enum(["ACTIVE", "IDLE", "MAINTENANCE", "OUT_OF_SERVICE"]).optional(),
+  station: z.enum(["IAH", "AUS", "HRL", "LRD", "ACT", "CLL", "BPT"]).optional(),
   fuelType: z.enum(["DIESEL", "GASOLINE", "ELECTRIC", "HYBRID", "CNG"]).optional(),
   odometer: z.coerce.number().min(0).optional(),
   fuelLevel: z.coerce.number().min(0).max(100).optional(),
   tankCapacity: z.coerce.number().min(0).optional(),
+  leasingCompany: z.string().optional().nullable(),
+  leaseEndDate: z.string().optional().nullable(),
+  registrationMonth: z.string().optional().nullable(),
   assignedDriverId: z.string().optional().nullable(),
   registrationExpiry: z.string().optional().nullable(),
   insuranceExpiry: z.string().optional().nullable(),
@@ -53,39 +58,25 @@ export async function PATCH(
   if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Invalid input");
   const d = parsed.data;
 
-  const { assignedDriverId, registrationExpiry, insuranceExpiry, offboardedDate, onboardedDate, ...rest } = d;
-  const vehicle = await prisma.vehicle.update({
-    where: { id },
-    data: {
-      ...rest,
-      assignedDriverId:
-        assignedDriverId === undefined ? undefined : assignedDriverId || null,
-      registrationExpiry:
-        registrationExpiry === undefined
-          ? undefined
-          : registrationExpiry
-            ? new Date(registrationExpiry)
-            : null,
-      insuranceExpiry:
-        insuranceExpiry === undefined
-          ? undefined
-          : insuranceExpiry
-            ? new Date(insuranceExpiry)
-            : null,
-      offboardedDate:
-        offboardedDate === undefined
-          ? undefined
-          : offboardedDate
-            ? new Date(offboardedDate)
-            : null,
-      onboardedDate:
-        onboardedDate === undefined
-          ? undefined
-          : onboardedDate
-            ? new Date(onboardedDate)
-            : null,
-    },
-  });
+  const { assignedDriverId, registrationExpiry, insuranceExpiry, offboardedDate, onboardedDate, leaseEndDate, ...rest } = d;
+
+  const toDate = (val: string | null | undefined) =>
+    val === undefined ? undefined : val ? new Date(val) : null;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: Record<string, any> = {
+    ...rest,
+    registrationExpiry: toDate(registrationExpiry),
+    insuranceExpiry: toDate(insuranceExpiry),
+    offboardedDate: toDate(offboardedDate),
+    onboardedDate: toDate(onboardedDate),
+    leaseEndDate: toDate(leaseEndDate),
+  };
+  if (assignedDriverId !== undefined) {
+    data.assignedDriverId = assignedDriverId || null;
+  }
+
+  const vehicle = await prisma.vehicle.update({ where: { id }, data });
   return NextResponse.json(vehicle);
 }
 

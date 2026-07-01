@@ -13,6 +13,7 @@ import {
 import { prisma } from "@/lib/db";
 import { Card, CardHeader, Badge, Table, Th, Td, ProgressBar } from "@/components/ui";
 import { VehicleActions } from "@/components/VehicleActions";
+import { VehicleEditForm } from "@/components/VehicleEditForm";
 import {
   VEHICLE_STATUS,
   WO_STATUS,
@@ -186,6 +187,26 @@ export default async function VehicleDetailPage({
             {v.dxNumber ? ` · ${v.dxNumber}` : ""}
           </p>
         </div>
+        <VehicleEditForm
+          vehicle={{
+            id: v.id,
+            name: v.name,
+            dxNumber: v.dxNumber,
+            make: v.make,
+            model: v.model,
+            year: v.year,
+            vin: v.vin,
+            licensePlate: v.licensePlate,
+            type: v.type,
+            station: v.station,
+            fuelType: v.fuelType,
+            odometer: v.odometer,
+            tankCapacity: v.tankCapacity,
+            leasingCompany: v.leasingCompany,
+            leaseEndDate: v.leaseEndDate?.toISOString().slice(0, 10) ?? null,
+            registrationMonth: v.registrationMonth,
+          }}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
