@@ -278,6 +278,139 @@ export default async function VehicleDetailPage({
         </Card>
       </div>
 
+      {/* Lease & Financial Section */}
+      {v.leasingCompany && (
+        <div className="mt-6">
+          <Card>
+            <CardHeader title="Lease & Financial" subtitle={v.leasingCompany} />
+            <div className="p-5">
+              {v.paidOff ? (
+                <div className="mb-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3">
+                  <p className="text-sm font-semibold text-green-700">✓ Vehicle Paid Off</p>
+                  <p className="text-xs text-green-600 mt-0.5">No remaining lease payments</p>
+                </div>
+              ) : (
+                <div className="mb-4 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
+                  <p className="text-sm font-semibold text-blue-700">Active Lease — {v.monthsLeftPayoff ?? "?"} months remaining</p>
+                  {v.leaseEndDate && <p className="text-xs text-blue-600 mt-0.5">Lease ends {formatDate(v.leaseEndDate)}</p>}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                {v.leaseType && (
+                  <div>
+                    <p className="text-xs text-slate-400">Lease Type</p>
+                    <p className="text-sm font-medium">{v.leaseType}</p>
+                  </div>
+                )}
+                {v.leaseTerm && (
+                  <div>
+                    <p className="text-xs text-slate-400">Term</p>
+                    <p className="text-sm font-medium">{v.leaseTerm} months</p>
+                  </div>
+                )}
+                {v.monthsInService && (
+                  <div>
+                    <p className="text-xs text-slate-400">Months in Service</p>
+                    <p className="text-sm font-medium">{v.monthsInService}</p>
+                  </div>
+                )}
+                {v.contractMileage && (
+                  <div>
+                    <p className="text-xs text-slate-400">Contract Mileage</p>
+                    <p className="text-sm font-medium">{formatNumber(v.contractMileage)} mi</p>
+                  </div>
+                )}
+                {v.deliveredPrice && (
+                  <div>
+                    <p className="text-xs text-slate-400">Delivered Price</p>
+                    <p className="text-sm font-medium">{formatCurrency(v.deliveredPrice)}</p>
+                  </div>
+                )}
+                {v.totalRentPerMonth && (
+                  <div>
+                    <p className="text-xs text-slate-400">Total Rent/Month</p>
+                    <p className="text-sm font-medium">{formatCurrency(v.totalRentPerMonth)}</p>
+                  </div>
+                )}
+                {v.leaseChargePerMonth && (
+                  <div>
+                    <p className="text-xs text-slate-400">Lease Charge/Month</p>
+                    <p className="text-sm font-medium">{formatCurrency(v.leaseChargePerMonth)}</p>
+                  </div>
+                )}
+                {v.depAmtPerMonth && (
+                  <div>
+                    <p className="text-xs text-slate-400">Depreciation/Month</p>
+                    <p className="text-sm font-medium">{formatCurrency(v.depAmtPerMonth)}</p>
+                  </div>
+                )}
+                {v.serviceChargePerMonth && (
+                  <div>
+                    <p className="text-xs text-slate-400">Service Charge/Month</p>
+                    <p className="text-sm font-medium">{formatCurrency(v.serviceChargePerMonth)}</p>
+                  </div>
+                )}
+                {v.currentBookValue && (
+                  <div>
+                    <p className="text-xs text-slate-400">Current Book Value</p>
+                    <p className="text-sm font-medium">{formatCurrency(v.currentBookValue)}</p>
+                  </div>
+                )}
+                {v.openEndNetBookValue && (
+                  <div>
+                    <p className="text-xs text-slate-400">Net Book Value</p>
+                    <p className="text-sm font-medium">{formatCurrency(v.openEndNetBookValue)}</p>
+                  </div>
+                )}
+                {v.currentMarketValue && (
+                  <div>
+                    <p className="text-xs text-slate-400">Current Market Value</p>
+                    <p className="text-sm font-medium">{formatCurrency(v.currentMarketValue)}</p>
+                  </div>
+                )}
+                {v.excessMileageRate != null && v.excessMileageRate > 0 && (
+                  <div>
+                    <p className="text-xs text-slate-400">Excess Mileage Rate</p>
+                    <p className="text-sm font-medium">${v.excessMileageRate}/mi</p>
+                  </div>
+                )}
+              </div>
+              {/* P&L Summary */}
+              {v.totalRentPerMonth && !v.paidOff && (
+                <div className="mt-4 border-t border-[var(--color-border)] pt-4">
+                  <p className="text-xs font-semibold uppercase text-slate-500 mb-2">Monthly Cost Summary</p>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-xs text-slate-400">Lease Payment</p>
+                      <p className="text-lg font-bold text-slate-800">{formatCurrency(v.totalRentPerMonth)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400">Total Paid to Date</p>
+                      <p className="text-lg font-bold text-slate-800">{formatCurrency(v.totalRentPerMonth * (v.monthsInService ?? 0))}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400">Remaining Payments</p>
+                      <p className="text-lg font-bold text-slate-800">{formatCurrency(v.totalRentPerMonth * (v.monthsLeftPayoff ?? 0))}</p>
+                    </div>
+                  </div>
+                  {v.currentMarketValue != null && v.openEndNetBookValue != null && (
+                    <div className="mt-3 rounded-lg bg-slate-50 px-4 py-3">
+                      <p className="text-xs text-slate-500">
+                        Total Loss Settlement: Market value ({formatCurrency(v.currentMarketValue)}) vs. Net Book Value ({formatCurrency(v.openEndNetBookValue)})
+                        {v.currentMarketValue >= v.openEndNetBookValue
+                          ? <span className="ml-1 font-semibold text-green-600">→ Positive equity of {formatCurrency(v.currentMarketValue - v.openEndNetBookValue)}</span>
+                          : <span className="ml-1 font-semibold text-red-600">→ Negative equity of {formatCurrency(v.openEndNetBookValue - v.currentMarketValue)}</span>
+                        }
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* PM Schedule Section */}
       <div className="mt-6">
         <Card>

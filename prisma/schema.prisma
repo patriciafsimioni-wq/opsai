@@ -190,10 +190,28 @@ model Vehicle {
   tankCapacity       Float          @default(200)
   station            Station        @default(AUS)
   leasingCompany     String?
+  leaseType          String?
+  leaseTerm          Int?
+  leaseStartDate     DateTime?
+  leaseEndDate       DateTime?
+  monthsInService    Int?
+  contractMileage    Float?
+  deliveredPrice     Float?
+  depAmtPerMonth     Float?
+  leaseChargePerMonth Float?
+  totalRentPerMonth  Float?
+  serviceChargePerMonth Float?
+  currentBookValue   Float?
+  excessMileageRate  Float?
+  openEndCapCost     Float?
+  openEndDeprRate    Float?
+  openEndNetBookValue Float?
+  currentMarketValue Float?
+  monthsLeftPayoff   Int?
+  paidOff            Boolean        @default(false)
   samsaraId          String?
   hasSamsaraCamera   Boolean         @default(false)
   onboardedDate      DateTime?
-  leaseEndDate       DateTime?
   registrationMonth  String?
   registrationExpiry DateTime?
   insuranceExpiry    DateTime?

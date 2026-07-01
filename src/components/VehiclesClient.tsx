@@ -263,7 +263,12 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
                   </Badge>
                 </Td>
                 <Td className="text-slate-600 text-xs">
-                  {v.leasingCompany ?? "—"}
+                  <div>{v.leasingCompany ?? "—"}</div>
+                  {v.paidOff ? (
+                    <span className="inline-flex rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700">Paid Off</span>
+                  ) : v.monthsLeftPayoff != null && v.monthsLeftPayoff > 0 ? (
+                    <span className="text-[10px] text-slate-400">{v.monthsLeftPayoff}mo left</span>
+                  ) : null}
                 </Td>
                 <Td className="text-slate-600">
                   {formatNumber(v.odometer)} mi
