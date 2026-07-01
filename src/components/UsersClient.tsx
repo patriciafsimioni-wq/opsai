@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Shield } from "lucide-react";
+import { Plus, Shield, Pencil, Trash2 } from "lucide-react";
 import { Card, Button, Table, Th, Td, Badge } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { apiSend } from "@/lib/use-data";
@@ -60,6 +60,8 @@ const emptyForm = {
 export function UsersClient({ users: initialUsers, currentRole }: { users: UserRow[]; currentRole: string }) {
   const [users, setUsers] = useState(initialUsers);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserRow | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -67,20 +69,56 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
   async function save() {
     setSaving(true);
     setError("");
-    const res = await apiSend("/api/users", "POST", {
-      ...form,
-      station: form.role === "STATION_MANAGER" ? form.station : null,
-    });
-    setSaving(false);
-    if (res.ok) {
-      setModalOpen(false);
-      setForm(emptyForm);
-      const d = res.data as Record<string, string | null>;
-      const newUser = { id: d.id!, email: d.email!, name: d.name!, role: d.role!, station: d.station ?? null, createdAt: new Date().toISOString() };
-      setUsers((prev) => [newUser, ...prev]);
+    if (editingUser) {
+      const payload: Record<string, unknown> = {
+        name: form.name,
+        email: form.email,
+        role: form.role,
+        station: form.role === "STATION_MANAGER" ? form.station : null,
+      };
+      if (form.password) payload.password = form.password;
+      const res = await apiSend(`/api/users/${editingUser.id}`, "PATCH", payload);
+      setSaving(false);
+      if (res.ok) {
+        setModalOpen(false);
+        setEditingUser(null);
+        setForm(emptyForm);
+        const d = res.data as Record<string, string | null>;
+        setUsers((prev) => prev.map((u) => u.id === editingUser.id ? { ...u, name: d.name!, email: d.email!, role: d.role!, station: d.station ?? null } : u));
+      } else {
+        setError(res.error ?? "Failed to update user");
+      }
     } else {
-      setError(res.error ?? "Failed to create user");
+      const res = await apiSend("/api/users", "POST", {
+        ...form,
+        station: form.role === "STATION_MANAGER" ? form.station : null,
+      });
+      setSaving(false);
+      if (res.ok) {
+        setModalOpen(false);
+        setForm(emptyForm);
+        const d = res.data as Record<string, string | null>;
+        const newUser = { id: d.id!, email: d.email!, name: d.name!, role: d.role!, station: d.station ?? null, createdAt: new Date().toISOString() };
+        setUsers((prev) => [newUser, ...prev]);
+      } else {
+        setError(res.error ?? "Failed to create user");
+      }
     }
+  }
+
+  async function deleteUser(id: string) {
+    const res = await apiSend(`/api/users/${id}`, "DELETE", {});
+    if (res.ok) {
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+      setDeleteConfirm(null);
+    }
+  }
+
+  function openEdit(u: UserRow) {
+    setEditingUser(u);
+    setForm({ name: u.name, email: u.email, password: "", role: u.role, station: u.station ?? "" });
+    setError("");
+    setModalOpen(true);
   }
 
   const canCreate = currentRole === "ADMIN" || currentRole === "GENERAL_MANAGER" || currentRole === "FLEET_MANAGER" || currentRole === "MANAGER";
@@ -95,7 +133,7 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
           </p>
         </div>
         {canCreate && (
-          <Button onClick={() => { setForm(emptyForm); setError(""); setModalOpen(true); }}>
+          <Button onClick={() => { setEditingUser(null); setForm(emptyForm); setError(""); setModalOpen(true); }}>
             <Plus size={16} /> Add User
           </Button>
         )}
@@ -121,6 +159,7 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
               <Th>Role</Th>
               <Th>Station</Th>
               <Th>Created</Th>
+              {canCreate && <Th>Actions</Th>}
             </tr>
           </thead>
           <tbody>
@@ -135,6 +174,43 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
                 </Td>
                 <Td className="text-slate-600">{u.station ?? "All"}</Td>
                 <Td className="text-slate-600">{formatDate(u.createdAt)}</Td>
+                {canCreate && (
+                  <Td>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => openEdit(u)}
+                        className="rounded p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600"
+                        title="Edit user"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      {deleteConfirm === u.id ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => deleteUser(u.id)}
+                            className="rounded bg-red-600 px-2 py-0.5 text-[10px] font-medium text-white hover:bg-red-700"
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirm(null)}
+                            className="rounded bg-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-300"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setDeleteConfirm(u.id)}
+                          className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                          title="Delete user"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </Td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -185,7 +261,7 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
         </Card>
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add User">
+      <Modal open={modalOpen} onClose={() => { setModalOpen(false); setEditingUser(null); }} title={editingUser ? "Edit User" : "Add User"}>
         <div className="space-y-4">
           <Field label="Full Name">
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="John Doe" />
@@ -193,8 +269,8 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
           <Field label="Email">
             <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="user@company.com" />
           </Field>
-          <Field label="Password">
-            <Input value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Min 6 characters" type="password" />
+          <Field label={editingUser ? "New Password (leave blank to keep)" : "Password"}>
+            <Input value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder={editingUser ? "Leave blank to keep current" : "Min 6 characters"} type="password" />
           </Field>
           <Field label="Role">
             <Select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} options={ROLES} />
@@ -210,7 +286,7 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
           )}
           {error && <p className="text-sm text-red-600">{error}</p>}
           <Button onClick={save} disabled={saving} className="w-full">
-            {saving ? "Creating…" : "Create User"}
+            {saving ? (editingUser ? "Saving…" : "Creating…") : (editingUser ? "Save Changes" : "Create User")}
           </Button>
         </div>
       </Modal>

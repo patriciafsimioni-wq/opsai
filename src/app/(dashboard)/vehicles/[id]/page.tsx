@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { Card, CardHeader, Badge, Table, Th, Td, ProgressBar } from "@/components/ui";
+import { VehicleActions } from "@/components/VehicleActions";
 import {
   VEHICLE_STATUS,
   WO_STATUS,
@@ -277,6 +278,17 @@ export default async function VehicleDetailPage({
           </div>
         </Card>
       </div>
+
+      {/* Vehicle Management — Offboard / Onboard / Branding */}
+      <VehicleActions
+        vehicleId={v.id}
+        branding={v.branding}
+        offboardedDate={v.offboardedDate?.toISOString() ?? null}
+        offboardReason={v.offboardReason}
+        onboardedDate={v.onboardedDate?.toISOString() ?? null}
+        onboardPhotos={v.onboardPhotos}
+        status={v.status}
+      />
 
       {/* Lease & Financial Section */}
       {v.leasingCompany && (

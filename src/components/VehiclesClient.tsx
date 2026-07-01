@@ -253,7 +253,15 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
                 <Td className="text-slate-600">
                   {STATION_LABEL[v.station as keyof typeof STATION_LABEL]?.split(" - ")[0] ?? v.station}
                 </Td>
-                <Td className="text-slate-600">{titleCase(v.type)}</Td>
+                <Td className="text-slate-600">
+                  <span>{titleCase(v.type)}</span>
+                  {v.branding === "YELLOW_DHL" && (
+                    <span className="ml-1 inline-flex rounded-full bg-yellow-100 px-1.5 py-0.5 text-[10px] font-medium text-yellow-800">DHL</span>
+                  )}
+                  {v.branding === "WHITE" && (
+                    <span className="ml-1 inline-flex rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">White</span>
+                  )}
+                </Td>
                 <Td>
                   <Badge
                     bg={VEHICLE_STATUS[v.status as keyof typeof VEHICLE_STATUS].bg}

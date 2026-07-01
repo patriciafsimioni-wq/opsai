@@ -34,13 +34,18 @@ const patchSchema = z.object({
   assignedDriverId: z.string().optional().nullable(),
   registrationExpiry: z.string().optional().nullable(),
   insuranceExpiry: z.string().optional().nullable(),
+  branding: z.enum(["YELLOW_DHL", "WHITE"]).optional().nullable(),
+  offboardReason: z.string().optional().nullable(),
+  offboardedDate: z.string().optional().nullable(),
+  onboardPhotos: z.string().optional().nullable(),
+  onboardedDate: z.string().optional().nullable(),
 });
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireManager();
+  const auth = await requireApiUser();
   if ("error" in auth) return auth.error;
   const { id } = await params;
   const body = await req.json().catch(() => null);
@@ -48,23 +53,36 @@ export async function PATCH(
   if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Invalid input");
   const d = parsed.data;
 
+  const { assignedDriverId, registrationExpiry, insuranceExpiry, offboardedDate, onboardedDate, ...rest } = d;
   const vehicle = await prisma.vehicle.update({
     where: { id },
     data: {
-      ...d,
+      ...rest,
       assignedDriverId:
-        d.assignedDriverId === undefined ? undefined : d.assignedDriverId || null,
+        assignedDriverId === undefined ? undefined : assignedDriverId || null,
       registrationExpiry:
-        d.registrationExpiry === undefined
+        registrationExpiry === undefined
           ? undefined
-          : d.registrationExpiry
-            ? new Date(d.registrationExpiry)
+          : registrationExpiry
+            ? new Date(registrationExpiry)
             : null,
       insuranceExpiry:
-        d.insuranceExpiry === undefined
+        insuranceExpiry === undefined
           ? undefined
-          : d.insuranceExpiry
-            ? new Date(d.insuranceExpiry)
+          : insuranceExpiry
+            ? new Date(insuranceExpiry)
+            : null,
+      offboardedDate:
+        offboardedDate === undefined
+          ? undefined
+          : offboardedDate
+            ? new Date(offboardedDate)
+            : null,
+      onboardedDate:
+        onboardedDate === undefined
+          ? undefined
+          : onboardedDate
+            ? new Date(onboardedDate)
             : null,
     },
   });

@@ -209,6 +209,10 @@ model Vehicle {
   currentMarketValue Float?
   monthsLeftPayoff   Int?
   paidOff            Boolean        @default(false)
+  branding           String?        // "YELLOW_DHL" or "WHITE"
+  offboardedDate     DateTime?
+  offboardReason     String?
+  onboardPhotos      String?        // JSON array of photo URLs
   samsaraId          String?
   hasSamsaraCamera   Boolean         @default(false)
   onboardedDate      DateTime?
