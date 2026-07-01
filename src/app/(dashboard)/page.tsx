@@ -99,7 +99,9 @@ export default async function DashboardPage() {
         return t >= start && t < end;
       })
       .reduce((s, f) => s + f.totalCost, 0);
-    fuelTrend.push({ label: `W${8 - i}`, value: Math.round(cost) });
+    const weekDate = new Date(start);
+    const label = weekDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    fuelTrend.push({ label, value: Math.round(cost) });
   }
 
   const utilization =
@@ -267,7 +269,7 @@ export default async function DashboardPage() {
             subtitle="Weekly trend"
             action={
               <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
-                <TrendingUp size={14} /> 8 wks
+                <TrendingUp size={14} /> Last 8 weeks
               </span>
             }
           />
