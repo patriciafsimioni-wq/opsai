@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Upload, FileSpreadsheet, FileText, ImageIcon, CheckCircle2, AlertCircle, Loader2, X, Trash2 } from "lucide-react";
+import { Upload, FileSpreadsheet, FileText, ImageIcon, CheckCircle2, AlertCircle, Loader2, X, Trash2, Download } from "lucide-react";
 
 type ClassifiedFile = {
   id: string;
@@ -145,6 +145,22 @@ export function UploadsClient({ canManage }: { canManage: boolean }) {
 
   return (
     <div className="space-y-6">
+      {/* Template download + deduplication note */}
+      <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4">
+        <div>
+          <p className="text-sm font-medium text-slate-700">Upload Template</p>
+          <p className="text-xs text-slate-500">Download the Excel template with tabs for each report type (Fuel, Service, FareEye, Fleet, Lease). Fill in new data and re-upload.</p>
+          <p className="mt-1 text-xs text-blue-600">⚠️ Duplicate records are automatically detected and skipped on upload.</p>
+        </div>
+        <a
+          href="/api/templates"
+          download="LiveFleetAI_Upload_Template.xlsx"
+          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 whitespace-nowrap"
+        >
+          <Download size={16} /> Download Template
+        </a>
+      </div>
+
       {/* Drop zone */}
       <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
