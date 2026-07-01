@@ -530,13 +530,11 @@ async function main() {
   for (let i = 0; i < 22; i++) {
     const v = pick(vehicles);
     const type = pick([
-      "SPEEDING", "GEOFENCE_ENTER", "GEOFENCE_EXIT", "MAINTENANCE_DUE",
+      "SPEEDING", "MAINTENANCE_DUE",
       "DOCUMENT_EXPIRY", "IDLE", "HARSH_DRIVING",
-    ]) as "SPEEDING" | "GEOFENCE_ENTER" | "GEOFENCE_EXIT" | "MAINTENANCE_DUE" | "DOCUMENT_EXPIRY" | "IDLE" | "HARSH_DRIVING";
+    ]) as "SPEEDING" | "MAINTENANCE_DUE" | "DOCUMENT_EXPIRY" | "IDLE" | "HARSH_DRIVING";
     const messages: Record<string, string> = {
       SPEEDING: `${v.name} exceeded speed limit (${randInt(78, 96)} mph in a 65 zone)`,
-      GEOFENCE_ENTER: `${v.name} entered geofence "IAH Depot - Houston"`,
-      GEOFENCE_EXIT: `${v.name} left geofence "AUS Hub - Austin"`,
       MAINTENANCE_DUE: `${v.name} is due for scheduled service`,
       DOCUMENT_EXPIRY: `${v.name} registration expires soon`,
       IDLE: `${v.name} idling for over 20 minutes`,
@@ -544,7 +542,7 @@ async function main() {
     };
     const severity = (
       type === "SPEEDING" || type === "HARSH_DRIVING" || type === "DOCUMENT_EXPIRY"
-    ) ? "CRITICAL" : type === "IDLE" || type === "GEOFENCE_ENTER" || type === "GEOFENCE_EXIT" ? "INFO" : "WARNING";
+    ) ? "CRITICAL" : type === "IDLE" ? "INFO" : "WARNING";
     await prisma.alert.create({
       data: {
         type,

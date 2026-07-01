@@ -41,7 +41,7 @@ export function AlertsClient() {
 
   const filtered = useMemo(() => {
     if (!alerts) return [];
-    const hiddenTypes = ["SPEEDING", "HARSH_DRIVING", "LOW_FUEL"];
+    const hiddenTypes = ["SPEEDING", "HARSH_DRIVING", "LOW_FUEL", "GEOFENCE_ENTER", "GEOFENCE_EXIT"];
     return alerts.filter((a) => {
       if (hiddenTypes.includes(a.type)) return false;
       if (tab === "unread" && a.read) return false;
