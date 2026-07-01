@@ -78,12 +78,44 @@ export async function GET(req: NextRequest) {
     totalLiters: Math.round((t._sum.liters ?? 0) * 100) / 100,
   }));
 
+  // Detect duplicate charges: same vehicle + same date with multiple transactions
+  const duplicateKeys = new Set<string>();
+  const seenKeys = new Map<string, number>();
+  for (const l of logs) {
+    const key = `${l.vehicleId}|${new Date(l.date).toISOString().slice(0, 10)}`;
+    seenKeys.set(key, (seenKeys.get(key) || 0) + 1);
+  }
+  for (const [key, count] of seenKeys) {
+    if (count > 1) duplicateKeys.add(key);
+  }
+  const duplicates = Array.from(duplicateKeys);
+
+  // Card status: check each vehicle's last fuel date to flag inactive cards (15+ days)
+  const now = new Date();
+  const inactiveThreshold = 15 * 86400000;
+  const latestPerVehicle = await prisma.fuelLog.groupBy({
+    by: ["vehicleId"],
+    _max: { date: true },
+    ...(station ? { where: { vehicle: { station: station as never } } } : {}),
+  });
+  const inactiveCards: string[] = [];
+  for (const entry of latestPerVehicle) {
+    if (entry._max.date) {
+      const diff = now.getTime() - new Date(entry._max.date).getTime();
+      if (diff > inactiveThreshold) {
+        inactiveCards.push(entry.vehicleId);
+      }
+    }
+  }
+
   return NextResponse.json({
     logs,
     stations: stationCounts.map((s) => s.station),
     dateStart: dateStart.toISOString(),
     dateEnd: dateEnd.toISOString(),
     purchaseBreakdown,
+    duplicates,
+    inactiveCards,
   });
 }
 

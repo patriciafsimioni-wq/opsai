@@ -41,7 +41,9 @@ export function AlertsClient() {
 
   const filtered = useMemo(() => {
     if (!alerts) return [];
+    const safetyTypes = ["SPEEDING", "HARSH_DRIVING"];
     return alerts.filter((a) => {
+      if (safetyTypes.includes(a.type)) return false;
       if (tab === "unread" && a.read) return false;
       if (filter && a.severity !== filter) return false;
       return true;

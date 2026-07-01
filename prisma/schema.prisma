@@ -185,6 +185,7 @@ model Vehicle {
   station            Station        @default(AUS)
   leasingCompany     String?
   samsaraId          String?
+  hasSamsaraCamera   Boolean         @default(false)
   onboardedDate      DateTime?
   leaseEndDate       DateTime?
   registrationMonth  String?
@@ -296,6 +297,7 @@ model FuelLog {
   vehicleId     String
   driver        Driver?      @relation(fields: [driverId], references: [id])
   driverId      String?
+  driverName    String?
   date          DateTime     @default(now())
   liters        Float
   pricePerLiter Float
@@ -303,6 +305,7 @@ model FuelLog {
   odometer      Float?
   location      String?
   purchaseType  PurchaseType @default(DIESEL)
+  cardNumber    String?
   createdAt     DateTime     @default(now())
 }
 

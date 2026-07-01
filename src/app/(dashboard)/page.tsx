@@ -18,23 +18,31 @@ import {
   ALERT_TYPE_LABEL,
 } from "@/lib/constants";
 import { formatCurrency, relativeTime, formatDate } from "@/lib/utils";
+import { StationFilter } from "@/components/StationFilter";
+import type { Station } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
-  const [vehicles, drivers, fareyeRoutes, alerts, workOrders, fuelLogs] =
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ station?: string }> }) {
+  const params = await searchParams;
+  const station = (params.station as Station) || null;
+
+  const vehicleWhere = station ? { station } : {};
+  const [allVehicles, drivers, fareyeRoutes, alerts, workOrders, fuelLogs] =
     await Promise.all([
-      prisma.vehicle.findMany(),
-      prisma.driver.findMany({ orderBy: { safetyScore: "desc" } }),
-      prisma.fareyeRoute.findMany(),
+      prisma.vehicle.findMany({ where: vehicleWhere }),
+      prisma.driver.findMany({ where: station ? { station } : {}, orderBy: { safetyScore: "desc" } }),
+      prisma.fareyeRoute.findMany({ where: station ? { station } : {} }),
       prisma.alert.findMany({
         orderBy: { createdAt: "desc" },
         include: { vehicle: true },
+        where: { type: { notIn: ["SPEEDING", "HARSH_DRIVING"] }, ...(station ? { vehicle: { station } } : {}) },
         take: 6,
       }),
-      prisma.workOrder.findMany({ include: { vehicle: true } }),
-      prisma.fuelLog.findMany(),
+      prisma.workOrder.findMany({ include: { vehicle: true }, where: station ? { vehicle: { station } } : {} }),
+      prisma.fuelLog.findMany({ where: station ? { vehicle: { station } } : {} }),
     ]);
+  const vehicles = allVehicles;
 
   const statusCounts = {
     ACTIVE: vehicles.filter((v) => v.status === "ACTIVE").length,
@@ -43,7 +51,7 @@ export default async function DashboardPage() {
     OUT_OF_SERVICE: vehicles.filter((v) => v.status === "OUT_OF_SERVICE").length,
   };
 
-  const unreadAlerts = await prisma.alert.count({ where: { read: false } });
+  const unreadAlerts = await prisma.alert.count({ where: { read: false, type: { notIn: ["SPEEDING", "HARSH_DRIVING"] }, ...(station ? { vehicle: { station } } : {}) } });
   const openWO = workOrders.filter(
     (w) => w.status === "OPEN" || w.status === "SCHEDULED" || w.status === "IN_PROGRESS",
   ).length;
@@ -152,11 +160,14 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Fleet Overview</h1>
-        <p className="mt-1 text-sm text-[var(--color-muted)]">
-          Real-time snapshot of your entire operation.
-        </p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Fleet Overview</h1>
+          <p className="mt-1 text-sm text-[var(--color-muted)]">
+            Real-time snapshot of your {station ? `${station} station` : "entire operation"}.
+          </p>
+        </div>
+        <StationFilter />
       </div>
 
       {/* KPI cards */}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Search, Trash2, Fuel, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, Trash2, Fuel, ChevronLeft, ChevronRight, AlertTriangle, CreditCard } from "lucide-react";
 import { Card, Button, Table, Th, Td, EmptyState, StatCard } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
@@ -33,6 +33,8 @@ type FuelApiResponse = {
   dateStart: string;
   dateEnd: string;
   purchaseBreakdown: PurchaseBreakdownItem[];
+  duplicates: string[];
+  inactiveCards: string[];
 };
 
 const PURCHASE_TYPE_LABEL: Record<string, string> = {
@@ -87,13 +89,17 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
 
   const logs = useMemo(() => data?.logs ?? [], [data]);
 
+  const duplicateSet = useMemo(() => new Set(data?.duplicates ?? []), [data]);
+  const inactiveCardSet = useMemo(() => new Set(data?.inactiveCards ?? []), [data]);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return logs.filter(
       (l) =>
         !q ||
         l.vehicle.name.toLowerCase().includes(q) ||
-        (l.location ?? "").toLowerCase().includes(q),
+        (l.location ?? "").toLowerCase().includes(q) ||
+        (l.driverName ?? "").toLowerCase().includes(q),
     );
   }, [logs, search]);
 
@@ -239,47 +245,70 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
               <tr>
                 <Th>Date</Th>
                 <Th>Vehicle</Th>
+                <Th>Driver</Th>
                 <Th>Type</Th>
                 <Th>Station</Th>
                 <Th>Volume</Th>
                 <Th>Price/Gal</Th>
                 <Th>Total</Th>
-                <Th>Location</Th>
+                <Th>Status</Th>
                 <Th />
               </tr>
             </thead>
             <tbody>
-              {filtered.map((l) => (
-                <tr key={l.id} className="hover:bg-slate-50">
-                  <Td className="text-slate-600">{formatDate(l.date)}</Td>
-                  <Td className="font-medium">{l.vehicle.name}</Td>
-                  <Td>
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                      l.purchaseType === "UNLEADED" ? "bg-amber-50 text-amber-700" :
-                      l.purchaseType === "DIESEL" ? "bg-indigo-50 text-indigo-700" :
-                      l.purchaseType === "DEF" ? "bg-emerald-50 text-emerald-700" :
-                      "bg-slate-100 text-slate-600"
-                    }`}>
-                      {PURCHASE_TYPE_LABEL[l.purchaseType] ?? l.purchaseType}
-                    </span>
-                  </Td>
-                  <Td className="text-slate-600">{l.vehicle.station ?? "—"}</Td>
-                  <Td>{formatNumber(l.liters, 1)} Gal</Td>
-                  <Td>{formatCurrency(l.pricePerLiter)}</Td>
-                  <Td className="font-medium">{formatCurrency(l.totalCost)}</Td>
-                  <Td className="text-slate-600">{l.location ?? "—"}</Td>
-                  <Td>
-                    {canManage && (
-                      <button
-                        onClick={() => remove(l)}
-                        className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    )}
-                  </Td>
-                </tr>
-              ))}
+              {filtered.map((l) => {
+                const dateKey = `${l.vehicleId}|${new Date(l.date!).toISOString().slice(0, 10)}`;
+                const isDuplicate = duplicateSet.has(dateKey);
+                const isInactiveCard = inactiveCardSet.has(l.vehicleId);
+                return (
+                  <tr key={l.id} className={`hover:bg-slate-50 ${isDuplicate ? "bg-amber-50/50" : ""}`}>
+                    <Td className="text-slate-600">{formatDate(l.date)}</Td>
+                    <Td className="font-medium">{l.vehicle.name}</Td>
+                    <Td className="text-slate-600">{l.driverName || (l.driver ? `${l.driver.firstName} ${l.driver.lastName}` : "—")}</Td>
+                    <Td>
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                        l.purchaseType === "UNLEADED" ? "bg-amber-50 text-amber-700" :
+                        l.purchaseType === "DIESEL" ? "bg-indigo-50 text-indigo-700" :
+                        l.purchaseType === "DEF" ? "bg-emerald-50 text-emerald-700" :
+                        "bg-slate-100 text-slate-600"
+                      }`}>
+                        {PURCHASE_TYPE_LABEL[l.purchaseType] ?? l.purchaseType}
+                      </span>
+                    </Td>
+                    <Td className="text-slate-600">{l.vehicle.station ?? "—"}</Td>
+                    <Td>{formatNumber(l.liters, 1)} Gal</Td>
+                    <Td>{formatCurrency(l.pricePerLiter)}</Td>
+                    <Td className="font-medium">{formatCurrency(l.totalCost)}</Td>
+                    <Td>
+                      <div className="flex items-center gap-1">
+                        {isDuplicate && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700" title="Multiple charges same day">
+                            <AlertTriangle size={11} /> Duplicate
+                          </span>
+                        )}
+                        {isInactiveCard && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700" title="Card inactive 15+ days">
+                            <CreditCard size={11} /> Card Not Working
+                          </span>
+                        )}
+                        {!isDuplicate && !isInactiveCard && (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
+                      </div>
+                    </Td>
+                    <Td>
+                      {canManage && (
+                        <button
+                          onClick={() => remove(l)}
+                          className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </Td>
+                  </tr>
+                );
+              })}
             </tbody>
           </Table>
         )}

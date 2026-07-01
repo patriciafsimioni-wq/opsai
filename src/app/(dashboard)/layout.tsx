@@ -14,7 +14,7 @@ export default async function DashboardLayout({
   const user = await getSession();
   if (!user) redirect("/login");
 
-  const alertCount = await prisma.alert.count({ where: { read: false } });
+  const alertCount = await prisma.alert.count({ where: { read: false, type: { notIn: ["SPEEDING", "HARSH_DRIVING"] } } });
 
   return (
     <div className="flex h-screen w-full overflow-hidden">

@@ -20,6 +20,7 @@ import {
   Settings2,
   Upload,
   CalendarClock,
+  ShieldAlert,
   Truck as TruckLogo,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,7 @@ const NAV = [
   { href: "/uploads", label: "Smart Upload", icon: Upload },
   { href: "/fuel", label: "Fuel", icon: Fuel },
   { href: "/alerts", label: "Alerts", icon: Bell },
+  { href: "/safety", label: "Safety", icon: ShieldAlert },
   { href: "/reports", label: "Reports", icon: BarChart3 },
 ];
 

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Pencil, Trash2, Truck, RefreshCw } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Truck, RefreshCw, Camera } from "lucide-react";
 import {
   Card,
   Button,
@@ -54,6 +54,7 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [checkingCameras, setCheckingCameras] = useState(false);
 
   const filtered = useMemo(() => {
     if (!vehicles) return [];
@@ -89,6 +90,28 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
     } finally {
       setSyncing(false);
       setTimeout(() => setSyncResult(null), 5000);
+    }
+  }
+
+  async function checkCameras() {
+    setCheckingCameras(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch("/api/samsara/camera-check", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setSyncResult(`Error: ${data.error || "Camera check failed"}`);
+      } else {
+        setSyncResult(
+          `Camera check: ${data.withCamera} with camera, ${data.withoutCamera} without. ${data.alertsCreated} new alerts created.`,
+        );
+        reload();
+      }
+    } catch {
+      setSyncResult("Error: Network request failed");
+    } finally {
+      setCheckingCameras(false);
+      setTimeout(() => setSyncResult(null), 8000);
     }
   }
 
@@ -174,6 +197,10 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
             <Button variant="secondary" onClick={syncSamsara} disabled={syncing}>
               <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
               {syncing ? "Syncing..." : "Sync Samsara"}
+            </Button>
+            <Button variant="secondary" onClick={checkCameras} disabled={checkingCameras}>
+              <Camera size={16} className={checkingCameras ? "animate-pulse" : ""} />
+              {checkingCameras ? "Checking..." : "Check Cameras"}
             </Button>
             <Button onClick={openCreate}>
               <Plus size={16} /> Add Vehicle

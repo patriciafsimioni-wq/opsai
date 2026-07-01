@@ -9,6 +9,7 @@ interface SamsaraVehicle {
   model?: string;
   year?: string;
   licensePlate?: string;
+  cameraSerial?: string;
   tags?: { id: string; name: string }[];
 }
 
