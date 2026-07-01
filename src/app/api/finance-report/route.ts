@@ -65,21 +65,22 @@ export async function GET(req: NextRequest) {
   function classifyPM(title: string): string | null {
     if (WO_TITLE_TO_PM_CATEGORY[title]) return WO_TITLE_TO_PM_CATEGORY[title];
     const lower = title.toLowerCase();
-    if (lower.includes("brake pad") || lower.includes("brake rotor") || lower.includes("air brake")) return "Brakes";
+    if (lower.includes("brake pad") || lower.includes("brake rotor") || lower.includes("air brake") || lower.includes("rotor sku") || lower.includes("dlg rotor") || lower.includes("brake wear") || lower.includes("duralast gold br")) return "Brakes";
     if (lower.includes("tire")) return "Tires Replacement";
     if (lower.includes("oil change") || lower.includes("pm a") || lower.includes("pm b") || lower.includes("pm c")) return "Oil Change";
     if (lower.includes("caliper")) return "Brake Calipers";
     if (lower.includes("drivetrain")) return "Drivetrain Overhaul";
     if (lower.includes("transmission")) return "Transmission Fluid";
-    if (lower.includes("coolant") || lower.includes("spark plug")) return "Coolant + Spark plugs";
+    if (lower.includes("coolant") || lower.includes("spark plug") || lower.includes("radiator")) return "Coolant + Spark plugs";
     if (lower.includes("timing") || lower.includes("time belt")) return "Time Belt";
     if (lower.includes("diesel filter")) return "Diesel Filter Cleaning";
     if (lower.includes("engine filter") || lower.includes("engine air filter") || lower.includes("air filter")) return "Engine Filter";
-    if (lower.includes("battery")) return "Battery Replacement";
+    if (lower.includes("battery") || lower.includes("parking brake actuator")) return "Battery Replacement";
     if (lower.includes("fluid")) return "Fluids";
     if (lower.includes("wiper")) return "Wiper Replacement";
     if (lower.includes("turbo")) return "Turbo Charger Inspection";
     if (lower.includes("dot") || lower.includes("inspection")) return "Brakes";
+    if (lower.includes("bulb") || lower.includes("light") || lower.includes("h11")) return "Wiper Replacement";
     return null;
   }
 
