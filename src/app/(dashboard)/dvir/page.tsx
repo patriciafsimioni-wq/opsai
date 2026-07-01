@@ -111,6 +111,7 @@ export default function DvirPage() {
     }
   }
 
+  const filteredVehicles = stationFilter === "ALL" ? vehicles : vehicles.filter((v) => v.station === stationFilter);
   const filtered = stationFilter === "ALL" ? reports : reports.filter((r) => r.vehicle.station === stationFilter);
   const alertReports = filtered.filter((r) => r.hasAlert && !r.alertResolved);
   const failedReports = filtered.filter((r) => r.overallStatus === "FAIL");
@@ -145,7 +146,7 @@ export default function DvirPage() {
           <label className="text-xs font-semibold uppercase text-slate-500">Station</label>
           <select
             value={stationFilter}
-            onChange={(e) => setStationFilter(e.target.value)}
+            onChange={(e) => { setStationFilter(e.target.value); setVehicleId(""); }}
             className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
           >
             {STATIONS.map((s) => (
@@ -175,7 +176,7 @@ export default function DvirPage() {
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                 >
                   <option value="">Select vehicle...</option>
-                  {vehicles.map((v) => (
+                  {filteredVehicles.map((v) => (
                     <option key={v.id} value={v.id}>{v.dxNumber ?? v.name}</option>
                   ))}
                 </select>

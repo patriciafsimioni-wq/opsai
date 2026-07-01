@@ -363,7 +363,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
               onChange={(e) => setForm({ ...form, vehicleId: e.target.value })}
               options={[
                 { value: "", label: "Select vehicle…" },
-                ...(vehicles ?? []).map((v) => ({ value: v.id, label: v.name })),
+                ...(vehicles ?? []).filter((v) => !station || (v as Record<string, unknown>).station === station).map((v) => ({ value: v.id, label: v.name })),
               ]}
             />
           </Field>
