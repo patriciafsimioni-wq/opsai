@@ -149,6 +149,27 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const insExpiringSoon = activeVehicles.filter((v) => v.insuranceExpiry && new Date(v.insuranceExpiry) >= nowDate && new Date(v.insuranceExpiry) <= in60Date);
   const complianceIssues = regExpired.length + regMissing.length + insExpired.length;
 
+  // Vehicle Age Compliance: cargo vans < 4 years, box trucks < 7 years
+  const currentYear = nowDate.getFullYear();
+  const agingVehicles = activeVehicles
+    .filter((v) => {
+      if (!v.year) return false;
+      const age = currentYear - v.year;
+      const maxAge = v.type === "VAN" ? 4 : 7;
+      // Flag if within 12 months of limit or past it
+      return age >= maxAge - 1;
+    })
+    .map((v) => {
+      const age = currentYear - (v.year ?? currentYear);
+      const maxAge = v.type === "VAN" ? 4 : 7;
+      const overdue = age >= maxAge;
+      const monthsToLeaseEnd = v.leaseEndDate
+        ? Math.round((new Date(v.leaseEndDate).getTime() - nowDate.getTime()) / (30 * 86400000))
+        : null;
+      return { ...v, age, maxAge, overdue, monthsToLeaseEnd };
+    })
+    .sort((a, b) => (b.age - b.maxAge) - (a.age - a.maxAge));
+
   // Recently onboarded & offboarded vehicles (last 30 days)
   const recentOnboarded = vehicles
     .filter((v) => v.onboardedDate && now - new Date(v.onboardedDate).getTime() < 30 * 86400000)
@@ -451,6 +472,72 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 </div>
               </div>
             )}
+          </Card>
+        </div>
+      )}
+
+      {/* Vehicle Age Compliance */}
+      {agingVehicles.length > 0 && (
+        <div className="mt-6">
+          <Card className="border-orange-200">
+            <CardHeader
+              title="⚠️ Vehicle Age Compliance"
+              subtitle={`Cargo Vans max 4 years · Box Trucks max 7 years — ${agingVehicles.filter((v) => v.overdue).length} overdue, ${agingVehicles.filter((v) => !v.overdue).length} approaching`}
+            />
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50">
+                    <th className="px-4 py-2 font-semibold text-slate-600">Vehicle</th>
+                    <th className="px-4 py-2 font-semibold text-slate-600">Type</th>
+                    <th className="px-4 py-2 font-semibold text-slate-600">Year</th>
+                    <th className="px-4 py-2 font-semibold text-slate-600">Age</th>
+                    <th className="px-4 py-2 font-semibold text-slate-600">Status</th>
+                    <th className="px-4 py-2 font-semibold text-slate-600">Lease End</th>
+                    <th className="px-4 py-2 font-semibold text-slate-600">Months Left</th>
+                    <th className="px-4 py-2 font-semibold text-slate-600">Paid Off</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {agingVehicles.map((v) => (
+                    <tr key={v.id} className={v.overdue ? "bg-red-50" : "bg-orange-50/50"}>
+                      <td className="px-4 py-2">
+                        <Link href={`/vehicles/${v.id}`} className="font-medium text-blue-600 hover:underline">
+                          {v.dxNumber ?? v.name}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-2 text-slate-600">{v.type === "VAN" ? "Cargo Van" : "Box Truck"}</td>
+                      <td className="px-4 py-2 text-slate-600">{v.year}</td>
+                      <td className="px-4 py-2 font-medium">{v.age} yr{v.age !== 1 ? "s" : ""}</td>
+                      <td className="px-4 py-2">
+                        {v.overdue ? (
+                          <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">OVERDUE</span>
+                        ) : (
+                          <span className="inline-flex rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700">APPROACHING</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-slate-600">
+                        {v.leaseEndDate ? formatDate(v.leaseEndDate) : "—"}
+                      </td>
+                      <td className="px-4 py-2 text-slate-600">
+                        {v.monthsToLeaseEnd !== null ? (
+                          <span className={v.monthsToLeaseEnd <= 6 ? "font-bold text-red-600" : ""}>
+                            {v.monthsToLeaseEnd > 0 ? `${v.monthsToLeaseEnd} mo` : "Expired"}
+                          </span>
+                        ) : v.monthsLeftPayoff ? `${v.monthsLeftPayoff} mo` : "—"}
+                      </td>
+                      <td className="px-4 py-2">
+                        {v.monthsLeftPayoff === 0 || v.monthsLeftPayoff === null && !v.leaseEndDate ? (
+                          <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">PAID OFF</span>
+                        ) : (
+                          <span className="text-slate-400">No</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </Card>
         </div>
       )}
