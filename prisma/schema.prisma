@@ -12,6 +12,11 @@ datasource db {
 
 enum Role {
   ADMIN
+  GENERAL_MANAGER
+  FLEET_MANAGER
+  STATION_MANAGER
+  MECHANIC
+  VENDOR
   MANAGER
   DRIVER
 }
@@ -136,6 +141,7 @@ model User {
   name              String
   passwordHash      String
   role              Role               @default(MANAGER)
+  station           String?
   driver            Driver?            @relation(fields: [driverId], references: [id])
   driverId          String?            @unique
   woRequests        WorkOrderRequest[] @relation("requestedBy")

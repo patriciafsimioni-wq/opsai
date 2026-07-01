@@ -511,6 +511,7 @@ async function main() {
       data: {
         vehicleId: vehicle.id,
         driverId: vehicle.assignedDriverId,
+        driverName: f.driverName || null,
         date: new Date(f.date),
         liters: f.gallons,
         pricePerLiter: f.pricePerGallon,

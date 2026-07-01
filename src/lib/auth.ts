@@ -15,6 +15,7 @@ export type SessionUser = {
   email: string;
   name: string;
   role: Role;
+  station: string | null;
   driverId: string | null;
 };
 
@@ -59,6 +60,7 @@ export async function getSession(): Promise<SessionUser | null> {
       email: payload.email as string,
       name: payload.name as string,
       role: payload.role as Role,
+      station: (payload.station as string | null) ?? null,
       driverId: (payload.driverId as string | null) ?? null,
     };
   } catch {
@@ -81,6 +83,7 @@ export async function authenticate(
     email: user.email,
     name: user.name,
     role: user.role,
+    station: user.station,
     driverId: user.driverId,
   };
 }
@@ -91,6 +94,41 @@ export async function requireUser(): Promise<SessionUser> {
   return session;
 }
 
+// Role hierarchy — higher roles include lower-tier permissions
+const MANAGEMENT_ROLES: Role[] = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER"];
+const APPROVAL_ROLES: Role[] = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "MANAGER"];
+const SERVICE_ROLES: Role[] = [...MANAGEMENT_ROLES, "MECHANIC", "VENDOR"];
+
 export function canManage(role: Role) {
-  return role === "ADMIN" || role === "MANAGER";
+  return MANAGEMENT_ROLES.includes(role);
+}
+
+export function canApprove(role: Role) {
+  return APPROVAL_ROLES.includes(role);
+}
+
+export function canLogService(role: Role) {
+  return SERVICE_ROLES.includes(role);
+}
+
+export function canViewFinance(role: Role) {
+  return role !== "VENDOR" && role !== "DRIVER";
+}
+
+export function canViewSafety(role: Role) {
+  return role !== "VENDOR";
+}
+
+export function getRoleLabel(role: Role): string {
+  const labels: Record<Role, string> = {
+    ADMIN: "Administrator",
+    GENERAL_MANAGER: "General Manager",
+    FLEET_MANAGER: "Fleet Manager",
+    STATION_MANAGER: "Station Manager",
+    MECHANIC: "Mechanic",
+    VENDOR: "Vendor",
+    MANAGER: "Manager",
+    DRIVER: "Driver",
+  };
+  return labels[role] || role;
 }

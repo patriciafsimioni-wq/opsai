@@ -21,6 +21,7 @@ import {
   Upload,
   CalendarClock,
   ShieldAlert,
+  UserCog,
   Truck as TruckLogo,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -44,6 +45,7 @@ const NAV = [
   { href: "/alerts", label: "Alerts", icon: Bell },
   { href: "/safety", label: "Safety", icon: ShieldAlert },
   { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/users", label: "Users", icon: UserCog },
 ];
 
 export function Sidebar({ alertCount }: { alertCount: number }) {
