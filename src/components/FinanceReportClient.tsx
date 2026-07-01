@@ -39,6 +39,16 @@ type MonthlyTotal = {
   budget: number;
 };
 
+type ServiceDetail = {
+  title: string;
+  cost: number;
+  vehicle: string;
+  station: string;
+  vendor: string;
+  date: string;
+  category: string;
+};
+
 type ReportData = {
   year: number;
   month: number;
@@ -47,6 +57,7 @@ type ReportData = {
   stations: Record<string, StationBlock>;
   monthlyTotals: MonthlyTotal[];
   monthlyByStation: Record<string, MonthlyTotal[]>;
+  serviceDetails?: ServiceDetail[];
   weekStart?: string;
   weekEnd?: string;
 };
@@ -634,6 +645,91 @@ export function FinanceReportClient() {
           />
         )}
       </div>
+
+      {/* CR Service Details — Mechanical & Engine */}
+      {reportType === "CR" && data.serviceDetails && data.serviceDetails.length > 0 && (() => {
+        const filtered = activeStation === "ALL"
+          ? data.serviceDetails
+          : data.serviceDetails.filter((s) => s.station === activeStation);
+        if (filtered.length === 0) return null;
+
+        const mechItems = filtered.filter((s) => s.category === "Mechanical Repairs");
+        const engineItems = filtered.filter((s) => s.category === "Engine Services");
+        const mechTotal = mechItems.reduce((s, r) => s + r.cost, 0);
+        const engineTotal = engineItems.reduce((s, r) => s + r.cost, 0);
+
+        return (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {/* Mechanical Repairs */}
+            <div className="rounded-xl border border-[var(--color-border)] bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-[var(--color-border)] bg-amber-50 px-4 py-3 rounded-t-xl">
+                <h3 className="text-sm font-bold text-amber-900">Mechanical Repairs</h3>
+                <span className="text-sm font-bold text-amber-900">${mechTotal.toLocaleString()}</span>
+              </div>
+              <div className="max-h-[320px] overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-white">
+                    <tr className="border-b border-[var(--color-border)]">
+                      <th className="px-3 py-2 text-left font-semibold text-slate-500">Vehicle</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-500">Service</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-500">Vendor</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-500">Date</th>
+                      <th className="px-3 py-2 text-right font-semibold text-slate-500">Cost</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mechItems.length === 0 ? (
+                      <tr><td colSpan={5} className="px-3 py-4 text-center text-slate-400">No mechanical repairs this period</td></tr>
+                    ) : mechItems.map((s, i) => (
+                      <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
+                        <td className="px-3 py-1.5 font-medium">{s.vehicle}</td>
+                        <td className="px-3 py-1.5 text-slate-700">{s.title}</td>
+                        <td className="px-3 py-1.5 text-slate-500">{s.vendor}</td>
+                        <td className="px-3 py-1.5 text-slate-500">{s.date}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums font-medium">${s.cost.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Engine Services */}
+            <div className="rounded-xl border border-[var(--color-border)] bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-[var(--color-border)] bg-red-50 px-4 py-3 rounded-t-xl">
+                <h3 className="text-sm font-bold text-red-900">Engine Services</h3>
+                <span className="text-sm font-bold text-red-900">${engineTotal.toLocaleString()}</span>
+              </div>
+              <div className="max-h-[320px] overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-white">
+                    <tr className="border-b border-[var(--color-border)]">
+                      <th className="px-3 py-2 text-left font-semibold text-slate-500">Vehicle</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-500">Service</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-500">Vendor</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-500">Date</th>
+                      <th className="px-3 py-2 text-right font-semibold text-slate-500">Cost</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {engineItems.length === 0 ? (
+                      <tr><td colSpan={5} className="px-3 py-4 text-center text-slate-400">No engine services this period</td></tr>
+                    ) : engineItems.map((s, i) => (
+                      <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
+                        <td className="px-3 py-1.5 font-medium">{s.vehicle}</td>
+                        <td className="px-3 py-1.5 text-slate-700">{s.title}</td>
+                        <td className="px-3 py-1.5 text-slate-500">{s.vendor}</td>
+                        <td className="px-3 py-1.5 text-slate-500">{s.date}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums font-medium">${s.cost.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* All stations for print */}
       <div className="hidden print:block">

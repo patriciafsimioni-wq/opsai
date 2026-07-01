@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
       status: "COMPLETED",
       completedAt: { gte: startCurrent, lte: endCurrent },
     },
-    include: { vehicle: { select: { station: true } } },
+    include: { vehicle: { select: { station: true, dxNumber: true, name: true } } },
   });
 
   // Fetch completed work orders for previous year up to same month
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
       status: "COMPLETED",
       completedAt: { gte: startPrev, lte: endPrev },
     },
-    include: { vehicle: { select: { station: true } } },
+    include: { vehicle: { select: { station: true, dxNumber: true, name: true } } },
   });
 
   // Helper: classify WO title to PM category
@@ -311,6 +311,48 @@ export async function GET(req: NextRequest) {
     };
   }
 
+  // For CR report, include individual work order details for Mechanical Repairs & Engine Services
+  type ServiceDetail = {
+    title: string;
+    cost: number;
+    vehicle: string;
+    station: string;
+    vendor: string;
+    date: string;
+    category: string;
+  };
+  let serviceDetails: ServiceDetail[] = [];
+
+  if (reportType === "CR") {
+    for (const wo of woCurrent) {
+      const cat = classifyCR(wo.title);
+      if (!cat) continue;
+      const woMonth = wo.completedAt ? new Date(wo.completedAt).getMonth() + 1 : month;
+      const woDate = wo.completedAt ? new Date(wo.completedAt) : null;
+
+      let inPeriod = false;
+      if (viewMode === "week" && weekStart && weekEnd && woDate) {
+        inPeriod = woDate >= weekStart && woDate <= weekEnd;
+      } else {
+        inPeriod = woMonth === month;
+      }
+
+      if (inPeriod && (cat === "Mechanical Repairs" || cat === "Engine Services")) {
+        const v = wo.vehicle as { station?: string; dxNumber?: string; name?: string } | null;
+        serviceDetails.push({
+          title: wo.title,
+          cost: wo.cost ?? 0,
+          vehicle: v?.dxNumber ?? v?.name ?? "Unknown",
+          station: v?.station ?? "IAH",
+          vendor: (wo.performedBy ?? wo.vendor ?? "") as string,
+          date: wo.completedAt ? new Date(wo.completedAt).toISOString().slice(0, 10) : "",
+          category: cat,
+        });
+      }
+    }
+    serviceDetails.sort((a, b) => b.cost - a.cost);
+  }
+
   return NextResponse.json({
     year,
     month,
@@ -319,6 +361,7 @@ export async function GET(req: NextRequest) {
     stations,
     monthlyTotals,
     monthlyByStation,
+    ...(serviceDetails.length > 0 ? { serviceDetails } : {}),
     ...(weekStart && weekEnd ? { weekStart: weekStart.toISOString(), weekEnd: weekEnd.toISOString() } : {}),
   });
 }
