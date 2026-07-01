@@ -531,15 +531,14 @@ async function main() {
     const v = pick(vehicles);
     const type = pick([
       "SPEEDING", "GEOFENCE_ENTER", "GEOFENCE_EXIT", "MAINTENANCE_DUE",
-      "DOCUMENT_EXPIRY", "LOW_FUEL", "IDLE", "HARSH_DRIVING",
-    ]) as "SPEEDING" | "GEOFENCE_ENTER" | "GEOFENCE_EXIT" | "MAINTENANCE_DUE" | "DOCUMENT_EXPIRY" | "LOW_FUEL" | "IDLE" | "HARSH_DRIVING";
+      "DOCUMENT_EXPIRY", "IDLE", "HARSH_DRIVING",
+    ]) as "SPEEDING" | "GEOFENCE_ENTER" | "GEOFENCE_EXIT" | "MAINTENANCE_DUE" | "DOCUMENT_EXPIRY" | "IDLE" | "HARSH_DRIVING";
     const messages: Record<string, string> = {
       SPEEDING: `${v.name} exceeded speed limit (${randInt(78, 96)} mph in a 65 zone)`,
       GEOFENCE_ENTER: `${v.name} entered geofence "IAH Depot - Houston"`,
       GEOFENCE_EXIT: `${v.name} left geofence "AUS Hub - Austin"`,
       MAINTENANCE_DUE: `${v.name} is due for scheduled service`,
       DOCUMENT_EXPIRY: `${v.name} registration expires soon`,
-      LOW_FUEL: `${v.name} fuel level below 15%`,
       IDLE: `${v.name} idling for over 20 minutes`,
       HARSH_DRIVING: `${v.name} harsh braking event detected`,
     };
