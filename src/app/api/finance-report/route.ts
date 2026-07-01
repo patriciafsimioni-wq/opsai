@@ -65,9 +65,9 @@ export async function GET(req: NextRequest) {
   function classifyPM(title: string): string | null {
     if (WO_TITLE_TO_PM_CATEGORY[title]) return WO_TITLE_TO_PM_CATEGORY[title];
     const lower = title.toLowerCase();
-    if (lower.includes("brake pad") || lower.includes("brake rotor") || lower.includes("air brake") || lower.includes("rotor sku") || lower.includes("dlg rotor") || lower.includes("brake wear") || lower.includes("duralast gold br")) return "Brakes";
-    if (lower.includes("tire")) return "Tires Replacement";
-    if (lower.includes("oil change") || lower.includes("pm a") || lower.includes("pm b") || lower.includes("pm c")) return "Oil Change";
+    if (lower.includes("brake pad") || lower.includes("brake rotor") || lower.includes("air brake") || lower.includes("rotor sku") || lower.includes("dlg rotor") || lower.includes("brake wear") || lower.includes("duralast gold br") || lower.includes("brake service") || lower.includes("slack adjust") || lower.includes("slack replace")) return "Brakes";
+    if (lower.includes("tire") || lower.includes("tires")) return "Tires Replacement";
+    if (lower.includes("oil change") || lower.includes("pm a") || lower.includes("pm b") || lower.includes("pm c") || lower.includes("tune up") || lower.includes("tune-up")) return "Oil Change";
     if (lower.includes("caliper")) return "Brake Calipers";
     if (lower.includes("drivetrain")) return "Drivetrain Overhaul";
     if (lower.includes("transmission")) return "Transmission Fluid";
