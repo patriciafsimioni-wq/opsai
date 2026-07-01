@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { getSession, canManage } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/ui";
 import { OffboardingClient } from "@/components/OffboardingClient";
@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 export default async function OffboardingPage() {
   const user = await getSession();
   if (!user) redirect("/login");
-  if (!canManage(user.role)) redirect("/");
+  // All users except vendors can access offboarding
+  if (user.role === "VENDOR") redirect("/");
 
   // Get active vehicles available to start offboarding
   const activeVehicles = await prisma.vehicle.findMany({
