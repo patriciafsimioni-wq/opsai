@@ -213,6 +213,13 @@ model Vehicle {
   branding           String?        // "YELLOW_DHL" or "WHITE"
   offboardedDate     DateTime?
   offboardReason     String?
+  offboardStatus     String?        // "IN_PROGRESS" | "COMPLETED"
+  offboardMileage    Float?
+  offboardBrandingRemoved Boolean   @default(false)
+  offboardCameraRemoved   Boolean   @default(false)
+  offboardPickupRequested Boolean   @default(false)
+  offboardPickupDate DateTime?
+  offboardSoldAmount Float?
   onboardPhotos      String?        // JSON array of photo URLs
   samsaraId          String?
   hasSamsaraCamera   Boolean         @default(false)

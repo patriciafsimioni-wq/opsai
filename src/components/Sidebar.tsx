@@ -24,6 +24,7 @@ import {
   UserCog,
   Landmark,
   Truck as TruckLogo,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +47,7 @@ const NAV = [
   { href: "/fuel", label: "Fuel", icon: Fuel },
   { href: "/alerts", label: "Alerts", icon: Bell },
   { href: "/safety", label: "Safety", icon: ShieldAlert },
+  { href: "/offboarding", label: "Offboarding", icon: LogOut },
   { href: "/fleet-finance", label: "Fleet Finance", icon: Landmark },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/users", label: "Users", icon: UserCog },
