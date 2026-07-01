@@ -236,15 +236,25 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
               <tbody className="divide-y divide-[var(--color-border)]">
                 {[
                   ["View Dashboard & Reports", true, true, true, false, false],
+                  ["View Fleet Finance (Executive)", true, true, false, false, false],
                   ["View Finance Reports", true, true, true, false, false],
                   ["Manage Vehicles & Drivers", true, true, true, true, false],
+                  ["Edit Vehicle Info", true, true, true, true, false],
+                  ["Offboard / Onboard Vehicles", true, true, true, false, false],
                   ["Approve WO/PO Requests", true, true, false, false, false],
                   ["Submit WO/PO Requests", true, true, true, true, true],
                   ["Log Services & Maintenance", true, true, true, true, true],
                   ["Add Invoices", true, true, true, true, true],
+                  ["Submit DVIR Inspections", true, true, true, true, true],
+                  ["View PM Schedule", true, true, true, true, false],
+                  ["View Fuel Management", true, true, true, false, false],
+                  ["Smart Upload Data", true, true, true, false, false],
+                  ["View FareEye Routes", true, true, true, false, false],
                   ["View Safety Events", true, true, true, true, false],
+                  ["View Live Map", true, true, true, true, false],
                   ["Manage Users", true, true, false, false, false],
                   ["Samsara Sync & Cameras", true, true, true, false, false],
+                  ["View Alerts", true, true, true, true, false],
                 ].map(([perm, gm, fm, sm, mech, vendor], i) => (
                   <tr key={i}>
                     <td className="px-4 py-2 text-slate-700">{perm as string}</td>
