@@ -1,35 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import maplibregl from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { Truck, Pause, Play, Search } from "lucide-react";
-import type { PositionDTO, GeofenceDTO } from "@/lib/types";
-import { VEHICLE_STATUS, GEOFENCE_TYPE } from "@/lib/constants";
-
-const OSM_STYLE: maplibregl.StyleSpecification = {
-  version: 8,
-  sources: {
-    osm: {
-      type: "raster",
-      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      tileSize: 256,
-      attribution: "© OpenStreetMap contributors",
-    },
-  },
-  layers: [{ id: "osm", type: "raster", source: "osm" }],
-};
-
-function circlePolygon(lng: number, lat: number, radiusM: number, points = 48) {
-  const coords: [number, number][] = [];
-  const distX = radiusM / (111320 * Math.cos((lat * Math.PI) / 180));
-  const distY = radiusM / 110540;
-  for (let i = 0; i <= points; i++) {
-    const theta = (i / points) * 2 * Math.PI;
-    coords.push([lng + distX * Math.cos(theta), lat + distY * Math.sin(theta)]);
-  }
-  return coords;
-}
+import type { PositionDTO } from "@/lib/types";
+import { VEHICLE_STATUS } from "@/lib/constants";
 
 function statusColor(status: string) {
   return (
@@ -37,12 +13,38 @@ function statusColor(status: string) {
   );
 }
 
+function createIcon(p: PositionDTO) {
+  const color = statusColor(p.status);
+  const moving = p.status === "ACTIVE";
+  const html = `
+    <div style="position:relative;width:30px;height:30px;display:flex;align-items:center;justify-content:center;">
+      ${moving ? `<span style="position:absolute;width:30px;height:30px;border-radius:50%;background:${color};opacity:.35;animation:pulse-ring 1.6s ease-out infinite;"></span>` : ""}
+      <span style="position:relative;width:22px;height:22px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;transform:rotate(${p.heading}deg);">
+        <span style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:7px solid #fff;margin-top:-2px;"></span>
+      </span>
+    </div>`;
+  return L.divIcon({ html, className: "", iconSize: [30, 30], iconAnchor: [15, 15] });
+}
+
+function popupHtml(p: PositionDTO) {
+  const driver = p.assignedDriver
+    ? `${p.assignedDriver.firstName} ${p.assignedDriver.lastName}`
+    : "Unassigned";
+  return `
+    <div style="font-size:12px;min-width:160px;">
+      <div style="font-weight:600;font-size:13px;margin-bottom:2px;">${p.name}</div>
+      <div style="color:#64748b;margin-bottom:6px;">${p.make} ${p.model}</div>
+      <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">Speed</span><b>${Math.round(p.speed)} mph</b></div>
+      <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">Fuel</span><b>${Math.round(p.fuelLevel)}%</b></div>
+      <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">Driver</span><b>${driver}</b></div>
+    </div>`;
+}
+
 export function MapView() {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
-  const markersRef = useRef<Record<string, maplibregl.Marker>>({});
+  const mapRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<Record<string, L.Marker>>({});
   const [positions, setPositions] = useState<PositionDTO[]>([]);
-  const [geofences, setGeofences] = useState<GeofenceDTO[]>([]);
   const [live, setLive] = useState(true);
   const liveRef = useRef(true);
   const [search, setSearch] = useState("");
@@ -51,18 +53,15 @@ export function MapView() {
   // init map
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
-    const map = new maplibregl.Map({
-      container: mapContainer.current,
-      style: OSM_STYLE,
-      center: [-122.4194, 37.7749],
+    const map = L.map(mapContainer.current, {
+      center: [29.76, -95.37], // Houston TX
       zoom: 10,
-      attributionControl: false,
+      zoomControl: true,
     });
-    map.addControl(new maplibregl.NavigationControl(), "top-right");
-    map.addControl(
-      new maplibregl.AttributionControl({ compact: true }),
-      "bottom-right",
-    );
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+      maxZoom: 19,
+    }).addTo(map);
     mapRef.current = map;
 
     return () => {
@@ -71,53 +70,7 @@ export function MapView() {
     };
   }, []);
 
-  // load geofences once and draw
-  useEffect(() => {
-    fetch("/api/geofences")
-      .then((r) => r.json())
-      .then((data: GeofenceDTO[]) => setGeofences(data))
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || geofences.length === 0) return;
-    const draw = () => {
-      const fc = {
-        type: "FeatureCollection" as const,
-        features: geofences.map((f) => ({
-          type: "Feature" as const,
-          properties: { color: f.color, name: f.name },
-          geometry: {
-            type: "Polygon" as const,
-            coordinates: [circlePolygon(f.centerLng, f.centerLat, f.radiusM)],
-          },
-        })),
-      };
-      const src = map.getSource("geofences") as maplibregl.GeoJSONSource | undefined;
-      if (src) {
-        src.setData(fc);
-      } else {
-        map.addSource("geofences", { type: "geojson", data: fc });
-        map.addLayer({
-          id: "geofences-fill",
-          type: "fill",
-          source: "geofences",
-          paint: { "fill-color": ["get", "color"], "fill-opacity": 0.12 },
-        });
-        map.addLayer({
-          id: "geofences-line",
-          type: "line",
-          source: "geofences",
-          paint: { "line-color": ["get", "color"], "line-width": 2, "line-dasharray": [2, 1] },
-        });
-      }
-    };
-    if (map.isStyleLoaded()) draw();
-    else map.once("load", draw);
-  }, [geofences]);
-
-  // poll simulation
+  // poll positions
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     let cancelled = false;
@@ -153,27 +106,18 @@ export function MapView() {
       seen.add(p.id);
       let marker = markersRef.current[p.id];
       if (!marker) {
-        const el = document.createElement("div");
-        el.style.cursor = "pointer";
-        el.innerHTML = markerHtml(p);
-        el.addEventListener("click", () => {
-          setSelected(p.id);
-          map.flyTo({ center: [p.lng, p.lat], zoom: 13 });
-        });
-        marker = new maplibregl.Marker({ element: el })
-          .setLngLat([p.lng, p.lat])
-          .setPopup(
-            new maplibregl.Popup({ offset: 18, closeButton: false }).setHTML(
-              popupHtml(p),
-            ),
-          )
+        marker = L.marker([p.lat, p.lng], { icon: createIcon(p) })
+          .bindPopup(popupHtml(p))
+          .on("click", () => {
+            setSelected(p.id);
+            map.flyTo([p.lat, p.lng], 13);
+          })
           .addTo(map);
         markersRef.current[p.id] = marker;
       } else {
-        marker.setLngLat([p.lng, p.lat]);
-        const el = marker.getElement();
-        el.innerHTML = markerHtml(p);
-        marker.getPopup()?.setHTML(popupHtml(p));
+        marker.setLatLng([p.lat, p.lng]);
+        marker.setIcon(createIcon(p));
+        marker.setPopupContent(popupHtml(p));
       }
     }
     // remove stale
@@ -192,8 +136,8 @@ export function MapView() {
 
   function focus(p: PositionDTO) {
     setSelected(p.id);
-    mapRef.current?.flyTo({ center: [p.lng, p.lat], zoom: 13 });
-    markersRef.current[p.id]?.togglePopup();
+    mapRef.current?.flyTo([p.lat, p.lng], 13);
+    markersRef.current[p.id]?.openPopup();
   }
 
   function toggleLive() {
@@ -269,44 +213,7 @@ export function MapView() {
       {/* map */}
       <div className="relative overflow-hidden rounded-xl border border-[var(--color-border)]">
         <div ref={mapContainer} className="h-full w-full" />
-        <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-lg bg-white/90 px-3 py-2 text-xs shadow backdrop-blur">
-          <p className="font-semibold text-slate-700">Geofences</p>
-          <div className="mt-1 space-y-0.5">
-            {Object.entries(GEOFENCE_TYPE).map(([k, v]) => (
-              <div key={k} className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: v.color }} />
-                <span className="text-slate-500">{v.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );
-}
-
-function markerHtml(p: PositionDTO) {
-  const color = statusColor(p.status);
-  const moving = p.status === "ACTIVE";
-  return `
-    <div style="position:relative;width:30px;height:30px;display:flex;align-items:center;justify-content:center;">
-      ${moving ? `<span style="position:absolute;width:30px;height:30px;border-radius:50%;background:${color};opacity:.35;animation:pulse-ring 1.6s ease-out infinite;"></span>` : ""}
-      <span style="position:relative;width:22px;height:22px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;transform:rotate(${p.heading}deg);">
-        <span style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:7px solid #fff;margin-top:-2px;"></span>
-      </span>
-    </div>`;
-}
-
-function popupHtml(p: PositionDTO) {
-  const driver = p.assignedDriver
-    ? `${p.assignedDriver.firstName} ${p.assignedDriver.lastName}`
-    : "Unassigned";
-  return `
-    <div style="font-size:12px;min-width:160px;">
-      <div style="font-weight:600;font-size:13px;margin-bottom:2px;">${p.name}</div>
-      <div style="color:#64748b;margin-bottom:6px;">${p.make} ${p.model}</div>
-      <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">Speed</span><b>${Math.round(p.speed)} mph</b></div>
-      <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">Fuel</span><b>${Math.round(p.fuelLevel)}%</b></div>
-      <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">Driver</span><b>${driver}</b></div>
-    </div>`;
 }
