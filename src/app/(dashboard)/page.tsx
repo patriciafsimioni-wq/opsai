@@ -107,6 +107,27 @@ export default async function DashboardPage() {
       ? Math.round((statusCounts.ACTIVE / vehicles.length) * 100)
       : 0;
 
+  // This week stats
+  const weekStart = now - 7 * 86400000;
+  const prevWeekStart = now - 14 * 86400000;
+  const fuelThisWeek = fuelLogs
+    .filter((f) => new Date(f.date).getTime() >= weekStart)
+    .reduce((s, f) => s + f.totalCost, 0);
+  const fuelLastWeek = fuelLogs
+    .filter((f) => { const t = new Date(f.date).getTime(); return t >= prevWeekStart && t < weekStart; })
+    .reduce((s, f) => s + f.totalCost, 0);
+  const servicesThisWeek = workOrders
+    .filter((w) => w.completedAt && new Date(w.completedAt).getTime() >= weekStart).length;
+  const servicesLastWeek = workOrders
+    .filter((w) => w.completedAt && new Date(w.completedAt).getTime() >= prevWeekStart && new Date(w.completedAt).getTime() < weekStart).length;
+  const routesThisWeek = fareyeRoutes
+    .filter((r) => new Date(r.date).getTime() >= weekStart).length;
+  const milesThisWeek = fareyeRoutes
+    .filter((r) => new Date(r.date).getTime() >= weekStart)
+    .reduce((s, r) => s + r.miles, 0);
+  const fillUpsThisWeek = fuelLogs
+    .filter((f) => new Date(f.date).getTime() >= weekStart).length;
+
   // Compliance audit — registration & insurance
   const nowDate = new Date();
   const in60Date = new Date(nowDate.getTime() + 60 * 86400000);
@@ -175,6 +196,41 @@ export default async function DashboardPage() {
           icon={<Fuel size={20} />}
           accent="#0891b2"
         />
+      </div>
+
+      {/* This Week Summary */}
+      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
+          <p className="text-xs font-medium text-slate-400 uppercase">Fuel Spend This Week</p>
+          <p className="mt-1 text-xl font-bold">{formatCurrency(fuelThisWeek)}</p>
+          {fuelLastWeek > 0 && (
+            <p className={`mt-0.5 text-xs ${fuelThisWeek <= fuelLastWeek ? "text-emerald-600" : "text-red-500"}`}>
+              {fuelThisWeek <= fuelLastWeek ? "↓" : "↑"} {Math.abs(Math.round(((fuelThisWeek - fuelLastWeek) / fuelLastWeek) * 100))}% vs last week
+            </p>
+          )}
+          <p className="mt-1 text-xs text-slate-400">{fillUpsThisWeek} fill-ups</p>
+        </div>
+        <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
+          <p className="text-xs font-medium text-slate-400 uppercase">Services Completed</p>
+          <p className="mt-1 text-xl font-bold">{servicesThisWeek}</p>
+          {servicesLastWeek > 0 && (
+            <p className="mt-0.5 text-xs text-slate-500">
+              vs {servicesLastWeek} last week
+            </p>
+          )}
+          <p className="mt-1 text-xs text-slate-400">this week</p>
+        </div>
+        <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
+          <p className="text-xs font-medium text-slate-400 uppercase">Routes Dispatched</p>
+          <p className="mt-1 text-xl font-bold">{routesThisWeek}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{Math.round(milesThisWeek).toLocaleString()} miles planned</p>
+          <p className="mt-1 text-xs text-slate-400">this week</p>
+        </div>
+        <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
+          <p className="text-xs font-medium text-slate-400 uppercase">Maintenance Cost (90d)</p>
+          <p className="mt-1 text-xl font-bold">{formatCurrency(maint90)}</p>
+          <p className="mt-1 text-xs text-slate-400">completed work orders</p>
+        </div>
       </div>
 
       {/* charts */}
