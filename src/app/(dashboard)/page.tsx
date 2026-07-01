@@ -484,9 +484,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               title="⚠️ Vehicle Age Compliance"
               subtitle={`Cargo Vans max 4 years · Box Trucks max 7 years — ${agingVehicles.filter((v) => v.overdue).length} overdue, ${agingVehicles.filter((v) => !v.overdue).length} approaching`}
             />
-            <div className="overflow-x-auto">
+            <div className="max-h-72 overflow-y-auto overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead>
+                <thead className="sticky top-0 z-10">
                   <tr className="border-b border-slate-200 bg-slate-50">
                     <th className="px-4 py-2 font-semibold text-slate-600">Vehicle</th>
                     <th className="px-4 py-2 font-semibold text-slate-600">Type</th>
