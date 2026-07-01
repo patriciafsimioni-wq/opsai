@@ -16,6 +16,7 @@ import { VehicleActions } from "@/components/VehicleActions";
 import { VehicleEditForm } from "@/components/VehicleEditForm";
 import {
   VEHICLE_STATUS,
+  LIFECYCLE_STATUS,
   WO_STATUS,
   PRIORITY,
   TIME_SCHEDULE,
@@ -49,17 +50,17 @@ const SERVICE_INTERVALS: [number, string, number][] = [
 
 function matchService(woTitle: string): string | null {
   const lower = woTitle.toLowerCase();
-  if (lower.includes("oil change") || lower.includes("oil + filter") || lower.includes("pm a") || lower.includes("pm b") || lower.includes("pm c") || lower.includes("tire rotation")) return "Oil + Filter + Tire Rotation";
-  if (lower === "fluids" || lower === "fluids check" || lower.includes("fluids ")) return "Fluids";
-  if (lower.includes("brake pad")) return "Brake Pads Replacement";
+  if (lower.includes("oil change") || lower.includes("oil + filter") || lower.includes("pm a") || lower.includes("pm b") || lower.includes("pm c") || lower.includes("tire rotation") || lower.includes("oil filter")) return "Oil + Filter + Tire Rotation";
+  if (lower.includes("fluid") && !lower.includes("transmission")) return "Fluids";
+  if (lower.includes("brake pad") || lower.includes("brake pads")) return "Brake Pads Replacement";
   if (lower.includes("brake inspection") || lower.includes("cabin air")) return "Brake Inspection + Cabin Air";
-  if (lower.includes("engine air filter") || lower.includes("engine filter") || lower.includes("air filter")) return "Engine Air Filter";
+  if (lower.includes("engine air filter") || lower.includes("engine filter")) return "Engine Air Filter";
   if (lower.includes("air brake") || lower.includes("purge brake")) return "Air Brake Cleaning";
-  if (lower.includes("tire replacement") || lower.includes("tires replacement") || lower.includes("tire install")) return "Tire Replacement";
+  if (lower.includes("tire replacement") || lower.includes("tires replacement") || lower.includes("tire install") || lower.includes("new tires")) return "Tire Replacement";
   if (lower.includes("brake caliper")) return "Brake Calipers";
   if (lower.includes("transmission")) return "Transmission Fluid";
-  if (lower.includes("turbo")) return "Turbocharger Inspection";
-  if (lower.includes("battery")) return "Battery Replacement";
+  if (lower.includes("turbo") || lower.includes("actuator")) return "Turbocharger Inspection";
+  if (lower.includes("battery") && !lower.includes("terminal")) return "Battery Replacement";
   if (lower.includes("coolant") || lower.includes("spark plug")) return "Coolant + Spark Plugs";
   if (lower.includes("timing belt") || lower.includes("time belt")) return "Timing Belt";
   if (lower.includes("diesel filter")) return "Diesel Filter Cleaning";
@@ -88,10 +89,41 @@ export default async function VehicleDetailPage({
   if (!v) notFound();
 
   const status = VEHICLE_STATUS[v.status as keyof typeof VEHICLE_STATUS];
+  const lifecycle = LIFECYCLE_STATUS[(v.lifecycleStatus ?? "ACTIVE") as keyof typeof LIFECYCLE_STATUS] ?? LIFECYCLE_STATUS.ACTIVE;
   const totalFuelCost = v.fuelLogs.reduce((s, f) => s + f.totalCost, 0);
   const totalMaintCost = v.maintenance
     .filter((w) => w.status === "COMPLETED")
     .reduce((s, w) => s + w.cost, 0);
+  const totalMaterialCost = v.maintenance.filter((w) => w.status === "COMPLETED").reduce((s, w) => s + w.materialCost, 0);
+  const totalLaborCost = v.maintenance.filter((w) => w.status === "COMPLETED").reduce((s, w) => s + w.laborCost, 0);
+
+  // Initial Investment
+  const initialInvestment = (v.purchasePrice ?? 0) + (v.taxesAndFees ?? 0) + (v.brandingCost ?? 0) + (v.gpsCamerasCost ?? 0) + (v.upfittingCost ?? 0) + (v.registrationCost ?? 0) + (v.initialInsurance ?? 0);
+
+  // Lease payments to date
+  const leaseMonthsPaid = v.leaseStartDate
+    ? Math.max(0, Math.round((new Date().getTime() - new Date(v.leaseStartDate).getTime()) / (30 * 86400000)))
+    : 0;
+  const totalLeasePaid = (v.monthlyPayment ?? v.totalRentPerMonth ?? 0) * leaseMonthsPaid;
+
+  // Total lifetime cost
+  const totalLifetimeCost = initialInvestment + totalMaintCost + totalFuelCost + totalLeasePaid;
+
+  // Cost metrics
+  const costPerMile = v.odometer > 0 ? totalLifetimeCost / v.odometer : 0;
+  const daysInService = v.onboardedDate ? Math.max(1, Math.round((new Date().getTime() - new Date(v.onboardedDate).getTime()) / 86400000)) : 1;
+  const costPerDay = totalLifetimeCost / daysInService;
+
+  // Replacement Score (0-100)
+  const ageYears = new Date().getFullYear() - (v.year ?? new Date().getFullYear());
+  const maxAge = v.type === "VAN" ? 4 : 7;
+  const ageScore = Math.min(100, (ageYears / maxAge) * 100);
+  const mileageScore = Math.min(100, (v.odometer / 250000) * 100);
+  const breakdownCount = v.maintenance.filter((w) => w.type === "REPAIR" && w.status === "COMPLETED").length;
+  const breakdownScore = Math.min(100, breakdownCount * 10);
+  const costTrend = costPerMile > 1.5 ? 100 : costPerMile > 1.0 ? 70 : costPerMile > 0.5 ? 40 : 20;
+  const replacementScore = Math.round(100 - (ageScore * 0.3 + mileageScore * 0.25 + breakdownScore * 0.25 + costTrend * 0.2));
+  const healthGrade = replacementScore >= 70 ? "HEALTHY" : replacementScore >= 50 ? "MONITOR" : replacementScore >= 30 ? "PLAN_REPLACEMENT" : "REPLACE_NOW";
   const regDays = daysUntil(v.registrationExpiry);
   const insDays = daysUntil(v.insuranceExpiry);
 
@@ -101,7 +133,8 @@ export default async function VehicleDetailPage({
   for (const wo of completedWOs) {
     const svcName = matchService(wo.title);
     if (!svcName) continue;
-    if (!lastPerformed[svcName] && wo.odometerAt != null && wo.completedAt) {
+    // odometerAt must be > 0 (0 means not recorded)
+    if (!lastPerformed[svcName] && wo.odometerAt != null && wo.odometerAt > 0 && wo.completedAt) {
       lastPerformed[svcName] = { odometerAt: wo.odometerAt, completedAt: wo.completedAt };
     }
   }
@@ -181,6 +214,9 @@ export default async function VehicleDetailPage({
             <Badge bg={status.bg} fg={status.fg}>
               {status.label}
             </Badge>
+            <Badge bg={lifecycle.bg} fg={lifecycle.fg}>
+              {lifecycle.label}
+            </Badge>
           </div>
           <p className="mt-1 text-sm text-[var(--color-muted)]">
             {v.year} {v.make} {v.model} · {titleCase(v.type)} · {v.licensePlate}
@@ -205,6 +241,14 @@ export default async function VehicleDetailPage({
             leasingCompany: v.leasingCompany,
             leaseEndDate: v.leaseEndDate?.toISOString().slice(0, 10) ?? null,
             registrationMonth: v.registrationMonth,
+            lifecycleStatus: v.lifecycleStatus ?? "ACTIVE",
+            purchasePrice: v.purchasePrice,
+            taxesAndFees: v.taxesAndFees,
+            brandingCost: v.brandingCost,
+            gpsCamerasCost: v.gpsCamerasCost,
+            upfittingCost: v.upfittingCost,
+            registrationCost: v.registrationCost,
+            initialInsurance: v.initialInsurance,
           }}
         />
       </div>
@@ -286,15 +330,79 @@ export default async function VehicleDetailPage({
         </Card>
 
         <Card>
-          <CardHeader title="Lifetime Costs" />
-          <div className="space-y-4 p-5">
-            <div>
-              <p className="text-xs text-slate-400">Fuel (recent)</p>
-              <p className="text-xl font-bold">{formatCurrency(totalFuelCost)}</p>
+          <CardHeader title="Fleet Health Score" />
+          <div className="p-5 text-center">
+            <div className={`inline-flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold ${
+              healthGrade === "HEALTHY" ? "bg-green-100 text-green-700"
+              : healthGrade === "MONITOR" ? "bg-yellow-100 text-yellow-700"
+              : healthGrade === "PLAN_REPLACEMENT" ? "bg-orange-100 text-orange-700"
+              : "bg-red-100 text-red-700"
+            }`}>
+              {replacementScore}
             </div>
-            <div>
-              <p className="text-xs text-slate-400">Maintenance (completed)</p>
-              <p className="text-xl font-bold">{formatCurrency(totalMaintCost)}</p>
+            <p className={`mt-2 text-sm font-semibold ${
+              healthGrade === "HEALTHY" ? "text-green-600"
+              : healthGrade === "MONITOR" ? "text-yellow-600"
+              : healthGrade === "PLAN_REPLACEMENT" ? "text-orange-600"
+              : "text-red-600"
+            }`}>
+              {healthGrade === "HEALTHY" ? "Healthy" : healthGrade === "MONITOR" ? "Monitor" : healthGrade === "PLAN_REPLACEMENT" ? "Plan Replacement" : "Replace Now"}
+            </p>
+            <div className="mt-3 space-y-1 text-left text-xs text-slate-500">
+              <div className="flex justify-between"><span>Cost/Mile</span><span className="font-medium text-slate-700">{formatCurrency(costPerMile)}</span></div>
+              <div className="flex justify-between"><span>Cost/Day</span><span className="font-medium text-slate-700">{formatCurrency(costPerDay)}</span></div>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Financial Summary */}
+      <div className="mt-6">
+        <Card>
+          <CardHeader title="Financial Summary" subtitle="Total Cost of Ownership" />
+          <div className="p-5">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
+                <p className="text-[10px] font-semibold uppercase text-slate-500">Total Invested</p>
+                <p className="mt-1 text-xl font-bold text-slate-800">{formatCurrency(totalLifetimeCost)}</p>
+              </div>
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-center">
+                <p className="text-[10px] font-semibold uppercase text-blue-600">Initial Investment</p>
+                <p className="mt-1 text-xl font-bold text-blue-800">{formatCurrency(initialInvestment)}</p>
+              </div>
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-center">
+                <p className="text-[10px] font-semibold uppercase text-amber-600">Maintenance</p>
+                <p className="mt-1 text-xl font-bold text-amber-800">{formatCurrency(totalMaintCost)}</p>
+              </div>
+              <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-center">
+                <p className="text-[10px] font-semibold uppercase text-green-600">Fuel</p>
+                <p className="mt-1 text-xl font-bold text-green-800">{formatCurrency(totalFuelCost)}</p>
+              </div>
+            </div>
+
+            {initialInvestment > 0 && (
+              <div className="mt-4">
+                <p className="mb-2 text-xs font-semibold uppercase text-slate-500">Initial Investment Breakdown</p>
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-4 text-xs">
+                  {v.purchasePrice ? <div className="flex justify-between border-b border-slate-100 pb-1"><span className="text-slate-500">Purchase Price</span><span className="font-medium">{formatCurrency(v.purchasePrice)}</span></div> : null}
+                  {v.taxesAndFees ? <div className="flex justify-between border-b border-slate-100 pb-1"><span className="text-slate-500">Taxes & Fees</span><span className="font-medium">{formatCurrency(v.taxesAndFees)}</span></div> : null}
+                  {v.brandingCost ? <div className="flex justify-between border-b border-slate-100 pb-1"><span className="text-slate-500">Branding</span><span className="font-medium">{formatCurrency(v.brandingCost)}</span></div> : null}
+                  {v.gpsCamerasCost ? <div className="flex justify-between border-b border-slate-100 pb-1"><span className="text-slate-500">GPS & Cameras</span><span className="font-medium">{formatCurrency(v.gpsCamerasCost)}</span></div> : null}
+                  {v.upfittingCost ? <div className="flex justify-between border-b border-slate-100 pb-1"><span className="text-slate-500">Upfitting</span><span className="font-medium">{formatCurrency(v.upfittingCost)}</span></div> : null}
+                  {v.registrationCost ? <div className="flex justify-between border-b border-slate-100 pb-1"><span className="text-slate-500">Registration</span><span className="font-medium">{formatCurrency(v.registrationCost)}</span></div> : null}
+                  {v.initialInsurance ? <div className="flex justify-between border-b border-slate-100 pb-1"><span className="text-slate-500">Initial Insurance</span><span className="font-medium">{formatCurrency(v.initialInsurance)}</span></div> : null}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4">
+              <p className="mb-2 text-xs font-semibold uppercase text-slate-500">Lifetime Cost Breakdown</p>
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-3 text-xs">
+                <div className="flex justify-between border-b border-slate-100 pb-1"><span className="text-slate-500">Maintenance (Parts)</span><span className="font-medium">{formatCurrency(totalMaterialCost)}</span></div>
+                <div className="flex justify-between border-b border-slate-100 pb-1"><span className="text-slate-500">Maintenance (Labor)</span><span className="font-medium">{formatCurrency(totalLaborCost)}</span></div>
+                <div className="flex justify-between border-b border-slate-100 pb-1"><span className="text-slate-500">Fuel</span><span className="font-medium">{formatCurrency(totalFuelCost)}</span></div>
+                {totalLeasePaid > 0 && <div className="flex justify-between border-b border-slate-100 pb-1"><span className="text-slate-500">Leasing</span><span className="font-medium">{formatCurrency(totalLeasePaid)}</span></div>}
+              </div>
             </div>
           </div>
         </Card>
@@ -408,23 +516,51 @@ export default async function VehicleDetailPage({
                   </div>
                 )}
               </div>
+              {/* Mileage Tracking */}
+              {v.contractMileage && v.contractMileage > 0 && (
+                <div className="mt-4 border-t border-[var(--color-border)] pt-4">
+                  <p className="text-xs font-semibold uppercase text-slate-500 mb-2">Mileage Tracking</p>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-xs text-slate-400">Allowed Mileage</p>
+                      <p className="text-sm font-medium">{formatNumber(v.contractMileage)} mi</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400">Current Mileage</p>
+                      <p className="text-sm font-medium">{formatNumber(v.odometer)} mi</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400">Mileage {v.odometer > v.contractMileage ? "Over" : "Under"}</p>
+                      <p className={`text-sm font-semibold ${v.odometer > v.contractMileage ? "text-red-600" : "text-green-600"}`}>
+                        {v.odometer > v.contractMileage ? "+" : "-"}{formatNumber(Math.abs(v.odometer - v.contractMileage))} mi
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               {/* P&L Summary */}
               {v.totalRentPerMonth && !v.paidOff && (
                 <div className="mt-4 border-t border-[var(--color-border)] pt-4">
                   <p className="text-xs font-semibold uppercase text-slate-500 mb-2">Monthly Cost Summary</p>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                     <div>
-                      <p className="text-xs text-slate-400">Lease Payment</p>
-                      <p className="text-lg font-bold text-slate-800">{formatCurrency(v.totalRentPerMonth)}</p>
+                      <p className="text-xs text-slate-400">Monthly Payment</p>
+                      <p className="text-lg font-bold text-slate-800">{formatCurrency(v.monthlyPayment ?? v.totalRentPerMonth)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-400">Total Paid to Date</p>
-                      <p className="text-lg font-bold text-slate-800">{formatCurrency(v.totalRentPerMonth * (v.monthsInService ?? 0))}</p>
+                      <p className="text-lg font-bold text-slate-800">{formatCurrency(totalLeasePaid)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-400">Remaining Payments</p>
-                      <p className="text-lg font-bold text-slate-800">{formatCurrency(v.totalRentPerMonth * (v.monthsLeftPayoff ?? 0))}</p>
+                      <p className="text-xs text-slate-400">Remaining Obligation</p>
+                      <p className="text-lg font-bold text-slate-800">{formatCurrency((v.monthlyPayment ?? v.totalRentPerMonth) * (v.monthsLeftPayoff ?? 0))}</p>
                     </div>
+                    {v.residualValue && (
+                      <div>
+                        <p className="text-xs text-slate-400">Residual Value</p>
+                        <p className="text-lg font-bold text-slate-800">{formatCurrency(v.residualValue)}</p>
+                      </div>
+                    )}
                   </div>
                   {v.currentMarketValue != null && v.openEndNetBookValue != null && (
                     <div className="mt-3 rounded-lg bg-slate-50 px-4 py-3">

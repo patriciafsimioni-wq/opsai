@@ -21,11 +21,20 @@ type VehicleData = {
   leasingCompany: string | null;
   leaseEndDate: string | null;
   registrationMonth: string | null;
+  lifecycleStatus: string;
+  purchasePrice: number | null;
+  taxesAndFees: number | null;
+  brandingCost: number | null;
+  gpsCamerasCost: number | null;
+  upfittingCost: number | null;
+  registrationCost: number | null;
+  initialInsurance: number | null;
 };
 
 const STATIONS = ["IAH", "AUS", "HRL", "LRD", "ACT", "CLL", "BPT"];
 const TYPES = ["VAN", "TRUCK", "CAR", "BUS", "PICKUP", "TRAILER"];
 const FUEL_TYPES = ["DIESEL", "GASOLINE", "ELECTRIC", "HYBRID", "CNG"];
+const LIFECYCLE_STAGES = ["PLANNING", "ACQUISITION_APPROVED", "ORDERED", "IN_TRANSIT", "RECEIVED", "UPFITTING", "REGISTERED", "ASSIGNED", "ACTIVE", "TEMP_OUT", "LONG_TERM_REPAIR", "READY_DISPOSAL", "SOLD_RETURNED", "ARCHIVED"];
 
 export function VehicleEditForm({ vehicle }: { vehicle: VehicleData }) {
   const [editing, setEditing] = useState(false);
@@ -54,6 +63,14 @@ export function VehicleEditForm({ vehicle }: { vehicle: VehicleData }) {
         leasingCompany: form.leasingCompany || null,
         leaseEndDate: form.leaseEndDate || null,
         registrationMonth: form.registrationMonth || null,
+        lifecycleStatus: form.lifecycleStatus,
+        purchasePrice: form.purchasePrice ? Number(form.purchasePrice) : null,
+        taxesAndFees: form.taxesAndFees ? Number(form.taxesAndFees) : null,
+        brandingCost: form.brandingCost ? Number(form.brandingCost) : null,
+        gpsCamerasCost: form.gpsCamerasCost ? Number(form.gpsCamerasCost) : null,
+        upfittingCost: form.upfittingCost ? Number(form.upfittingCost) : null,
+        registrationCost: form.registrationCost ? Number(form.registrationCost) : null,
+        initialInsurance: form.initialInsurance ? Number(form.initialInsurance) : null,
       });
       window.location.reload();
     } catch (err) {
@@ -99,6 +116,18 @@ export function VehicleEditForm({ vehicle }: { vehicle: VehicleData }) {
         <Field label="Leasing Company" value={form.leasingCompany ?? ""} onChange={(v) => set("leasingCompany", v)} />
         <Field label="Lease End Date" value={form.leaseEndDate ?? ""} onChange={(v) => set("leaseEndDate", v)} type="date" />
         <Field label="Registration Month" value={form.registrationMonth ?? ""} onChange={(v) => set("registrationMonth", v)} />
+        <SelectField label="Lifecycle Status" value={form.lifecycleStatus} options={LIFECYCLE_STAGES} onChange={(v) => set("lifecycleStatus", v)} />
+      </div>
+
+      <p className="mt-4 mb-2 text-[10px] font-semibold uppercase text-slate-500">Initial Investment</p>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+        <Field label="Purchase Price" value={String(form.purchasePrice ?? "")} onChange={(v) => set("purchasePrice", v)} type="number" />
+        <Field label="Taxes & Fees" value={String(form.taxesAndFees ?? "")} onChange={(v) => set("taxesAndFees", v)} type="number" />
+        <Field label="Branding Cost" value={String(form.brandingCost ?? "")} onChange={(v) => set("brandingCost", v)} type="number" />
+        <Field label="GPS & Cameras" value={String(form.gpsCamerasCost ?? "")} onChange={(v) => set("gpsCamerasCost", v)} type="number" />
+        <Field label="Upfitting" value={String(form.upfittingCost ?? "")} onChange={(v) => set("upfittingCost", v)} type="number" />
+        <Field label="Registration Cost" value={String(form.registrationCost ?? "")} onChange={(v) => set("registrationCost", v)} type="number" />
+        <Field label="Initial Insurance" value={String(form.initialInsurance ?? "")} onChange={(v) => set("initialInsurance", v)} type="number" />
       </div>
 
       <div className="mt-4 flex gap-2">

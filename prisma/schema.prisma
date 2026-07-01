@@ -146,6 +146,7 @@ model User {
   driverId          String?            @unique
   woRequests        WorkOrderRequest[] @relation("requestedBy")
   woReviews         WorkOrderRequest[] @relation("reviewedBy")
+  dvirReports       DvirReport[]
   createdAt         DateTime           @default(now())
 }
 
@@ -221,6 +222,20 @@ model Vehicle {
   insuranceExpiry    DateTime?
   purchaseDate       DateTime?
   purchasePrice      Float?
+  // Vehicle Lifecycle
+  lifecycleStatus    String          @default("ACTIVE") // PLANNING, ACQUISITION_APPROVED, ORDERED, IN_TRANSIT, RECEIVED, UPFITTING, REGISTERED, ASSIGNED, ACTIVE, TEMP_OUT, LONG_TERM_REPAIR, READY_DISPOSAL, SOLD_RETURNED, ARCHIVED
+  // Financial - Initial Investment
+  taxesAndFees       Float?
+  brandingCost       Float?
+  gpsCamerasCost     Float?
+  upfittingCost      Float?
+  registrationCost   Float?
+  initialInsurance   Float?
+  monthlyPayment     Float?
+  allowedMileage     Float?
+  residualValue      Float?
+  purchaseOption     Float?
+  earlyTermFee       Float?
   // live telemetry
   lat                Float?
   lng                Float?
@@ -238,6 +253,7 @@ model Vehicle {
   telemetry          TelemetryLog[]
   woRequests         WorkOrderRequest[]
   pmDismissals       PmAlertDismissal[]
+  dvirReports        DvirReport[]
   createdAt          DateTime       @default(now())
 }
 
@@ -451,4 +467,35 @@ model WorkOrderRequest {
   reviewNote         String?
   reviewedAt         DateTime?
   createdAt          DateTime        @default(now())
+}
+
+model DvirReport {
+  id              String   @id @default(cuid())
+  vehicle         Vehicle  @relation(fields: [vehicleId], references: [id])
+  vehicleId       String
+  submittedBy     User     @relation(fields: [submittedById], references: [id])
+  submittedById   String
+  odometer        Float?
+  // Inspection items: PASS, FAIL, NA
+  tires           String   @default("PASS")
+  brakes          String   @default("PASS")
+  lights          String   @default("PASS")
+  mirrors         String   @default("PASS")
+  windshield      String   @default("PASS")
+  wipers          String   @default("PASS")
+  horn            String   @default("PASS")
+  seatbelts       String   @default("PASS")
+  fluids          String   @default("PASS")
+  bodyDamage      String   @default("PASS")
+  exhaust         String   @default("PASS")
+  steering        String   @default("PASS")
+  suspension      String   @default("PASS")
+  ac              String   @default("PASS")
+  // Overall
+  overallStatus   String   @default("PASS") // PASS or FAIL
+  notes           String?
+  photos          String?  // JSON array of photo URLs
+  hasAlert        Boolean  @default(false)
+  alertResolved   Boolean  @default(false)
+  createdAt       DateTime @default(now())
 }

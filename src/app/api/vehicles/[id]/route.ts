@@ -44,6 +44,19 @@ const patchSchema = z.object({
   offboardedDate: z.string().optional().nullable(),
   onboardPhotos: z.string().optional().nullable(),
   onboardedDate: z.string().optional().nullable(),
+  lifecycleStatus: z.string().optional(),
+  purchasePrice: z.coerce.number().optional().nullable(),
+  taxesAndFees: z.coerce.number().optional().nullable(),
+  brandingCost: z.coerce.number().optional().nullable(),
+  gpsCamerasCost: z.coerce.number().optional().nullable(),
+  upfittingCost: z.coerce.number().optional().nullable(),
+  registrationCost: z.coerce.number().optional().nullable(),
+  initialInsurance: z.coerce.number().optional().nullable(),
+  monthlyPayment: z.coerce.number().optional().nullable(),
+  allowedMileage: z.coerce.number().optional().nullable(),
+  residualValue: z.coerce.number().optional().nullable(),
+  purchaseOption: z.coerce.number().optional().nullable(),
+  earlyTermFee: z.coerce.number().optional().nullable(),
 });
 
 export async function PATCH(

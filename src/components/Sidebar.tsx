@@ -22,6 +22,7 @@ import {
   CalendarClock,
   ShieldAlert,
   UserCog,
+  Landmark,
   Truck as TruckLogo,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ const NAV = [
   { href: "/fareye-routes", label: "FareEye Routes", icon: Navigation },
   { href: "/maintenance", label: "Maintenance", icon: Wrench },
   { href: "/maintenance-schedule", label: "PM Schedule", icon: CalendarClock },
+  { href: "/dvir", label: "DVIR", icon: ClipboardCheck },
   { href: "/work-order-requests", label: "WO Requests", icon: ClipboardList },
   { href: "/log-service", label: "Log Service", icon: ClipboardCheck },
   { href: "/services", label: "Service Catalog", icon: ListChecks },
@@ -44,6 +46,7 @@ const NAV = [
   { href: "/fuel", label: "Fuel", icon: Fuel },
   { href: "/alerts", label: "Alerts", icon: Bell },
   { href: "/safety", label: "Safety", icon: ShieldAlert },
+  { href: "/fleet-finance", label: "Fleet Finance", icon: Landmark },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/users", label: "Users", icon: UserCog },
 ];

@@ -9,6 +9,25 @@ export const VEHICLE_TYPES = ["TRUCK", "VAN", "CAR", "BUS", "PICKUP", "TRAILER"]
 export const VEHICLE_STATUSES = ["ACTIVE", "IDLE", "MAINTENANCE", "OUT_OF_SERVICE"] as const;
 export const FUEL_TYPES = ["DIESEL", "GASOLINE", "ELECTRIC", "HYBRID", "CNG"] as const;
 
+export const LIFECYCLE_STATUS = {
+  PLANNING: { label: "Planning", bg: "#f1f5f9", fg: "#475569", color: "#64748b" },
+  ACQUISITION_APPROVED: { label: "Acquisition Approved", bg: "#dbeafe", fg: "#1e40af", color: "#2563eb" },
+  ORDERED: { label: "Ordered", bg: "#e0e7ff", fg: "#3730a3", color: "#4f46e5" },
+  IN_TRANSIT: { label: "In Transit", bg: "#fef3c7", fg: "#92400e", color: "#d97706" },
+  RECEIVED: { label: "Received", bg: "#cffafe", fg: "#155e75", color: "#0891b2" },
+  UPFITTING: { label: "Upfitting / Branding", bg: "#fce7f3", fg: "#9d174d", color: "#db2777" },
+  REGISTERED: { label: "Registered & Insured", bg: "#d1fae5", fg: "#065f46", color: "#059669" },
+  ASSIGNED: { label: "Assigned to Station", bg: "#ede9fe", fg: "#5b21b6", color: "#7c3aed" },
+  ACTIVE: { label: "Active", bg: "#dcfce7", fg: "#166534", color: "#16a34a" },
+  TEMP_OUT: { label: "Temporary Out of Service", bg: "#fef3c7", fg: "#78350f", color: "#b45309" },
+  LONG_TERM_REPAIR: { label: "Long-Term Repair", bg: "#fee2e2", fg: "#991b1b", color: "#dc2626" },
+  READY_DISPOSAL: { label: "Ready for Disposal", bg: "#fecaca", fg: "#7f1d1d", color: "#b91c1c" },
+  SOLD_RETURNED: { label: "Sold / Returned / End of Lease", bg: "#e2e8f0", fg: "#334155", color: "#475569" },
+  ARCHIVED: { label: "Archived", bg: "#f1f5f9", fg: "#64748b", color: "#94a3b8" },
+} as const;
+
+export const LIFECYCLE_STATUSES = Object.keys(LIFECYCLE_STATUS) as (keyof typeof LIFECYCLE_STATUS)[];
+
 export const DRIVER_STATUS = {
   ACTIVE: { label: "Active", bg: "#dcfce7", fg: "#166534" },
   ON_TRIP: { label: "On Trip", bg: "#dbeafe", fg: "#1e40af" },
