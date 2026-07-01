@@ -1,13 +1,12 @@
 // Fleet Management — Prisma schema
-// SQLite for zero-config dev; swap `provider` to "postgresql" for production.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
 }
 
 enum Role {
