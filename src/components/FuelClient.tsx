@@ -64,6 +64,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
   const [range, setRange] = useState<"week" | "month">("month");
   const [refDate, setRefDate] = useState(new Date().toISOString().slice(0, 10));
   const [purchaseType, setPurchaseType] = useState("");
+  const [viewTab, setViewTab] = useState<"all" | "duplicates">("all");
 
   const apiUrl = `/api/fuel?range=${range}&date=${refDate}${station ? `&station=${station}` : ""}${purchaseType ? `&purchaseType=${purchaseType}` : ""}`;
   const { data, loading, reload } = useData<FuelApiResponse>(apiUrl);
@@ -92,16 +93,24 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
   const duplicateSet = useMemo(() => new Set(data?.duplicates ?? []), [data]);
   const inactiveCardSet = useMemo(() => new Set(data?.inactiveCards ?? []), [data]);
 
+  const duplicateOnlyLogs = useMemo(() => {
+    return logs.filter((l) => {
+      const dateKey = `${l.vehicleId}|${new Date(l.date!).toISOString().slice(0, 10)}`;
+      return duplicateSet.has(dateKey);
+    });
+  }, [logs, duplicateSet]);
+
   const filtered = useMemo(() => {
+    const base = viewTab === "duplicates" ? duplicateOnlyLogs : logs;
     const q = search.toLowerCase();
-    return logs.filter(
+    return base.filter(
       (l) =>
         !q ||
         l.vehicle.name.toLowerCase().includes(q) ||
         (l.location ?? "").toLowerCase().includes(q) ||
         (l.driverName ?? "").toLowerCase().includes(q),
     );
-  }, [logs, search]);
+  }, [logs, duplicateOnlyLogs, viewTab, search]);
 
   const breakdown = data?.purchaseBreakdown ?? [];
   const gasCost = breakdown.find((b) => b.type === "UNLEADED")?.totalCost ?? 0;
@@ -219,6 +228,28 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
 
       <Card>
         <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] p-4">
+          {/* View tabs */}
+          <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden">
+            <button
+              onClick={() => setViewTab("all")}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewTab === "all" ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              All ({logs.length})
+            </button>
+            <button
+              onClick={() => setViewTab("duplicates")}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewTab === "duplicates" ? "bg-amber-500 text-white" : "bg-white text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <span className="flex items-center gap-1">
+                <AlertTriangle size={13} /> Duplicates ({duplicateOnlyLogs.length})
+              </span>
+            </button>
+          </div>
+
           <div className="relative flex-1 min-w-[200px]">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
