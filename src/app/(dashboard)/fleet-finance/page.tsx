@@ -50,10 +50,11 @@ export default async function FleetFinancePage() {
     const ageYears = now.getFullYear() - (v.year ?? now.getFullYear());
     const maxAge = v.type === "VAN" ? 4 : 7;
     const ageScore = Math.min(100, (ageYears / maxAge) * 100);
-    const mileageScore = Math.min(100, (v.odometer / 250000) * 100);
+    const mileageScore = v.odometer > 0 ? Math.min(100, (v.odometer / 250000) * 100) : Math.min(100, (ageYears * 25000 / 250000) * 100);
     const breakdownCount = v.maintenance.filter((w) => w.type === "REPAIR").length;
     const breakdownScore = Math.min(100, breakdownCount * 10);
-    const costTrend = costPerMile > 1.5 ? 100 : costPerMile > 1.0 ? 70 : costPerMile > 0.5 ? 40 : 20;
+    const estimatedCPM = costPerMile > 0 ? costPerMile : (lifetimeCost > 0 && ageYears > 0 ? lifetimeCost / (ageYears * 25000) : 0);
+    const costTrend = estimatedCPM > 1.5 ? 100 : estimatedCPM > 1.0 ? 70 : estimatedCPM > 0.5 ? 40 : 20;
     const score = Math.round(100 - (ageScore * 0.3 + mileageScore * 0.25 + breakdownScore * 0.25 + costTrend * 0.2));
     const grade = score >= 70 ? "HEALTHY" : score >= 50 ? "MONITOR" : score >= 30 ? "PLAN_REPLACEMENT" : "REPLACE_NOW";
 

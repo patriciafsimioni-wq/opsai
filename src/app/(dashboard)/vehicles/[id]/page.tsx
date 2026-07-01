@@ -97,6 +97,8 @@ export default async function VehicleDetailPage({
   const totalMaterialCost = v.maintenance.filter((w) => w.status === "COMPLETED").reduce((s, w) => s + w.materialCost, 0);
   const totalLaborCost = v.maintenance.filter((w) => w.status === "COMPLETED").reduce((s, w) => s + w.laborCost, 0);
 
+  const now = new Date();
+
   // Initial Investment
   const initialInvestment = (v.purchasePrice ?? 0) + (v.taxesAndFees ?? 0) + (v.brandingCost ?? 0) + (v.gpsCamerasCost ?? 0) + (v.upfittingCost ?? 0) + (v.registrationCost ?? 0) + (v.initialInsurance ?? 0);
 
@@ -109,19 +111,21 @@ export default async function VehicleDetailPage({
   // Total lifetime cost
   const totalLifetimeCost = initialInvestment + totalMaintCost + totalFuelCost + totalLeasePaid;
 
-  // Cost metrics
-  const costPerMile = v.odometer > 0 ? totalLifetimeCost / v.odometer : 0;
-  const daysInService = v.onboardedDate ? Math.max(1, Math.round((new Date().getTime() - new Date(v.onboardedDate).getTime()) / 86400000)) : 1;
+  // Cost metrics — use best available start date for days in service
+  const serviceStartDate = v.onboardedDate ?? v.leaseStartDate ?? (v.monthsInService ? new Date(now.getTime() - v.monthsInService * 30 * 86400000) : new Date(v.year, 0, 1));
+  const daysInService = Math.max(1, Math.round((now.getTime() - new Date(serviceStartDate).getTime()) / 86400000));
+  const costPerMile = v.odometer > 0 ? totalLifetimeCost / v.odometer : null;
   const costPerDay = totalLifetimeCost / daysInService;
 
   // Replacement Score (0-100)
-  const ageYears = new Date().getFullYear() - (v.year ?? new Date().getFullYear());
+  const ageYears = now.getFullYear() - (v.year ?? now.getFullYear());
   const maxAge = v.type === "VAN" ? 4 : 7;
   const ageScore = Math.min(100, (ageYears / maxAge) * 100);
-  const mileageScore = Math.min(100, (v.odometer / 250000) * 100);
+  const mileageScore = v.odometer > 0 ? Math.min(100, (v.odometer / 250000) * 100) : Math.min(100, (ageYears * 25000 / 250000) * 100);
   const breakdownCount = v.maintenance.filter((w) => w.type === "REPAIR" && w.status === "COMPLETED").length;
   const breakdownScore = Math.min(100, breakdownCount * 10);
-  const costTrend = costPerMile > 1.5 ? 100 : costPerMile > 1.0 ? 70 : costPerMile > 0.5 ? 40 : 20;
+  const estimatedCPM = costPerMile ?? (totalLifetimeCost > 0 && ageYears > 0 ? totalLifetimeCost / (ageYears * 25000) : 0);
+  const costTrend = estimatedCPM > 1.5 ? 100 : estimatedCPM > 1.0 ? 70 : estimatedCPM > 0.5 ? 40 : 20;
   const replacementScore = Math.round(100 - (ageScore * 0.3 + mileageScore * 0.25 + breakdownScore * 0.25 + costTrend * 0.2));
   const healthGrade = replacementScore >= 70 ? "HEALTHY" : replacementScore >= 50 ? "MONITOR" : replacementScore >= 30 ? "PLAN_REPLACEMENT" : "REPLACE_NOW";
   const regDays = daysUntil(v.registrationExpiry);
@@ -139,7 +143,6 @@ export default async function VehicleDetailPage({
     }
   }
   const odo = v.odometer;
-  const now = new Date();
   const scheduleRows = SERVICE_INTERVALS.map(([interval, service, firstDue]) => {
     const last = lastPerformed[service];
     let nextDue: number;
@@ -349,7 +352,7 @@ export default async function VehicleDetailPage({
               {healthGrade === "HEALTHY" ? "Healthy" : healthGrade === "MONITOR" ? "Monitor" : healthGrade === "PLAN_REPLACEMENT" ? "Plan Replacement" : "Replace Now"}
             </p>
             <div className="mt-3 space-y-1 text-left text-xs text-slate-500">
-              <div className="flex justify-between"><span>Cost/Mile</span><span className="font-medium text-slate-700">{formatCurrency(costPerMile)}</span></div>
+              <div className="flex justify-between"><span>Cost/Mile</span><span className="font-medium text-slate-700">{costPerMile != null ? formatCurrency(costPerMile) : "N/A"}</span></div>
               <div className="flex justify-between"><span>Cost/Day</span><span className="font-medium text-slate-700">{formatCurrency(costPerDay)}</span></div>
             </div>
           </div>
