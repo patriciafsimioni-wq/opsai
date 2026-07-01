@@ -65,9 +65,10 @@ export async function PATCH(
   });
 
   // Send email notification to requester
-  if (updated.requestedBy?.email) {
+  const recipientEmail = updated.requesterEmail || updated.requestedBy?.email;
+  if (recipientEmail) {
     const emailData = buildApprovalEmail({
-      requesterName: updated.requestedBy.name || "Team Member",
+      requesterName: updated.requestedBy?.name || "Team Member",
       poNumber: updated.poNumber || "N/A",
       status: parsed.data.status,
       vehicleName: updated.vehicle?.name || updated.vehicle?.dxNumber || "N/A",
@@ -75,7 +76,7 @@ export async function PATCH(
       approverName: auth.user.name || undefined,
       notes: parsed.data.reviewNote || undefined,
     });
-    sendEmail({ to: updated.requestedBy.email, ...emailData }).catch(() => {});
+    sendEmail({ to: recipientEmail, ...emailData }).catch(() => {});
   }
 
   return NextResponse.json(updated);

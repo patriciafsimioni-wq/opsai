@@ -84,6 +84,7 @@ export function WorkOrderRequestsClient({
     comments: "",
     serviceHours: "",
     vendorEstimate: "",
+    requesterEmail: "",
   });
   const [file, setFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -154,7 +155,8 @@ export function WorkOrderRequestsClient({
     form.station &&
     (form.vehicleId || form.vehicleOther.trim()) &&
     form.serviceId &&
-    form.requestedDate;
+    form.requestedDate &&
+    form.requesterEmail.trim();
 
   async function submit() {
     setSaving(true);
@@ -190,6 +192,7 @@ export function WorkOrderRequestsClient({
       photoUrl,
       serviceHours: form.serviceHours || null,
       vendorEstimate: form.vendorEstimate || null,
+      requesterEmail: form.requesterEmail.trim() || null,
     };
 
     const res = await apiSend("/api/work-order-requests", "POST", payload);
@@ -208,6 +211,7 @@ export function WorkOrderRequestsClient({
         comments: "",
         serviceHours: "",
         vendorEstimate: "",
+        requesterEmail: "",
       });
       setFile(null);
       if (fileRef.current) fileRef.current.value = "";
@@ -512,6 +516,20 @@ export function WorkOrderRequestsClient({
                 setForm({ ...form, vendorEstimate: e.target.value })
               }
             />
+          </Field>
+
+          <Field label="Email for Notifications *">
+            <Input
+              type="email"
+              placeholder="email@example.com"
+              value={form.requesterEmail}
+              onChange={(e) =>
+                setForm({ ...form, requesterEmail: e.target.value })
+              }
+            />
+            <p className="mt-1 text-xs text-slate-400">
+              Approval/rejection notifications will be sent to this email.
+            </p>
           </Field>
 
           <div className="sm:col-span-2">

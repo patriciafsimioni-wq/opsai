@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Bell,
   Check,
@@ -109,6 +110,11 @@ export function AlertsClient() {
           {filtered.map((a) => {
             const sev = ALERT_SEVERITY[a.severity as keyof typeof ALERT_SEVERITY];
             const Icon = ICONS[a.type] ?? Bell;
+            const href = a.vehicleId
+              ? `/vehicles/${a.vehicleId}`
+              : a.driverId
+                ? `/drivers/${a.driverId}`
+                : null;
             return (
               <div
                 key={a.id}
@@ -121,11 +127,23 @@ export function AlertsClient() {
                   <Icon size={17} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{a.message}</p>
-                  <p className="text-xs text-slate-400">
-                    {ALERT_TYPE_LABEL[a.type]} · {relativeTime(a.createdAt)}
-                    {a.vehicle ? ` · ${a.vehicle.name}` : ""}
-                  </p>
+                  {href ? (
+                    <Link href={href} className="group">
+                      <p className="text-sm font-medium group-hover:text-blue-600 group-hover:underline">{a.message}</p>
+                      <p className="text-xs text-slate-400">
+                        {ALERT_TYPE_LABEL[a.type]} · {relativeTime(a.createdAt)}
+                        {a.vehicle ? ` · ${a.vehicle.name}` : ""}
+                      </p>
+                    </Link>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium">{a.message}</p>
+                      <p className="text-xs text-slate-400">
+                        {ALERT_TYPE_LABEL[a.type]} · {relativeTime(a.createdAt)}
+                        {a.vehicle ? ` · ${a.vehicle.name}` : ""}
+                      </p>
+                    </>
+                  )}
                 </div>
                 <Badge bg={sev.bg} fg={sev.fg}>
                   {sev.label}

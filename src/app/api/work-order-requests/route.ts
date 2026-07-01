@@ -34,6 +34,7 @@ const schema = z.object({
   photoUrl: z.string().optional().nullable(),
   serviceHours: z.coerce.number().min(0).optional().nullable(),
   vendorEstimate: z.coerce.number().min(0).optional().nullable(),
+  requesterEmail: z.string().email().optional().nullable(),
 });
 
 export async function POST(req: Request) {
@@ -74,6 +75,7 @@ export async function POST(req: Request) {
       photoUrl: d.photoUrl || null,
       serviceHours: d.serviceHours ?? null,
       vendorEstimate: d.vendorEstimate ?? null,
+      requesterEmail: d.requesterEmail || null,
       requestedById: auth.user.id,
     },
     include: {

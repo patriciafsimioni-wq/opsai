@@ -409,6 +409,7 @@ model WorkOrderRequest {
   photoUrl           String?
   serviceHours       Float?
   vendorEstimate     Float?
+  requesterEmail     String?
   status             WORequestStatus @default(PENDING)
   requestedBy        User            @relation("requestedBy", fields: [requestedById], references: [id])
   requestedById      String
