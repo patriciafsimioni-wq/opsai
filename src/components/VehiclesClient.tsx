@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Pencil, Trash2, Truck } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Truck, RefreshCw } from "lucide-react";
 import {
   Card,
   Button,
@@ -52,6 +52,8 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     if (!vehicles) return [];
@@ -69,6 +71,26 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
       return matchSearch && matchStatus;
     });
   }, [vehicles, search, statusFilter]);
+
+  async function syncSamsara() {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch("/api/samsara/sync", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setSyncResult(`Error: ${data.error || "Sync failed"}`);
+      } else {
+        setSyncResult(`Synced ${data.updated} of ${data.matched} matched vehicles`);
+        reload();
+      }
+    } catch {
+      setSyncResult("Error: Network request failed");
+    } finally {
+      setSyncing(false);
+      setTimeout(() => setSyncResult(null), 5000);
+    }
+  }
 
   function openCreate() {
     setEditing(null);
@@ -148,11 +170,23 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
           ))}
         </select>
         {canManage && (
-          <Button onClick={openCreate}>
-            <Plus size={16} /> Add Vehicle
-          </Button>
+          <>
+            <Button variant="secondary" onClick={syncSamsara} disabled={syncing}>
+              <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
+              {syncing ? "Syncing..." : "Sync Samsara"}
+            </Button>
+            <Button onClick={openCreate}>
+              <Plus size={16} /> Add Vehicle
+            </Button>
+          </>
         )}
       </div>
+
+      {syncResult && (
+        <div className={`mb-4 rounded-lg border px-4 py-2 text-sm ${syncResult.startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
+          {syncResult}
+        </div>
+      )}
 
       {loading ? (
         <p className="p-8 text-center text-sm text-slate-400">Loading…</p>

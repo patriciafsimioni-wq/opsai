@@ -431,7 +431,7 @@ async function main() {
         materialCost: row.materialCost,
         laborHours: 0,
         laborRate: 0,
-        laborCost: row.serviceCost,
+        laborCost: Math.min(row.serviceCost, row.totalCost - row.materialCost),
         cost: row.totalCost,
         performedBy: null,
         odometerAt: row.odometer,
