@@ -9,6 +9,7 @@ import {
   MapPin,
   User,
   AlertTriangle,
+  Flag,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { Card, CardHeader, Badge, Table, Th, Td, ProgressBar } from "@/components/ui";
@@ -287,11 +288,18 @@ export default async function VehicleDetailPage({
             {v.dxNumber ? ` · ${v.dxNumber}` : ""}
           </p>
         </div>
-        <VehicleEditForm
-          vehicle={{
-            id: v.id,
-            name: v.name,
-            dxNumber: v.dxNumber,
+        <div className="flex items-center gap-2">
+          <a
+            href={`/issues?create=1&title=${encodeURIComponent(`Vehicle Issue — ${v.name}`)}&category=Vehicles&description=${encodeURIComponent(`Vehicle: ${v.name}${v.dxNumber ? ` (${v.dxNumber})` : ''} · ${v.year} ${v.make} ${v.model}`)}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors"
+          >
+            <Flag size={14} /> Flag Issue
+          </a>
+          <VehicleEditForm
+            vehicle={{
+              id: v.id,
+              name: v.name,
+              dxNumber: v.dxNumber,
             make: v.make,
             model: v.model,
             year: v.year,
@@ -314,7 +322,8 @@ export default async function VehicleDetailPage({
             registrationCost: v.registrationCost,
             initialInsurance: v.initialInsurance,
           }}
-        />
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
