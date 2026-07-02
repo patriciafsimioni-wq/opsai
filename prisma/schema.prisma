@@ -146,7 +146,61 @@ model User {
   woRequests        WorkOrderRequest[] @relation("requestedBy")
   woReviews         WorkOrderRequest[] @relation("reviewedBy")
   dvirReports       DvirReport[]
+  issuesCreated     Issue[]            @relation("issueCreatedBy")
+  issuesAssigned    Issue[]            @relation("issueAssignedTo")
+  issueComments     IssueComment[]
   createdAt         DateTime           @default(now())
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum IssuePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Issue {
+  id            String         @id @default(cuid())
+  title         String
+  description   String?
+  status        IssueStatus    @default(OPEN)
+  priority      IssuePriority  @default(MEDIUM)
+  category      String?
+  station       String?
+  module        String?
+  referenceId   String?
+  referenceData String?
+  createdBy     User           @relation("issueCreatedBy", fields: [createdById], references: [id])
+  createdById   String
+  assignedTo    User?          @relation("issueAssignedTo", fields: [assignedToId], references: [id])
+  assignedToId  String?
+  resolvedAt    DateTime?
+  comments      IssueComment[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([status])
+  @@index([assignedToId])
+  @@index([station])
+}
+
+model IssueComment {
+  id        String   @id @default(cuid())
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  issueId   String
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([issueId])
 }
 
 model Driver {

@@ -25,6 +25,7 @@ import {
   Landmark,
   Truck as TruckLogo,
   LogOut,
+  Flag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -76,6 +77,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/uploads", label: "Smart Upload", icon: Upload },
       { href: "/alerts", label: "Alerts", icon: Bell },
       { href: "/safety", label: "Safety", icon: ShieldAlert },
+      { href: "/issues", label: "Issue Tracker", icon: Flag },
     ],
   },
   {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Search, Trash2, Fuel, ChevronLeft, ChevronRight, AlertTriangle, CreditCard } from "lucide-react";
+import { Plus, Search, Trash2, Fuel, ChevronLeft, ChevronRight, AlertTriangle, CreditCard, Flag } from "lucide-react";
 import { Card, Button, Table, Th, Td, EmptyState, StatCard } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
@@ -253,6 +253,18 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
               </span>
             </button>
           </div>
+
+          {viewTab === "duplicates" && duplicateOnlyLogs.length > 0 && (
+            <button
+              onClick={() => {
+                const desc = `${duplicateOnlyLogs.length} duplicate fuel entries found for ${station || "all stations"} in ${data?.dateStart ? new Date(data.dateStart).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" }) : "this period"}. Please review and explain.`;
+                window.open(`/issues?create=1&title=${encodeURIComponent("Fuel Duplicates" + (station ? ` - ${station}` : ""))}&description=${encodeURIComponent(desc)}&category=Fuel&station=${station || ""}`, "_self");
+              }}
+              className="flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors"
+            >
+              <Flag size={14} /> Flag Issue
+            </button>
+          )}
 
           <div className="relative flex-1 min-w-[200px]">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
