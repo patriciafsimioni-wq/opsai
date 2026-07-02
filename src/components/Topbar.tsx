@@ -3,20 +3,43 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { Bell, LogOut, ChevronDown } from "lucide-react";
+import { Bell, LogOut, ChevronDown, Eye } from "lucide-react";
 import { MobileMenuButton } from "@/components/Sidebar";
 import { Avatar } from "@/components/ui";
 import type { Role } from "@prisma/client";
 
+const ALL_ROLES: { value: Role; label: string }[] = [
+  { value: "ADMIN", label: "Administrator" },
+  { value: "GENERAL_MANAGER", label: "General Manager" },
+  { value: "FLEET_MANAGER", label: "Fleet Manager" },
+  { value: "STATION_MANAGER", label: "Station Manager" },
+  { value: "MANAGER", label: "Manager" },
+  { value: "MECHANIC", label: "Mechanic" },
+  { value: "VENDOR", label: "Vendor" },
+  { value: "DRIVER", label: "Driver" },
+];
+
 export function Topbar({
   user,
   alertCount,
+  viewAsRole,
 }: {
   user: { name: string; email: string; role: Role; station: string | null };
   alertCount: number;
+  viewAsRole?: string | null;
 }) {
   const router = useRouter();
   const [menu, setMenu] = useState(false);
+  const isAdmin = user.role === "ADMIN" || user.role === "GENERAL_MANAGER" || user.role === "FLEET_MANAGER";
+
+  function setViewAs(role: string) {
+    if (role === "" || role === user.role) {
+      document.cookie = "viewAsRole=; path=/; max-age=0";
+    } else {
+      document.cookie = `viewAsRole=${role}; path=/; max-age=86400`;
+    }
+    router.refresh();
+  }
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -56,6 +79,21 @@ export function Topbar({
       </div>
 
       <div className="flex items-center gap-3">
+        {isAdmin && (
+          <div className="flex items-center gap-1.5">
+            <Eye size={15} className={viewAsRole ? "text-amber-600" : "text-slate-400"} />
+            <select
+              value={viewAsRole || ""}
+              onChange={(e) => setViewAs(e.target.value)}
+              className={`h-8 rounded-lg border px-2 text-xs font-medium ${viewAsRole ? "border-amber-300 bg-amber-50 text-amber-700" : "border-slate-200 bg-white text-slate-600"}`}
+            >
+              <option value="">View as: My Role</option>
+              {ALL_ROLES.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <Link
           href="/alerts"
           className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
