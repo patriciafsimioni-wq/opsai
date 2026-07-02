@@ -156,8 +156,25 @@ async function importServiceHistory(rows: Record<string, unknown>[]) {
   });
 }
 
+function parseMinutes(val: unknown): number {
+  if (!val) return 0;
+  const s = String(val).trim();
+  // "2 hrs 30 mins" or "125 hrs 19 mins"
+  const hm = s.match(/(\d+)\s*hrs?\s*(\d+)?\s*min/i);
+  if (hm) return parseInt(hm[1]) * 60 + (parseInt(hm[2] || "0"));
+  // "2:30" format
+  const colon = s.match(/^(\d+):(\d+)/);
+  if (colon) return parseInt(colon[1]) * 60 + parseInt(colon[2]);
+  return Math.round(parseNum(val));
+}
+
+function parseMiles(val: unknown): number {
+  if (!val) return 0;
+  const s = String(val).trim().replace(/\s*miles?$/i, "").replace(/,/g, "");
+  return parseNum(s);
+}
+
 async function importFareyeRoutes(rows: Record<string, unknown>[]) {
-  // Load existing routes for duplicate detection
   const existing = await prisma.fareyeRoute.findMany({
     select: { routeId: true, date: true },
   });
@@ -171,14 +188,40 @@ async function importFareyeRoutes(rows: Record<string, unknown>[]) {
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const routeId = String(row["Routes"] ?? row["Route"] ?? row["Route ID"] ?? row["RouteID"] ?? "").trim();
+    const routeId = String(row["Route"] ?? row["Routes"] ?? row["Route ID"] ?? row["RouteID"] ?? "").trim();
     const dateVal = parseDate(row["Date"] ?? "");
-    const miles = parseNum(row["Miles"] ?? row["Total travel distance"] ?? 0);
-    const stops = Math.round(parseNum(row["Stops"] ?? 0));
+    const driverName = String(row["First User Name"] ?? row["Driver"] ?? "").trim() || null;
+    const miles = parseMiles(row["Miles"] ?? row["Miles*"] ?? row["Travel Distance"] ?? 0);
+    const travelMinutes = parseMinutes(row["Travel Time"] ?? 0);
+    const routeDurationMinutes = parseMinutes(row["Route Duration"] ?? 0);
+    const leaveByTime = String(row["Vehicle Leave By Time"] ?? row["Leave By"] ?? "").trim() || null;
+    const plannedEndTime = String(row["Vehicle Planned End Time"] ?? row["Planned End Time"] ?? "").trim() || null;
+    const stops = Math.round(parseNum(row["Stop Count"] ?? row["Stops"] ?? 0));
+    const jobs = Math.round(parseNum(row["No. of jobs"] ?? row["Jobs"] ?? 0));
+    const totalWeight = parseNum(row["Total weight"] ?? row["Total Weight"] ?? 0);
+    const totalPallets = Math.round(parseNum(row["Total Pallets"] ?? row["Pallets"] ?? 0));
+    const totalVolume = parseNum(row["Total Volume"] ?? 0);
+    const vehicleCapacity = parseNum(row["Vehicle Capacity"] ?? 0);
+    const weightCapacityUtil = parseNum(row["Weight Capacity Utilization"] ?? 0);
+    const palletsCapacityUtil = parseNum(row["Pallets Capacity Utilization"] ?? 0);
+    const volumetricCapacityUtil = parseNum(row["VolumetricCapacityUtilization"] ?? row["Volumetric Capacity Utilization"] ?? 0);
+    const vehicleType = String(row["Vehicle Type"] ?? "VAN").trim();
+    const vehicleTag = String(row["Vehicle Tag"] ?? "").trim() || null;
+    const vehicleUtilization = parseNum(row["Vehicle Utilization"] ?? row["Vehicle U%"] ?? 0);
+    const shiftUtilization = parseNum(row["Shift Utilization"] ?? 0);
     const sporh = parseNum(row["SPORH"] ?? 0);
-    const gca = parseNum(row["GCA"] ?? 0);
-    const pop = parseNum(row["POP"] ?? 0);
-    const pieces = Math.round(parseNum(row["Pieces"] ?? 0));
+    const plannedHours = parseNum(row["FE Planned Hrs"] ?? row["Planned Hrs"] ?? row["Planned Hours"] ?? 0);
+    const breakDuration = parseMinutes(row["Break duration (Mins)"] ?? row["Break Duration"] ?? 0);
+    const breakTime = String(row["Break Time"] ?? "").trim() || null;
+    const waitingTime = parseMinutes(row["Waiting Time"] ?? 0);
+    const totalLoadingTime = parseMinutes(row["Total Loading Time"] ?? 0);
+    const totalRuns = Math.round(parseNum(row["Total Runs"] ?? 0));
+    const cost = parseNum(row["Cost"] ?? 0);
+    const co2Emit = parseNum(row["Co2 Emit"] ?? row["CO2 Emit"] ?? 0);
+    const co2Saved = parseNum(row["Co2 Saved"] ?? row["CO2 Saved"] ?? 0);
+    const serviceProvider = String(row["Service Provider"] ?? "").trim() || null;
+    const lat = parseNum(row["Vehicle Start Location (Latitude)"] ?? 0) || null;
+    const lng = parseNum(row["Vehicle Start Location (Longitude)"] ?? 0) || null;
     const stationRaw = String(row["Station"] ?? "").trim().toUpperCase();
 
     if (!routeId || !dateVal) { skipped++; continue; }
@@ -193,16 +236,38 @@ async function importFareyeRoutes(rows: Record<string, unknown>[]) {
       data: {
         date: dateVal,
         routeId,
+        driverName,
         miles,
-        travelMinutes: Math.round(miles / 40 * 60),
-        routeDurationMinutes: Math.round(miles / 40 * 60),
+        travelMinutes: travelMinutes || Math.round(miles / 40 * 60),
+        routeDurationMinutes: routeDurationMinutes || Math.round(miles / 40 * 60),
+        leaveByTime,
+        plannedEndTime,
         stops,
-        totalWeight: gca,
-        totalPallets: Math.round(pop),
-        vehicleType: "VAN",
-        vehicleUtilization: gca > 0 ? Math.min(gca / 100, 1) : 0,
+        jobs,
+        totalWeight,
+        totalPallets,
+        totalVolume,
+        vehicleCapacity,
+        weightCapacityUtil,
+        palletsCapacityUtil,
+        volumetricCapacityUtil,
+        vehicleType: vehicleType || "VAN",
+        vehicleTag,
+        vehicleUtilization,
+        shiftUtilization,
         sporh,
-        plannedHours: stops > 0 && sporh > 0 ? stops / sporh : 0,
+        plannedHours,
+        breakDuration,
+        breakTime,
+        waitingTime,
+        totalLoadingTime,
+        totalRuns,
+        cost,
+        co2Emit,
+        co2Saved,
+        serviceProvider,
+        lat,
+        lng,
         station,
       },
     });

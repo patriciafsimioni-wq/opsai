@@ -37,7 +37,7 @@ const RULES: { category: string; keywords: string[]; minMatches: number }[] = [
   },
   {
     category: "FareEye Routes",
-    keywords: ["route", "travel distance", "stops", "utilization", "sporh", "planned hrs", "leave by", "end time", "pallets"],
+    keywords: ["route", "travel distance", "travel time", "stops", "stop count", "utilization", "sporh", "planned hrs", "fe planned", "leave by", "end time", "pallets", "vehicle tag", "no. of jobs", "total weight", "route duration", "shift utilization", "co2 emit", "service provider", "break duration"],
     minMatches: 3,
   },
   {

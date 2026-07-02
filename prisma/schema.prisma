@@ -461,26 +461,43 @@ model PmBudget {
 }
 
 model FareyeRoute {
-  id                    String   @id @default(cuid())
-  date                  DateTime
-  routeId               String
-  miles                 Float
-  travelMinutes         Int
-  routeDurationMinutes  Int
-  leaveByTime           String?
-  plannedEndTime        String?
-  stops                 Int
-  totalWeight           Float    @default(0)
-  totalPallets          Int      @default(0)
-  vehicleType           String
-  vehicleTag            String?
-  vehicleUtilization    Float
-  sporh                 Float
-  plannedHours          Float
-  lat                   Float?
-  lng                   Float?
-  station               Station  @default(IAH)
-  createdAt             DateTime @default(now())
+  id                       String   @id @default(cuid())
+  date                     DateTime
+  routeId                  String
+  driverName               String?
+  miles                    Float
+  travelMinutes            Int
+  routeDurationMinutes     Int
+  leaveByTime              String?
+  plannedEndTime           String?
+  stops                    Int
+  jobs                     Int      @default(0)
+  totalWeight              Float    @default(0)
+  totalPallets             Int      @default(0)
+  totalVolume              Float    @default(0)
+  vehicleCapacity          Float    @default(0)
+  weightCapacityUtil       Float    @default(0)
+  palletsCapacityUtil      Float    @default(0)
+  volumetricCapacityUtil   Float    @default(0)
+  vehicleType              String
+  vehicleTag               String?
+  vehicleUtilization       Float
+  shiftUtilization         Float    @default(0)
+  sporh                    Float
+  plannedHours             Float
+  breakDuration            Int      @default(0)
+  breakTime                String?
+  waitingTime              Int      @default(0)
+  totalLoadingTime         Int      @default(0)
+  totalRuns                Int      @default(0)
+  cost                     Float    @default(0)
+  co2Emit                  Float    @default(0)
+  co2Saved                 Float    @default(0)
+  serviceProvider          String?
+  lat                      Float?
+  lng                      Float?
+  station                  Station  @default(IAH)
+  createdAt                DateTime @default(now())
 
   @@index([date])
   @@index([station])
