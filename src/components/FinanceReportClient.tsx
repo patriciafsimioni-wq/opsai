@@ -394,8 +394,11 @@ function getMonday(d: Date): Date {
 
 export function FinanceReportClient() {
   const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
+  // Default to previous month (finance reports are for completed months)
+  const defaultMonth = now.getMonth() === 0 ? 12 : now.getMonth(); // getMonth() is 0-indexed, so getMonth() gives prev month (1-indexed)
+  const defaultYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+  const [year, setYear] = useState(defaultYear);
+  const [month, setMonth] = useState(defaultMonth);
   const [viewMode, setViewMode] = useState<"week" | "month">("month");
   const [weekDate, setWeekDate] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`);
   const [reportType, setReportType] = useState<"PM" | "CR">("PM");
