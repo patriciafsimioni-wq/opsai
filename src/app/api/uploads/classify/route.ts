@@ -199,12 +199,37 @@ export async function POST(req: Request) {
       bestResult = { ...cls, preview: data.slice(0, 5), columns: headers, rowCount: data.length, sheetName, data, headers };
     }
 
-    // Build per-sheet summary for multi-sheet files
-    const sheetSummary = workbook.SheetNames.map((sn) => {
+    // Build per-sheet classification for multi-sheet files
+    const sheetClassifications = [];
+    for (const sn of workbook.SheetNames) {
       const sh = workbook.Sheets[sn];
       const sd = XLSX.utils.sheet_to_json<Record<string, unknown>>(sh, { defval: "" });
-      return { name: sn, rows: sd.length };
-    });
+      if (sd.length === 0) continue;
+      const hdrs = Object.keys(sd[0]);
+      const cls = classifyByHeaders(hdrs);
+
+      let sheetNameCategory = "";
+      const sLower = sn.toLowerCase();
+      if (sLower.includes("fuel")) sheetNameCategory = "Fuel Log";
+      else if (sLower.includes("service")) sheetNameCategory = "Service History";
+      else if (sLower.includes("fareye") || sLower.includes("route")) sheetNameCategory = "FareEye Routes";
+      else if (sLower.includes("fleet")) sheetNameCategory = "Fleet / Vehicles";
+      else if (sLower.includes("driver")) sheetNameCategory = "Driver Data";
+
+      const cat = cls.category !== "Unknown" ? cls.category : sheetNameCategory || "Unknown";
+      const conf = cls.category !== "Unknown" ? cls.confidence : (sheetNameCategory ? "medium" as const : "low" as const);
+      const rsn = cls.category !== "Unknown" ? cls.reason : (sheetNameCategory ? `Matched by sheet name "${sn}"` : cls.reason);
+
+      sheetClassifications.push({
+        sheetName: sn,
+        category: cat,
+        confidence: conf,
+        reason: rsn,
+        columns: hdrs,
+        rowCount: sd.length,
+        preview: sd.slice(0, 5),
+      });
+    }
 
     return NextResponse.json({
       filename: file.name,
@@ -213,7 +238,7 @@ export async function POST(req: Request) {
       sheetName: bestResult.sheetName,
       sheetCount: workbook.SheetNames.length,
       sheets: workbook.SheetNames,
-      sheetSummary,
+      sheetClassifications,
       category: bestResult.category,
       confidence: bestResult.confidence,
       reason: bestResult.reason,

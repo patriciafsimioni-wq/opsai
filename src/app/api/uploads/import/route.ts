@@ -55,6 +55,10 @@ export async function POST(req: Request) {
     return importServiceHistory(rows);
   }
 
+  if (cat === "FareEye Routes") {
+    return importFareyeRoutes(rows);
+  }
+
   return badRequest(`Import not supported for category: ${cat}`);
 }
 
@@ -147,6 +151,69 @@ async function importServiceHistory(rows: Record<string, unknown>[]) {
     imported,
     skipped,
     unmatched,
+    total: rows.length,
+    errors: errors.slice(0, 20),
+  });
+}
+
+async function importFareyeRoutes(rows: Record<string, unknown>[]) {
+  // Load existing routes for duplicate detection
+  const existing = await prisma.fareyeRoute.findMany({
+    select: { routeId: true, date: true },
+  });
+  const dupeSet = new Set(
+    existing.map((r) => `${r.routeId}|${r.date.toISOString().slice(0, 10)}`),
+  );
+
+  let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const routeId = String(row["Routes"] ?? row["Route"] ?? row["Route ID"] ?? row["RouteID"] ?? "").trim();
+    const dateVal = parseDate(row["Date"] ?? "");
+    const miles = parseNum(row["Miles"] ?? row["Total travel distance"] ?? 0);
+    const stops = Math.round(parseNum(row["Stops"] ?? 0));
+    const sporh = parseNum(row["SPORH"] ?? 0);
+    const gca = parseNum(row["GCA"] ?? 0);
+    const pop = parseNum(row["POP"] ?? 0);
+    const pieces = Math.round(parseNum(row["Pieces"] ?? 0));
+    const stationRaw = String(row["Station"] ?? "").trim().toUpperCase();
+
+    if (!routeId || !dateVal) { skipped++; continue; }
+
+    const dupeKey = `${routeId}|${dateVal.toISOString().slice(0, 10)}`;
+    if (dupeSet.has(dupeKey)) { skipped++; continue; }
+    dupeSet.add(dupeKey);
+
+    const station = (VALID_STATIONS.has(stationRaw) ? stationRaw : "IAH") as Station;
+
+    await prisma.fareyeRoute.create({
+      data: {
+        date: dateVal,
+        routeId,
+        miles,
+        travelMinutes: Math.round(miles / 40 * 60),
+        routeDurationMinutes: Math.round(miles / 40 * 60),
+        stops,
+        totalWeight: gca,
+        totalPallets: Math.round(pop),
+        vehicleType: "VAN",
+        vehicleUtilization: gca > 0 ? Math.min(gca / 100, 1) : 0,
+        sporh,
+        plannedHours: stops > 0 && sporh > 0 ? stops / sporh : 0,
+        station,
+      },
+    });
+    imported++;
+  }
+
+  return NextResponse.json({
+    success: true,
+    imported,
+    skipped,
+    unmatched: 0,
     total: rows.length,
     errors: errors.slice(0, 20),
   });

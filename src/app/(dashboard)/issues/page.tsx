@@ -225,6 +225,9 @@ function CreateIssueModal({ prefill, onClose, onCreated }: { prefill?: Record<st
                 <option value="">— Select —</option>
                 <option value="Fuel">Fuel</option>
                 <option value="Maintenance">Maintenance</option>
+                <option value="Vehicles">Vehicles</option>
+                <option value="Drivers">Drivers</option>
+                <option value="FareEye Routes">FareEye Routes</option>
                 <option value="DVIR">DVIR</option>
                 <option value="Safety">Safety</option>
                 <option value="Operations">Operations</option>

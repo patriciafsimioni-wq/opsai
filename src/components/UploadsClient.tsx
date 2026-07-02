@@ -3,6 +3,19 @@
 import { useCallback, useState } from "react";
 import { Upload, FileSpreadsheet, FileText, ImageIcon, CheckCircle2, AlertCircle, Loader2, X, Trash2, Download } from "lucide-react";
 
+type SheetClassification = {
+  sheetName: string;
+  category: string;
+  confidence: "high" | "medium" | "low";
+  reason: string;
+  columns: string[];
+  rowCount: number;
+  preview: Record<string, unknown>[];
+  importStatus?: "idle" | "importing" | "imported" | "error";
+  importResult?: { imported: number; skipped: number; unmatched: number; total: number; errors: string[] };
+  importError?: string;
+};
+
 type ClassifiedFile = {
   id: string;
   filename: string;
@@ -17,6 +30,7 @@ type ClassifiedFile = {
   sheetName?: string;
   sheetCount?: number;
   sheets?: string[];
+  sheetClassifications?: SheetClassification[];
   status: "classifying" | "classified" | "error" | "importing" | "imported";
   error?: string;
   file?: File;
@@ -112,6 +126,7 @@ export function UploadsClient({ canManage }: { canManage: boolean }) {
                 sheetName: data.sheetName,
                 sheetCount: data.sheetCount,
                 sheets: data.sheets,
+                sheetClassifications: (data.sheetClassifications ?? []).map((sc: SheetClassification) => ({ ...sc, importStatus: "idle" as const })),
                 file,
               }
             : f,
@@ -159,6 +174,38 @@ export function UploadsClient({ canManage }: { canManage: boolean }) {
       setFiles((prev) => prev.map((f) => (f.id === entry.id ? { ...f, status: "imported" as const, importResult: data } : f)));
     } catch (err) {
       setFiles((prev) => prev.map((f) => (f.id === entry.id ? { ...f, status: "error" as const, error: String(err) } : f)));
+    }
+  }, []);
+
+  const importSheet = useCallback(async (entry: ClassifiedFile, sheetName: string, category: string) => {
+    if (!entry.file) return;
+    setFiles((prev) => prev.map((f) => f.id === entry.id ? {
+      ...f,
+      sheetClassifications: f.sheetClassifications?.map((sc) => sc.sheetName === sheetName ? { ...sc, importStatus: "importing" as const } : sc),
+    } : f));
+    try {
+      const formData = new FormData();
+      formData.append("file", entry.file);
+      formData.append("category", category);
+      formData.append("sheetName", sheetName);
+      const res = await fetch("/api/uploads/import", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        setFiles((prev) => prev.map((f) => f.id === entry.id ? {
+          ...f,
+          sheetClassifications: f.sheetClassifications?.map((sc) => sc.sheetName === sheetName ? { ...sc, importStatus: "error" as const, importError: data.error ?? "Import failed" } : sc),
+        } : f));
+        return;
+      }
+      setFiles((prev) => prev.map((f) => f.id === entry.id ? {
+        ...f,
+        sheetClassifications: f.sheetClassifications?.map((sc) => sc.sheetName === sheetName ? { ...sc, importStatus: "imported" as const, importResult: data } : sc),
+      } : f));
+    } catch (err) {
+      setFiles((prev) => prev.map((f) => f.id === entry.id ? {
+        ...f,
+        sheetClassifications: f.sheetClassifications?.map((sc) => sc.sheetName === sheetName ? { ...sc, importStatus: "error" as const, importError: String(err) } : sc),
+      } : f));
     }
   }, []);
 
@@ -322,8 +369,43 @@ export function UploadsClient({ canManage }: { canManage: boolean }) {
                         </div>
                       )}
 
-                      {/* Import button for supported categories */}
-                      {f.category === "Service History" && f.rowCount > 0 && (
+                      {/* Per-sheet import buttons for multi-sheet files */}
+                      {f.sheetClassifications && f.sheetClassifications.length > 1 && (
+                        <div className="mt-2 space-y-2">
+                          <p className="text-xs font-semibold text-slate-600">Sheets detected:</p>
+                          {f.sheetClassifications.filter((sc) => sc.rowCount > 0).map((sc) => {
+                            const importable = ["Service History", "FareEye Routes"].includes(sc.category);
+                            return (
+                              <div key={sc.sheetName} className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium">{CATEGORY_ICON[sc.category] ?? "📁"} {sc.sheetName}</span>
+                                  <span className="text-xs text-slate-500">{sc.category} — {sc.rowCount} rows</span>
+                                </div>
+                                {importable && sc.importStatus === "idle" && (
+                                  <button
+                                    onClick={() => importSheet(f, sc.sheetName, sc.category)}
+                                    className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                                  >
+                                    Import
+                                  </button>
+                                )}
+                                {sc.importStatus === "importing" && (
+                                  <span className="flex items-center gap-1 text-xs text-blue-600"><Loader2 size={12} className="animate-spin" /> Importing...</span>
+                                )}
+                                {sc.importStatus === "imported" && sc.importResult && (
+                                  <span className="flex items-center gap-1 text-xs text-green-700"><CheckCircle2 size={12} /> {sc.importResult.imported} imported{sc.importResult.skipped > 0 ? `, ${sc.importResult.skipped} skipped` : ""}</span>
+                                )}
+                                {sc.importStatus === "error" && (
+                                  <span className="text-xs text-red-600">{sc.importError}</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Single-sheet import button */}
+                      {(!f.sheetClassifications || f.sheetClassifications.length <= 1) && ["Service History", "FareEye Routes"].includes(f.category) && f.rowCount > 0 && (
                         <button
                           onClick={() => importFile(f)}
                           className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
