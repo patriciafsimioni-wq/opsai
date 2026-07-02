@@ -531,7 +531,7 @@ export function FinanceReportClient() {
             </button>
             <span className="min-w-[180px] text-center text-sm font-medium text-slate-700">
               {data?.weekStart && data?.weekEnd
-                ? `${new Date(data.weekStart).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/Chicago" })} \u2013 ${new Date(data.weekEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Chicago" })}`
+                ? `${new Date(data.weekStart).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} \u2013 ${new Date(data.weekEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`
                 : "Loading..."}
             </span>
             <button

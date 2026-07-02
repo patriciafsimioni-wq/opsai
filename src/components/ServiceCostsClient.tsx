@@ -14,7 +14,7 @@ function monthKey(d: Date) {
 }
 function monthLabel(key: string) {
   const [y, m] = key.split("-").map(Number);
-  return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "America/Chicago" });
+  return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 export function ServiceCostsClient() {

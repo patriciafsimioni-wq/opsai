@@ -29,7 +29,7 @@ export function formatDate(date: Date | string | null | undefined) {
     year: "numeric",
     month: "short",
     day: "numeric",
-    timeZone: APP_TIMEZONE,
+    timeZone: "UTC",
   });
 }
 
@@ -41,7 +41,7 @@ export function formatDateTime(date: Date | string | null | undefined) {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: APP_TIMEZONE,
+    timeZone: "UTC",
   });
 }
 

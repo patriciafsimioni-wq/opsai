@@ -54,9 +54,9 @@ function formatDateRange(start: string, end: string, range: string): string {
   const s = new Date(start);
   const e = new Date(end);
   if (range === "week") {
-    return `${s.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: APP_TIMEZONE })} – ${e.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: APP_TIMEZONE })}`;
+    return `${s.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} – ${e.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
   }
-  return s.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: APP_TIMEZONE });
+  return s.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
 export function FuelClient({ canManage }: { canManage: boolean }) {

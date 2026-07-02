@@ -51,15 +51,13 @@ type ReportsApiResponse = {
   mileageDist: { label: string; value: number }[];
 };
 
-const APP_TZ = "America/Chicago";
-
 function formatDateRange(start: string, end: string, range: string): string {
   const s = new Date(start);
   const e = new Date(end);
   if (range === "week") {
-    return `${s.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: APP_TZ })} – ${e.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: APP_TZ })}`;
+    return `${s.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} – ${e.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
   }
-  return s.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: APP_TZ });
+  return s.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
 export function ReportsClient() {
