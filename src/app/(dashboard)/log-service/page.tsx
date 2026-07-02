@@ -1,4 +1,4 @@
-import { getSession, canManage } from "@/lib/auth";
+import { getSession, canLogService } from "@/lib/auth";
 import { PageHeader } from "@/components/ui";
 import { LogServiceClient } from "@/components/LogServiceClient";
 
@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export default async function LogServicePage() {
   const user = await getSession();
-  const manage = user ? canManage(user.role) : false;
+  const manage = user ? canLogService(user.role) : false;
   return (
     <div>
       <PageHeader
