@@ -305,6 +305,8 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
                     />
                   </Th>
                 )}
+                <Th>WO#</Th>
+                <Th>PO#</Th>
                 <Th>Work Order</Th>
                 <Th>Vehicle</Th>
                 <Th>Station</Th>
@@ -331,6 +333,8 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
                         />
                       </Td>
                     )}
+                    <Td className="font-mono text-xs text-slate-500">{o.id.slice(-6).toUpperCase()}</Td>
+                    <Td className="font-mono text-xs font-semibold text-slate-700">{o.poNumber ?? "—"}</Td>
                     <Td>
                       <p className="font-medium">{o.title}</p>
                       <p className="text-xs text-slate-400">

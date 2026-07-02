@@ -108,15 +108,17 @@ export function StatCard({
   icon,
   accent = "#2563eb",
   hint,
+  href,
 }: {
   label: string;
   value: React.ReactNode;
   icon?: React.ReactNode;
   accent?: string;
   hint?: React.ReactNode;
+  href?: string;
 }) {
-  return (
-    <Card className="p-4">
+  const content = (
+    <Card className={`p-4${href ? " cursor-pointer hover:shadow-md transition-shadow" : ""}`}>
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
@@ -140,6 +142,11 @@ export function StatCard({
       </div>
     </Card>
   );
+  if (href) {
+    const LinkComp = require("next/link").default;
+    return <LinkComp href={href}>{content}</LinkComp>;
+  }
+  return content;
 }
 
 export function PageHeader({

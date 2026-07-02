@@ -287,6 +287,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           value={vehicles.length}
           icon={<Truck size={20} />}
           accent="#2563eb"
+          href="/vehicles"
         />
         <StatCard
           label="Active Now"
@@ -294,6 +295,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           icon={<Activity size={20} />}
           accent="#16a34a"
           hint={`${utilization}% utilization`}
+          href="/vehicles"
         />
         {canSeeDrivers && (
           <StatCard
@@ -301,6 +303,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             value={drivers.length}
             icon={<Users size={20} />}
             accent="#7c3aed"
+            href="/drivers"
           />
         )}
         {canSeeAlerts && (
@@ -309,6 +312,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             value={unreadAlerts}
             icon={<AlertTriangle size={20} />}
             accent="#dc2626"
+            href="/alerts"
           />
         )}
         <StatCard
@@ -316,6 +320,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           value={openWO}
           icon={<Wrench size={20} />}
           accent="#d97706"
+          href="/maintenance"
         />
         {canSeeFuel && (
           <StatCard
@@ -323,6 +328,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             value={formatCurrency(fuel30)}
             icon={<Fuel size={20} />}
             accent="#0891b2"
+            href="/fuel"
           />
         )}
       </div>
@@ -330,7 +336,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {/* This Week Summary */}
       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {canSeeFuel && (
-          <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
+          <Link href="/fuel" className="rounded-xl border border-[var(--color-border)] bg-white p-4 hover:shadow-md transition-shadow">
             <p className="text-xs font-medium text-slate-400 uppercase">Fuel Spend This Week</p>
             <p className="mt-1 text-xl font-bold">{formatCurrency(fuelThisWeek)}</p>
             {fuelLastWeek > 0 && (
@@ -339,9 +345,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               </p>
             )}
             <p className="mt-1 text-xs text-slate-400">{fillUpsThisWeek} fill-ups</p>
-          </div>
+          </Link>
         )}
-        <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
+        <Link href="/maintenance" className="rounded-xl border border-[var(--color-border)] bg-white p-4 hover:shadow-md transition-shadow">
           <p className="text-xs font-medium text-slate-400 uppercase">Services Completed</p>
           <p className="mt-1 text-xl font-bold">{servicesThisWeek}</p>
           {servicesLastWeek > 0 && (
@@ -350,25 +356,26 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </p>
           )}
           <p className="mt-1 text-xs text-slate-400">this week</p>
-        </div>
+        </Link>
         {canSeeRoutes && (
-          <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
+          <Link href="/fareye-routes" className="rounded-xl border border-[var(--color-border)] bg-white p-4 hover:shadow-md transition-shadow">
             <p className="text-xs font-medium text-slate-400 uppercase">Routes Dispatched</p>
             <p className="mt-1 text-xl font-bold">{routesThisWeek}</p>
             <p className="mt-0.5 text-xs text-slate-500">{Math.round(milesThisWeek).toLocaleString()} miles planned</p>
             <p className="mt-1 text-xs text-slate-400">this week</p>
-          </div>
+          </Link>
         )}
-        <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
+        <Link href="/maintenance" className="rounded-xl border border-[var(--color-border)] bg-white p-4 hover:shadow-md transition-shadow">
           <p className="text-xs font-medium text-slate-400 uppercase">Maintenance Cost (90d)</p>
           <p className="mt-1 text-xl font-bold">{formatCurrency(maint90)}</p>
           <p className="mt-1 text-xs text-slate-400">completed work orders</p>
-        </div>
+        </Link>
       </div>
 
       {/* charts */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card>
+        <Link href="/vehicles">
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
           <CardHeader title="Fleet Status" subtitle="Live distribution" />
           <div className="p-4">
             <DonutChart data={donut} />
@@ -386,18 +393,22 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </div>
           </div>
         </Card>
+        </Link>
 
         {canSeeRoutes && (
-          <Card>
+          <Link href="/fareye-routes">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer">
             <CardHeader title="FareEye Routes" subtitle="Planned miles · last 7 days" />
             <div className="p-4">
               <BarChartCard data={routeMilesPerDay} color="#7c3aed" />
             </div>
           </Card>
+          </Link>
         )}
 
         {canSeeFuel && (
-          <Card>
+          <Link href="/fuel">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer">
             <CardHeader
               title="Fuel Spend"
               subtitle="Weekly trend"
@@ -411,6 +422,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <AreaChartCard data={fuelTrend} color="#0891b2" prefix="$" />
             </div>
           </Card>
+          </Link>
         )}
       </div>
 
@@ -465,7 +477,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
         {/* top drivers */}
         {canSeeDrivers && (
-        <Card>
+        <Link href="/drivers">
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
           <CardHeader title="Top Drivers" subtitle="By safety score" />
           <div className="divide-y divide-[var(--color-border)]">
             {topDrivers.map((d, i) => (
@@ -501,6 +514,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             ))}
           </div>
         </Card>
+        </Link>
         )}
       </div>
 
