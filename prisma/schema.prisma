@@ -576,3 +576,9 @@ model DvirReport {
   alertResolved   Boolean  @default(false)
   createdAt       DateTime @default(now())
 }
+
+model ServiceProvider {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}

@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Search, Trash2, Pencil, ListChecks } from "lucide-react";
-import { Card, Button, Badge, Table, Th, Td, EmptyState, StatCard } from "@/components/ui";
+import { Plus, Search, Trash2, Pencil, ListChecks, Building2 } from "lucide-react";
+import { Card, CardHeader, Button, Badge, Table, Th, Td, EmptyState, StatCard } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
 import type { ServiceDTO } from "@/lib/types";
@@ -19,6 +19,7 @@ const emptyForm = {
 
 export function ServicesClient({ canManage }: { canManage: boolean }) {
   const { data: services, loading, reload } = useData<ServiceDTO[]>("/api/services");
+  const { data: providers, reload: reloadProviders } = useData<{ id: string; name: string }[]>("/api/service-providers");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -26,6 +27,9 @@ export function ServicesClient({ canManage }: { canManage: boolean }) {
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [newProvider, setNewProvider] = useState("");
+  const [providerError, setProviderError] = useState("");
+  const [addingProvider, setAddingProvider] = useState(false);
 
   const filtered = useMemo(() => {
     if (!services) return [];
@@ -178,6 +182,70 @@ export function ServicesClient({ canManage }: { canManage: boolean }) {
           </Table>
         )}
       </Card>
+
+      {/* Service Providers Management */}
+      {canManage && (
+        <Card>
+          <CardHeader
+            title="Service Providers"
+            subtitle="Manage vendors and service providers available in Log Service"
+          />
+          <div className="p-4">
+            <div className="flex gap-2 mb-4">
+              <Input
+                value={newProvider}
+                onChange={(e) => { setNewProvider(e.target.value); setProviderError(""); }}
+                placeholder="Enter new provider name…"
+                className="flex-1"
+              />
+              <Button
+                disabled={addingProvider || !newProvider.trim()}
+                onClick={async () => {
+                  setAddingProvider(true);
+                  setProviderError("");
+                  const res = await apiSend("/api/service-providers", "POST", { name: newProvider.trim() });
+                  setAddingProvider(false);
+                  if (res.ok) {
+                    setNewProvider("");
+                    reloadProviders();
+                  } else {
+                    setProviderError(res.error ?? "Failed to add");
+                  }
+                }}
+              >
+                <Plus size={16} /> Add
+              </Button>
+            </div>
+            {providerError && (
+              <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{providerError}</p>
+            )}
+            <div className="divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)]">
+              {(providers ?? []).length === 0 ? (
+                <p className="px-4 py-6 text-center text-sm text-slate-400">No service providers yet.</p>
+              ) : (
+                (providers ?? []).map((p) => (
+                  <div key={p.id} className="flex items-center justify-between px-4 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <Building2 size={16} className="text-slate-400" />
+                      <span className="text-sm font-medium">{p.name}</span>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`Delete provider "${p.name}"?`)) return;
+                        await apiSend("/api/service-providers", "DELETE", { id: p.id });
+                        reloadProviders();
+                      }}
+                      className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Modal
         open={modalOpen}

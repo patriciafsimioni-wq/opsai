@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ClipboardCheck, Lock, Upload } from "lucide-react";
 import { Card, CardHeader, Button, Badge, Table, Th, Td, EmptyState } from "@/components/ui";
 import { Field, Input, Select, Textarea } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
 import type { WorkOrderDTO, VehicleDTO, ServiceDTO } from "@/lib/types";
-import { FORM_STATIONS, STATION_LABEL, SERVICE_PROVIDERS } from "@/lib/constants";
+import { FORM_STATIONS, STATION_LABEL } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 function todayStr() {
@@ -23,6 +23,8 @@ export function LogServiceClient({
   const { data: orders, loading, reload } = useData<WorkOrderDTO[]>("/api/maintenance");
   const { data: vehicles } = useData<VehicleDTO[]>("/api/vehicles");
   const { data: services } = useData<ServiceDTO[]>("/api/services");
+  const { data: providerList } = useData<{ id: string; name: string }[]>("/api/service-providers");
+  const serviceProviders = useMemo(() => (providerList ?? []).map((p) => p.name), [providerList]);
 
   const initialForm = useMemo(
     () => ({
@@ -32,7 +34,7 @@ export function LogServiceClient({
       category: "PREVENTIVE",
       serviceId: "",
       odometer: "",
-      serviceProvider: SERVICE_PROVIDERS[0] as string,
+      serviceProvider: "" as string,
       serviceProviderOther: "",
       completedAt: todayStr(),
       poNumber: "",
@@ -45,6 +47,11 @@ export function LogServiceClient({
   );
 
   const [form, setForm] = useState(initialForm);
+  useEffect(() => {
+    if (serviceProviders.length > 0 && !form.serviceProvider) {
+      setForm((f) => ({ ...f, serviceProvider: serviceProviders[0] }));
+    }
+  }, [serviceProviders]);
   const [file, setFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
@@ -245,7 +252,7 @@ export function LogServiceClient({
               Service Provider<span className="text-red-500"> *</span>
             </span>
             <div className="space-y-1.5 pt-1">
-              {SERVICE_PROVIDERS.map((p) => (
+              {serviceProviders.map((p) => (
                 <label key={p} className="flex items-center gap-2 text-sm">
                   <input
                     type="radio"
