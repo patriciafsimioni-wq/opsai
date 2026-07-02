@@ -134,10 +134,14 @@ export interface SamsaraSafetyEvent {
   id: string;
   time: string;
   behaviorLabel: string;
+  behaviorLabels?: { label: string; source: string; name: string }[];
   vehicle?: { id: string; name: string };
   driver?: { id: string; name: string };
   maxAccelerationGForce?: number;
   location?: { latitude: number; longitude: number };
+  coachingState?: string;
+  downloadForwardVideoUrl?: string;
+  downloadInwardVideoUrl?: string;
 }
 
 export async function getSamsaraSafetyEvents(startMs: number, endMs: number): Promise<SamsaraSafetyEvent[]> {
@@ -151,10 +155,14 @@ export async function getSamsaraSafetyEvents(startMs: number, endMs: number): Pr
     };
     if (cursor) params.after = cursor;
     const res = await samsaraFetch<{ data: SamsaraSafetyEvent[]; pagination: { endCursor: string; hasNextPage: boolean } }>(
-      "/fleet/safety/events",
+      "/fleet/safety-events",
       params,
     );
-    all.push(...res.data);
+    const mapped = res.data.map((e) => ({
+      ...e,
+      behaviorLabel: e.behaviorLabel || (e.behaviorLabels?.map((b) => b.name).join(", ")) || "Unknown",
+    }));
+    all.push(...mapped);
     cursor = res.pagination.hasNextPage ? res.pagination.endCursor : undefined;
   } while (cursor);
   return all;
