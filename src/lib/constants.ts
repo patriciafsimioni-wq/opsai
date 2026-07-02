@@ -81,6 +81,7 @@ export const SERVICE_PROVIDERS = [
   "Ernesto",
   "Autoservicio De Leon",
   "Jiffy Lube",
+  "Autopaint Solutions",
 ] as const;
 
 // Maps the preventive service catalog into the report's headline buckets,
