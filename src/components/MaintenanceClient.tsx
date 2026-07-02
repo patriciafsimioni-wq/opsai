@@ -48,6 +48,9 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState("COMPLETED");
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   const filtered = useMemo(() => {
     if (!orders) return [];
@@ -122,6 +125,36 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
     if (res.ok) reload();
   }
 
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((o) => selectedIds.has(o.id));
+
+  function toggleSelectAll() {
+    if (allFilteredSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((o) => o.id)));
+    }
+  }
+
+  async function bulkUpdateStatus() {
+    if (selectedIds.size === 0) return;
+    setBulkProcessing(true);
+    const ids = Array.from(selectedIds);
+    await Promise.all(
+      ids.map((id) => apiSend(`/api/maintenance/${id}`, "PATCH", { status: bulkStatus })),
+    );
+    setBulkProcessing(false);
+    setSelectedIds(new Set());
+    reload();
+  }
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -169,6 +202,34 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
           )}
         </div>
 
+        {canManage && selectedIds.size > 0 && (
+          <div className="flex items-center gap-3 border-b border-blue-200 bg-blue-50 px-4 py-2">
+            <span className="text-sm font-medium text-blue-700">{selectedIds.size} selected</span>
+            <select
+              value={bulkStatus}
+              onChange={(e) => setBulkStatus(e.target.value)}
+              className="rounded-lg border border-blue-200 bg-white px-3 py-1 text-sm"
+            >
+              {WO_STATUSES.map((s) => (
+                <option key={s} value={s}>{WO_STATUS[s].label}</option>
+              ))}
+            </select>
+            <button
+              onClick={bulkUpdateStatus}
+              disabled={bulkProcessing}
+              className="rounded-lg bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {bulkProcessing ? "Updating..." : "Update All"}
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="text-xs text-slate-500 hover:text-slate-700"
+            >
+              Clear
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <p className="p-8 text-center text-sm text-slate-400">Loading…</p>
         ) : filtered.length === 0 ? (
@@ -177,6 +238,17 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
           <Table>
             <thead>
               <tr>
+                {canManage && (
+                  <Th>
+                    <input
+                      type="checkbox"
+                      checked={allFilteredSelected}
+                      onChange={toggleSelectAll}
+                      className="h-4 w-4 rounded border-slate-300"
+                      title="Select all"
+                    />
+                  </Th>
+                )}
                 <Th>Work Order</Th>
                 <Th>Vehicle</Th>
                 <Th>Station</Th>
@@ -192,7 +264,17 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
               {filtered.map((o) => {
                 const cat = o.service?.category;
                 return (
-                  <tr key={o.id} className="hover:bg-slate-50">
+                  <tr key={o.id} className={`hover:bg-slate-50 ${selectedIds.has(o.id) ? "bg-blue-50" : ""}`}>
+                    {canManage && (
+                      <Td>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(o.id)}
+                          onChange={() => toggleSelect(o.id)}
+                          className="h-4 w-4 rounded border-slate-300"
+                        />
+                      </Td>
+                    )}
                     <Td>
                       <p className="font-medium">{o.title}</p>
                       <p className="text-xs text-slate-400">
