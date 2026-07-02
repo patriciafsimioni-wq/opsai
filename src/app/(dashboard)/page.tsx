@@ -8,6 +8,7 @@ import {
   Users,
   TrendingUp,
   ShieldAlert,
+  Flag,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { Card, CardHeader, StatCard, Badge, Avatar } from "@/components/ui";
@@ -28,7 +29,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const station = (params.station as Station) || null;
 
   const vehicleWhere = station ? { station } : {};
-  const [allVehicles, drivers, fareyeRoutes, alerts, workOrders, fuelLogs] =
+  const [allVehicles, drivers, fareyeRoutes, alerts, workOrders, fuelLogs, issues] =
     await Promise.all([
       prisma.vehicle.findMany({ where: vehicleWhere }),
       prisma.driver.findMany({ where: station ? { station } : {}, orderBy: { safetyScore: "desc" } }),
@@ -41,6 +42,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       }),
       prisma.workOrder.findMany({ include: { vehicle: true }, where: station ? { vehicle: { station } } : {} }),
       prisma.fuelLog.findMany({ where: station ? { vehicle: { station } } : {} }),
+      prisma.issue.findMany({
+        where: { status: { in: ["OPEN", "IN_PROGRESS"] }, ...(station ? { station } : {}) },
+        orderBy: { createdAt: "desc" },
+        include: { createdBy: { select: { name: true } }, assignedTo: { select: { name: true } } },
+        take: 5,
+      }),
     ]);
   const vehicles = allVehicles;
 
@@ -204,6 +211,43 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </div>
         <StationFilter />
       </div>
+
+      {/* Issue Tracker */}
+      {issues.length > 0 && (
+        <Card className="mb-6">
+          <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-3">
+            <div className="flex items-center gap-2">
+              <Flag size={18} className="text-amber-600" />
+              <h2 className="text-sm font-semibold">Open Issues ({issues.length})</h2>
+            </div>
+            <Link href="/issues" className="text-xs font-medium text-blue-600 hover:underline">View All</Link>
+          </div>
+          <div className="divide-y divide-[var(--color-border)]">
+            {issues.map((issue) => {
+              const priorityColor = issue.priority === "URGENT" ? "text-red-600" : issue.priority === "HIGH" ? "text-orange-600" : issue.priority === "MEDIUM" ? "text-amber-600" : "text-slate-500";
+              const statusBg = issue.status === "OPEN" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700";
+              return (
+                <Link key={issue.id} href="/issues" className="flex items-center justify-between px-5 py-2.5 hover:bg-slate-50">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Flag size={14} className={priorityColor} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{issue.title}</p>
+                      <p className="text-xs text-slate-400">
+                        {issue.station && <span className="mr-2">{issue.station}</span>}
+                        {issue.assignedTo ? `Assigned to ${issue.assignedTo.name}` : "Unassigned"}
+                        {" · "}{relativeTime(issue.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`shrink-0 ml-3 rounded-full px-2 py-0.5 text-xs font-medium ${statusBg}`}>
+                    {issue.status === "OPEN" ? "Open" : "In Progress"}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-6">
