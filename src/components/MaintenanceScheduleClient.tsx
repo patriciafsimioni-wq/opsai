@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useData, apiSend } from "@/lib/use-data";
-import { AlertTriangle, Check, SkipForward, Undo2 } from "lucide-react";
+import { AlertTriangle, Check, SkipForward, Undo2, UserPlus } from "lucide-react";
 
 const STATIONS = ["ALL", "IAH", "AUS", "HRL", "LRD", "ACT", "CLL", "BPT"];
 
@@ -148,6 +148,7 @@ function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss }: {
                   </span>
                   {(ts.status === "never_performed" || ts.status === "overdue") && (
                     <div className="flex gap-1">
+                      <AssignButton vehicleId={vehicle.id} vehicleName={vehicle.dxNumber ?? vehicle.name} service={ts.service} station={vehicle.station} onAssigned={() => { onDismiss(vehicle.id, ts.service, "done"); }} />
                       <button onClick={() => onDismiss(vehicle.id, ts.service, "done")} className="rounded px-2 py-1 text-[10px] font-medium text-green-700 hover:bg-green-50" title="Mark as done"><Check size={12} /> Done</button>
                       <button onClick={() => onDismiss(vehicle.id, ts.service, "skip")} className="rounded px-2 py-1 text-[10px] font-medium text-slate-500 hover:bg-slate-100" title="Skip"><SkipForward size={12} /> Skip</button>
                     </div>
@@ -215,6 +216,7 @@ function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss }: {
                     <td className="px-3 py-2 text-right">
                       {(s.status === "never_performed" || s.status === "overdue" || s.status === "upcoming") && (
                         <div className="flex justify-end gap-1">
+                          <AssignButton vehicleId={vehicle.id} vehicleName={vehicle.dxNumber ?? vehicle.name} service={s.service} station={vehicle.station} onAssigned={() => { onDismiss(vehicle.id, s.service, "done"); }} />
                           <button onClick={() => onDismiss(vehicle.id, s.service, "done")} className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-green-700 hover:bg-green-50" title="Mark as done"><Check size={11} /></button>
                           <button onClick={() => onDismiss(vehicle.id, s.service, "skip")} className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-slate-500 hover:bg-slate-100" title="Skip this service"><SkipForward size={11} /></button>
                         </div>
@@ -236,6 +238,90 @@ function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss }: {
         </div>
       </div>
     </div>
+  );
+}
+
+type UserOption = { id: string; name: string; role: string };
+
+function AssignButton({ vehicleId, vehicleName, service, station, onAssigned }: {
+  vehicleId: string;
+  vehicleName: string;
+  service: string;
+  station: string;
+  onAssigned: () => void;
+}) {
+  const [show, setShow] = useState(false);
+  const { data: users } = useData<UserOption[]>("/api/users");
+  const [assigneeId, setAssigneeId] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const assignableUsers = (users ?? []).filter(
+    (u) => u.role === "VENDOR" || u.role === "MECHANIC" || u.role === "FLEET_MANAGER" || u.role === "STATION_MANAGER"
+  );
+
+  async function assign() {
+    if (!assigneeId) return;
+    setSaving(true);
+    const assignee = assignableUsers.find((u) => u.id === assigneeId);
+    await fetch("/api/maintenance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        vehicleId,
+        title: `PM: ${service}`,
+        description: `Scheduled maintenance — ${service} for ${vehicleName}`,
+        type: "SCHEDULED_SERVICE",
+        priority: "MEDIUM",
+        status: "SCHEDULED",
+        station,
+        performedBy: assignee?.name ?? "",
+        vendor: assignee?.role === "VENDOR" ? assignee.name : undefined,
+      }),
+    });
+    setSaving(false);
+    setShow(false);
+    onAssigned();
+  }
+
+  return (
+    <>
+      <button
+        onClick={(e) => { e.stopPropagation(); setShow(true); }}
+        className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-blue-600 hover:bg-blue-50"
+        title="Assign to vendor/mechanic"
+      >
+        <UserPlus size={11} />
+      </button>
+      {show && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30" onClick={() => setShow(false)}>
+          <div className="bg-white rounded-lg p-5 w-96 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <p className="font-semibold mb-1">Assign Maintenance</p>
+            <p className="text-xs text-slate-500 mb-3">{service} — {vehicleName}</p>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Assign to</label>
+            <select
+              value={assigneeId}
+              onChange={(e) => setAssigneeId(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm mb-3"
+            >
+              <option value="">Select vendor or mechanic...</option>
+              {assignableUsers.map((u) => (
+                <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+              ))}
+            </select>
+            <div className="flex gap-2">
+              <button
+                onClick={assign}
+                disabled={saving || !assigneeId}
+                className="flex-1 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {saving ? "Creating..." : "Create Work Order"}
+              </button>
+              <button onClick={() => setShow(false)} className="flex-1 rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
