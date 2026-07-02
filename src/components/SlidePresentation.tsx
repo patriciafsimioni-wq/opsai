@@ -2,6 +2,17 @@
 
 import { useState, useRef } from "react";
 import { useData } from "@/lib/use-data";
+import {
+  ResponsiveContainer,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ComposedChart,
+  Line,
+} from "recharts";
 
 type CoverSlide = {
   type: "cover";
@@ -91,7 +102,73 @@ type CategoryDetailSlide = {
   }[];
 };
 
-type Slide = CoverSlide | ExecSummarySlide | DetailedSlide | CategoryDetailSlide | YtdSlide;
+type TrendsChartsSlide = {
+  type: "trends_charts";
+  title: string;
+  heading: string;
+  months: string[];
+  prevYear: number;
+  charts: {
+    monthlyActual: number[];
+    monthlyPrev: number[];
+    monthlyBudget: number[];
+    monthlyVariancePct: number[];
+    ytdActual: number[];
+    ytdPrev: number[];
+    ytdBudget: number[];
+    ytdVariancePct: number[];
+    budgetVariancePct: number[];
+    ytdBudgetVariancePct: number[];
+  };
+};
+
+type DataTableSlide = {
+  type: "data_table";
+  title: string;
+  heading: string;
+  stationRows: {
+    station: string;
+    label: string;
+    prevYear: number;
+    currentYear: number;
+    yoyPct: number;
+    yoyAmt: number;
+    budget: number;
+    budgetVariancePct: number;
+    budgetVarianceAmt: number;
+    annualBudget: number;
+    remainderPct: number;
+    remainderAmt: number;
+  }[];
+  categoryRows: {
+    idx: number;
+    category: string;
+    prevYear: number;
+    currentYear: number;
+    yoyPct: number;
+    yoyAmt: number;
+    budget: number;
+    budgetVariancePct: number;
+    budgetVarianceAmt: number;
+    annualBudget: number;
+    remainderPct: number;
+    remainderAmt: number;
+  }[];
+  totals: {
+    prevYear: number;
+    currentYear: number;
+    yoyPct: number;
+    yoyAmt: number;
+    budget: number;
+    budgetVariancePct: number;
+    budgetVarianceAmt: number;
+    annualBudget: number;
+    remainderPct: number;
+    remainderAmt: number;
+  };
+};
+
+type Slide = CoverSlide | ExecSummarySlide | DetailedSlide | CategoryDetailSlide | YtdSlide | TrendsChartsSlide | DataTableSlide;
 
 type SlidesData = {
   year: number;
@@ -256,6 +333,241 @@ function CategoryDetailSlideView({ slide }: { slide: CategoryDetailSlide }) {
   );
 }
 
+function fmtK(n: number): string {
+  if (Math.abs(n) >= 1000) return "$" + (n / 1000).toFixed(0) + "k";
+  return "$" + n.toLocaleString("en-US");
+}
+
+function TrendsChartsSlideView({ slide, year }: { slide: TrendsChartsSlide; year: number }) {
+  const c = slide.charts;
+  const monthlyData = slide.months.map((m, i) => ({
+    month: m,
+    prev: c.monthlyPrev[i],
+    actual: c.monthlyActual[i],
+    variance: c.monthlyVariancePct[i],
+  }));
+  const ytdData = slide.months.map((m, i) => ({
+    month: m,
+    prev: c.ytdPrev[i],
+    actual: c.ytdActual[i],
+    variance: c.ytdVariancePct[i],
+  }));
+  const budgetData = slide.months.map((m, i) => ({
+    month: m,
+    actual: c.monthlyActual[i],
+    budget: c.monthlyBudget[i],
+    variance: c.budgetVariancePct[i],
+  }));
+  const ytdBudgetData = slide.months.map((m, i) => ({
+    month: m,
+    actual: c.ytdActual[i],
+    budget: c.ytdBudget[i],
+    variance: c.ytdBudgetVariancePct[i],
+  }));
+
+  const chartProps = { margin: { top: 10, right: 40, left: 10, bottom: 0 } };
+  const axisStyle = { fontSize: 9, fill: "#64748b" };
+  const yTickFmt = (v: number) => fmtK(v);
+  const pctFmt = (v: number) => `${v}%`;
+
+  return (
+    <div className="flex h-full flex-col bg-white p-6">
+      <p className="mb-1 text-xs font-bold text-slate-500">{slide.heading}</p>
+      <h2 className="mb-3 text-lg font-bold text-blue-900">{slide.title}</h2>
+      <div className="grid flex-1 grid-cols-2 grid-rows-2 gap-3">
+        {/* Chart 1: Monthly Actual YoY */}
+        <div className="rounded-lg border border-slate-200 p-2">
+          <p className="mb-1 text-center text-[10px] font-bold text-slate-700">{slide.prevYear}-{year} Actual | Expenses monthly variance</p>
+          <ResponsiveContainer width="100%" height={150}>
+            <ComposedChart data={monthlyData} {...chartProps}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="month" tick={axisStyle} />
+              <YAxis yAxisId="left" tick={axisStyle} tickFormatter={yTickFmt} />
+              <YAxis yAxisId="right" orientation="right" tick={axisStyle} tickFormatter={pctFmt} />
+              <Tooltip formatter={(v, name) => [name === "variance" ? `${v}%` : fmtK(Number(v)), String(name)]} />
+              <Legend wrapperStyle={{ fontSize: 9 }} />
+              <Bar yAxisId="left" dataKey="prev" name={`A${slide.prevYear}`} fill="#94a3b8" barSize={12} />
+              <Bar yAxisId="left" dataKey="actual" name={`A${year}`} fill="#3b82f6" barSize={12} />
+              <Line yAxisId="right" type="monotone" dataKey="variance" name="Variance %" stroke="#1e40af" strokeWidth={2} dot={{ r: 3 }} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+        {/* Chart 2: YTD Actual YoY */}
+        <div className="rounded-lg border border-slate-200 p-2">
+          <p className="mb-1 text-center text-[10px] font-bold text-slate-700">{slide.prevYear}-{year} YTD | Expenses trend</p>
+          <ResponsiveContainer width="100%" height={150}>
+            <ComposedChart data={ytdData} {...chartProps}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="month" tick={axisStyle} />
+              <YAxis yAxisId="left" tick={axisStyle} tickFormatter={yTickFmt} />
+              <YAxis yAxisId="right" orientation="right" tick={axisStyle} tickFormatter={pctFmt} />
+              <Tooltip formatter={(v, name) => [name === "variance" ? `${v}%` : fmtK(Number(v)), String(name)]} />
+              <Legend wrapperStyle={{ fontSize: 9 }} />
+              <Bar yAxisId="left" dataKey="prev" name={`A${slide.prevYear} YTD`} fill="#94a3b8" barSize={12} />
+              <Bar yAxisId="left" dataKey="actual" name={`A${year} YTD`} fill="#3b82f6" barSize={12} />
+              <Line yAxisId="right" type="monotone" dataKey="variance" name="Variance %" stroke="#1e40af" strokeWidth={2} dot={{ r: 3 }} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+        {/* Chart 3: Actual vs Budget Monthly */}
+        <div className="rounded-lg border border-slate-200 p-2">
+          <p className="mb-1 text-center text-[10px] font-bold text-slate-700">{year} Actual vs Budget | Expenses monthly variance</p>
+          <ResponsiveContainer width="100%" height={150}>
+            <ComposedChart data={budgetData} {...chartProps}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="month" tick={axisStyle} />
+              <YAxis yAxisId="left" tick={axisStyle} tickFormatter={yTickFmt} />
+              <YAxis yAxisId="right" orientation="right" tick={axisStyle} tickFormatter={pctFmt} />
+              <Tooltip formatter={(v, name) => [name === "variance" ? `${v}%` : fmtK(Number(v)), String(name)]} />
+              <Legend wrapperStyle={{ fontSize: 9 }} />
+              <Bar yAxisId="left" dataKey="actual" name={`A${year} Monthly`} fill="#3b82f6" barSize={12} />
+              <Bar yAxisId="left" dataKey="budget" name={`Budget ${year}`} fill="#f59e0b" barSize={12} />
+              <Line yAxisId="right" type="monotone" dataKey="variance" name="Variance %" stroke="#1e40af" strokeWidth={2} dot={{ r: 3 }} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+        {/* Chart 4: YTD Actual vs Budget */}
+        <div className="rounded-lg border border-slate-200 p-2">
+          <p className="mb-1 text-center text-[10px] font-bold text-slate-700">{year} YTD Actual vs Budget | Expenses variance</p>
+          <ResponsiveContainer width="100%" height={150}>
+            <ComposedChart data={ytdBudgetData} {...chartProps}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="month" tick={axisStyle} />
+              <YAxis yAxisId="left" tick={axisStyle} tickFormatter={yTickFmt} />
+              <YAxis yAxisId="right" orientation="right" tick={axisStyle} tickFormatter={pctFmt} />
+              <Tooltip formatter={(v, name) => [name === "variance" ? `${v}%` : fmtK(Number(v)), String(name)]} />
+              <Legend wrapperStyle={{ fontSize: 9 }} />
+              <Bar yAxisId="left" dataKey="actual" name={`A${year} YTD`} fill="#3b82f6" barSize={12} />
+              <Bar yAxisId="left" dataKey="budget" name={`Budget ${year} YTD`} fill="#f59e0b" barSize={12} />
+              <Line yAxisId="right" type="monotone" dataKey="variance" name="Variance %" stroke="#1e40af" strokeWidth={2} dot={{ r: 3 }} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DataTableSlideView({ slide, year }: { slide: DataTableSlide; year: number }) {
+  const prevYear = year - 1;
+  const cellCls = "px-1.5 py-1 text-right text-[8px]";
+  const hdrCls = "px-1.5 py-1 text-center text-[7px] font-bold text-white";
+  const varColor = (v: number) => v > 0 ? "text-red-600" : v < 0 ? "text-green-700" : "";
+  const varBg = (v: number) => v > 0 ? "bg-red-50" : v < 0 ? "bg-green-50" : "";
+
+  type Row = { label: string; prevYear: number; currentYear: number; yoyPct: number; yoyAmt: number; budget: number; budgetVariancePct: number; budgetVarianceAmt: number; annualBudget: number; remainderPct: number; remainderAmt: number };
+
+  function renderRow(r: Row, idx?: number) {
+    return (
+      <tr key={r.label} className="border-b border-slate-100">
+        <td className="px-1.5 py-1 text-left text-[8px] font-medium text-slate-700">
+          {idx !== undefined && <span className="mr-1 text-blue-600">{idx}.</span>}
+          {r.label}
+        </td>
+        <td className={cellCls}>{fmtDollar(r.prevYear)}</td>
+        <td className={cellCls}>{fmtDollar(r.currentYear)}</td>
+        <td className={`${cellCls} ${varColor(r.yoyPct)}`}>{r.yoyPct}%</td>
+        <td className={`${cellCls} ${varBg(r.yoyAmt)} ${varColor(r.yoyAmt)}`}>{r.yoyAmt >= 0 ? "" : "-"}{fmtDollar(Math.abs(r.yoyAmt))}</td>
+        <td className={cellCls}>{fmtDollar(r.budget)}</td>
+        <td className={`${cellCls} ${varColor(r.budgetVariancePct)}`}>{r.budgetVariancePct}%</td>
+        <td className={`${cellCls} ${varBg(r.budgetVarianceAmt)} ${varColor(r.budgetVarianceAmt)}`}>{r.budgetVarianceAmt >= 0 ? "" : "-"}{fmtDollar(Math.abs(r.budgetVarianceAmt))}</td>
+        <td className={cellCls}>{fmtDollar(r.annualBudget)}</td>
+        <td className={`${cellCls} ${varColor(-r.remainderAmt)}`}>{r.remainderPct}%</td>
+        <td className={`${cellCls} ${varBg(-r.remainderAmt)}`}>{fmtDollar(r.remainderAmt)}</td>
+      </tr>
+    );
+  }
+
+  return (
+    <div className="flex h-full flex-col bg-white p-5">
+      <h2 className="mb-1 text-lg font-bold text-blue-900">{slide.title}</h2>
+      <p className="mb-2 text-[10px] font-bold text-slate-500">{slide.heading}</p>
+      <div className="flex-1 overflow-auto">
+        {/* Station table */}
+        <table className="mb-3 w-full border-collapse text-[8px]">
+          <thead>
+            <tr className="bg-slate-700">
+              <th className={`${hdrCls} text-left`}>Station</th>
+              <th className={hdrCls}>A{prevYear}</th>
+              <th className={hdrCls}>A{year}</th>
+              <th className={hdrCls} colSpan={2}>YoY Variance</th>
+              <th className={hdrCls}>B{year}</th>
+              <th className={hdrCls} colSpan={2}>Budget Variance</th>
+              <th className={hdrCls}>Annual</th>
+              <th className={hdrCls} colSpan={2}>Remainder</th>
+            </tr>
+          </thead>
+          <tbody>
+            {slide.stationRows.map((r) => renderRow({ label: r.label, prevYear: r.prevYear, currentYear: r.currentYear, yoyPct: r.yoyPct, yoyAmt: r.yoyAmt, budget: r.budget, budgetVariancePct: r.budgetVariancePct, budgetVarianceAmt: r.budgetVarianceAmt, annualBudget: r.annualBudget, remainderPct: r.remainderPct, remainderAmt: r.remainderAmt }))}
+            <tr className="border-t-2 border-slate-400 bg-slate-100 font-bold">
+              <td className="px-1.5 py-1 text-left text-[8px] font-bold">TOTAL</td>
+              <td className={cellCls}>{fmtDollar(slide.totals.prevYear)}</td>
+              <td className={cellCls}>{fmtDollar(slide.totals.currentYear)}</td>
+              <td className={`${cellCls} ${varColor(slide.totals.yoyPct)}`}>{slide.totals.yoyPct}%</td>
+              <td className={`${cellCls} ${varColor(slide.totals.yoyAmt)}`}>{fmtDollar(Math.abs(slide.totals.yoyAmt))}</td>
+              <td className={cellCls}>{fmtDollar(slide.totals.budget)}</td>
+              <td className={`${cellCls} ${varColor(slide.totals.budgetVariancePct)}`}>{slide.totals.budgetVariancePct}%</td>
+              <td className={`${cellCls} ${varColor(slide.totals.budgetVarianceAmt)}`}>{fmtDollar(Math.abs(slide.totals.budgetVarianceAmt))}</td>
+              <td className={cellCls}>{fmtDollar(slide.totals.annualBudget)}</td>
+              <td className={`${cellCls} ${varColor(-slide.totals.remainderAmt)}`}>{slide.totals.remainderPct}%</td>
+              <td className={cellCls}>{fmtDollar(slide.totals.remainderAmt)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Category table */}
+        <p className="mb-1 text-[9px] font-bold text-slate-600">Services - Consolidated TX</p>
+        <table className="w-full border-collapse text-[8px]">
+          <thead>
+            <tr className="bg-emerald-700">
+              <th className={`${hdrCls} text-left`}>#</th>
+              <th className={`${hdrCls} text-left`}>Category</th>
+              <th className={hdrCls}>A{prevYear}</th>
+              <th className={hdrCls}>A{year}</th>
+              <th className={hdrCls} colSpan={2}>YoY Variance</th>
+              <th className={hdrCls}>B{year}</th>
+              <th className={hdrCls} colSpan={2}>Budget Variance</th>
+              <th className={hdrCls}>Annual</th>
+              <th className={hdrCls} colSpan={2}>Remainder</th>
+            </tr>
+          </thead>
+          <tbody>
+            {slide.categoryRows.map((r) => (
+              <tr key={r.category} className="border-b border-slate-100">
+                <td className="px-1.5 py-1 text-[8px] text-blue-600 font-bold">{r.idx}</td>
+                <td className="px-1.5 py-1 text-left text-[8px] font-medium text-slate-700">{r.category}</td>
+                <td className={cellCls}>{fmtDollar(r.prevYear)}</td>
+                <td className={cellCls}>{fmtDollar(r.currentYear)}</td>
+                <td className={`${cellCls} ${varColor(r.yoyPct)}`}>{r.yoyPct}%</td>
+                <td className={`${cellCls} ${varBg(r.yoyAmt)} ${varColor(r.yoyAmt)}`}>{r.yoyAmt >= 0 ? "" : "-"}{fmtDollar(Math.abs(r.yoyAmt))}</td>
+                <td className={cellCls}>{fmtDollar(r.budget)}</td>
+                <td className={`${cellCls} ${varColor(r.budgetVariancePct)}`}>{r.budgetVariancePct}%</td>
+                <td className={`${cellCls} ${varBg(r.budgetVarianceAmt)} ${varColor(r.budgetVarianceAmt)}`}>{r.budgetVarianceAmt >= 0 ? "" : "-"}{fmtDollar(Math.abs(r.budgetVarianceAmt))}</td>
+                <td className={cellCls}>{fmtDollar(r.annualBudget)}</td>
+                <td className={`${cellCls} ${varColor(-r.remainderAmt)}`}>{r.remainderPct}%</td>
+                <td className={`${cellCls} ${varBg(-r.remainderAmt)}`}>{fmtDollar(r.remainderAmt)}</td>
+              </tr>
+            ))}
+            <tr className="border-t-2 border-slate-400 bg-slate-100 font-bold">
+              <td className="px-1.5 py-1 text-[8px]" colSpan={2}>TOTAL</td>
+              <td className={cellCls}>{fmtDollar(slide.totals.prevYear)}</td>
+              <td className={cellCls}>{fmtDollar(slide.totals.currentYear)}</td>
+              <td className={`${cellCls} ${varColor(slide.totals.yoyPct)}`}>{slide.totals.yoyPct}%</td>
+              <td className={`${cellCls} ${varColor(slide.totals.yoyAmt)}`}>{fmtDollar(Math.abs(slide.totals.yoyAmt))}</td>
+              <td className={cellCls}>{fmtDollar(slide.totals.budget)}</td>
+              <td className={`${cellCls} ${varColor(slide.totals.budgetVariancePct)}`}>{slide.totals.budgetVariancePct}%</td>
+              <td className={`${cellCls} ${varColor(slide.totals.budgetVarianceAmt)}`}>{fmtDollar(Math.abs(slide.totals.budgetVarianceAmt))}</td>
+              <td className={cellCls}>{fmtDollar(slide.totals.annualBudget)}</td>
+              <td className={`${cellCls} ${varColor(-slide.totals.remainderAmt)}`}>{slide.totals.remainderPct}%</td>
+              <td className={cellCls}>{fmtDollar(slide.totals.remainderAmt)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function YtdSlideView({ slide, year }: { slide: YtdSlide; year: number }) {
   const prevYear = year - 1;
   const s = slide.stats;
@@ -374,8 +686,11 @@ export function SlidePresentation({ year, month, reportType, onClose }: { year: 
           <button onClick={onClose} className="rounded px-3 py-1 text-sm text-slate-300 hover:bg-slate-700 hover:text-white">
             ← Back to Report
           </button>
+          <span className="rounded bg-blue-600 px-2 py-0.5 text-xs font-bold text-white">
+            {data.monthName} {data.year}
+          </span>
           <span className="text-sm text-slate-400">
-            {data.reportLabel} — {data.monthName} {data.year}
+            {data.reportLabel}
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -398,8 +713,10 @@ export function SlidePresentation({ year, month, reportType, onClose }: { year: 
           <div data-slide className="h-full w-full">
             {slide.type === "cover" && <CoverSlideView slide={slide} />}
             {slide.type === "executive_summary" && <ExecSummarySlideView slide={slide} />}
+            {slide.type === "trends_charts" && <TrendsChartsSlideView slide={slide} year={data.year} />}
             {slide.type === "detailed_analysis" && <DetailedSlideView slide={slide} year={data.year} />}
             {slide.type === "category_detail" && <CategoryDetailSlideView slide={slide} />}
+            {slide.type === "data_table" && <DataTableSlideView slide={slide} year={data.year} />}
             {slide.type === "ytd_summary" && <YtdSlideView slide={slide} year={data.year} />}
           </div>
         </div>
@@ -411,8 +728,10 @@ export function SlidePresentation({ year, month, reportType, onClose }: { year: 
           <div key={i} data-slide className="w-[960px] bg-white" style={{ minHeight: 540, overflow: "visible" }}>
             {s.type === "cover" && <CoverSlideView slide={s} />}
             {s.type === "executive_summary" && <ExecSummarySlideView slide={s} />}
+            {s.type === "trends_charts" && <TrendsChartsSlideView slide={s} year={data.year} />}
             {s.type === "detailed_analysis" && <DetailedSlideView slide={s} year={data.year} />}
             {s.type === "category_detail" && <CategoryDetailSlideView slide={s} />}
+            {s.type === "data_table" && <DataTableSlideView slide={s} year={data.year} />}
             {s.type === "ytd_summary" && <YtdSlideView slide={s} year={data.year} />}
           </div>
         ))}

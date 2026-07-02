@@ -354,7 +354,146 @@ export async function GET(req: NextRequest) {
     observations: generateObservations(consolidated, stationData, reportLabelShort, monthName, year, activeStations),
   };
 
-  const slides = [coverSlide, executiveSummarySlide, detailedSlide, categorySlide, ytdSlide];
+  // Slide 6: Monthly Trends Charts
+  const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  // Build monthly actual/prev/budget arrays for all 12 months
+  const monthlyActual: number[] = Array(12).fill(0);
+  const monthlyPrev: number[] = Array(12).fill(0);
+  const monthlyBudget: number[] = Array(12).fill(0);
+
+  for (const wo of woFullYear) {
+    const cat = classify(wo.title);
+    if (!cat || !(CATEGORIES as readonly string[]).includes(cat)) continue;
+    const m = wo.completedAt ? new Date(wo.completedAt).getMonth() : -1;
+    if (m >= 0) monthlyActual[m] += wo.cost ?? 0;
+  }
+  for (const wo of woFullPrev) {
+    const cat = classify(wo.title);
+    if (!cat || !(CATEGORIES as readonly string[]).includes(cat)) continue;
+    const m = wo.completedAt ? new Date(wo.completedAt).getMonth() : -1;
+    if (m >= 0) monthlyPrev[m] += wo.cost ?? 0;
+  }
+  for (const b of budgets) {
+    if (!(CATEGORIES as readonly string[]).includes(b.category)) continue;
+    if (b.month >= 1 && b.month <= 12) monthlyBudget[b.month - 1] += b.amount;
+  }
+
+  // YTD cumulative
+  const ytdActualCum: number[] = [];
+  const ytdPrevCum: number[] = [];
+  const ytdBudgetCum: number[] = [];
+  let cumA = 0, cumP = 0, cumB = 0;
+  for (let i = 0; i < 12; i++) {
+    cumA += monthlyActual[i]; ytdActualCum.push(Math.round(cumA));
+    cumP += monthlyPrev[i]; ytdPrevCum.push(Math.round(cumP));
+    cumB += monthlyBudget[i]; ytdBudgetCum.push(Math.round(cumB));
+  }
+
+  // Monthly variance %
+  const monthlyVariancePct = monthlyActual.map((a, i) => {
+    const p = monthlyPrev[i];
+    return p > 0 ? Math.round(((a - p) / p) * 100) : 0;
+  });
+  const ytdVariancePctArr = ytdActualCum.map((a, i) => {
+    const p = ytdPrevCum[i];
+    return p > 0 ? Math.round(((a - p) / p) * 100) : 0;
+  });
+  const budgetVariancePctArr = monthlyActual.map((a, i) => {
+    const b = monthlyBudget[i];
+    return b > 0 ? Math.round(((a - b) / b) * 100) : 0;
+  });
+  const ytdBudgetVarPctArr = ytdActualCum.map((a, i) => {
+    const b = ytdBudgetCum[i];
+    return b > 0 ? Math.round(((a - b) / b) * 100) : 0;
+  });
+
+  const trendsSlide = {
+    type: "trends_charts" as const,
+    title: `${prevYear}-${year} ${reportLabel} Expenses Trends`,
+    heading: "TEXAS - Consolidated",
+    months: MONTHS_SHORT,
+    prevYear,
+    charts: {
+      monthlyActual: monthlyActual.map(Math.round),
+      monthlyPrev: monthlyPrev.map(Math.round),
+      monthlyBudget: monthlyBudget.map(Math.round),
+      monthlyVariancePct,
+      ytdActual: ytdActualCum,
+      ytdPrev: ytdPrevCum,
+      ytdBudget: ytdBudgetCum,
+      ytdVariancePct: ytdVariancePctArr,
+      budgetVariancePct: budgetVariancePctArr,
+      ytdBudgetVariancePct: ytdBudgetVarPctArr,
+    },
+  };
+
+  // Slide 7: Data Table (station + category breakdown)
+  const stationRows = activeStations.map((s) => {
+    const d = stationData[s];
+    const yoyPct = d.ytdPrev > 0 ? Math.round(((d.ytdActual - d.ytdPrev) / d.ytdPrev) * 100) : 0;
+    const budVarPct = d.ytdBudget > 0 ? Math.round(((d.ytdActual - d.ytdBudget) / d.ytdBudget) * 100) : 0;
+    const remPct = d.annualBudget > 0 ? Math.round(((d.annualBudget - d.ytdActual) / d.annualBudget) * 100) : 0;
+    return {
+      station: s,
+      label: STATION_LABELS[s] ?? s,
+      prevYear: d.ytdPrev,
+      currentYear: d.ytdActual,
+      yoyPct,
+      yoyAmt: d.ytdActual - d.ytdPrev,
+      budget: d.ytdBudget,
+      budgetVariancePct: budVarPct,
+      budgetVarianceAmt: d.ytdActual - d.ytdBudget,
+      annualBudget: d.annualBudget,
+      remainderPct: remPct,
+      remainderAmt: d.annualBudget - d.ytdActual,
+    };
+  });
+
+  const categoryRows = consolidated.categories.map((cat, idx) => {
+    const yoyPct = cat.ytdPrev > 0 ? Math.round(((cat.ytdActual - cat.ytdPrev) / cat.ytdPrev) * 100) : (cat.ytdActual > 0 ? 100 : 0);
+    const budVarPct = cat.ytdBudget > 0 ? Math.round(((cat.ytdActual - cat.ytdBudget) / cat.ytdBudget) * 100) : 0;
+    const remPct = cat.annualBudget > 0 ? Math.round(((cat.annualBudget - cat.ytdActual) / cat.annualBudget) * 100) : 0;
+    return {
+      idx: idx + 1,
+      category: cat.category,
+      prevYear: cat.ytdPrev,
+      currentYear: cat.ytdActual,
+      yoyPct,
+      yoyAmt: cat.ytdActual - cat.ytdPrev,
+      budget: cat.ytdBudget,
+      budgetVariancePct: budVarPct,
+      budgetVarianceAmt: cat.ytdActual - cat.ytdBudget,
+      annualBudget: cat.annualBudget,
+      remainderPct: remPct,
+      remainderAmt: cat.annualBudget - cat.ytdActual,
+    };
+  });
+
+  const totYoyPct = consolidated.ytdPrev > 0 ? Math.round(((consolidated.ytdActual - consolidated.ytdPrev) / consolidated.ytdPrev) * 100) : 0;
+  const totRemPct = consolidated.annualBudget > 0 ? Math.round(((consolidated.annualBudget - consolidated.ytdActual) / consolidated.annualBudget) * 100) : 0;
+
+  const dataTableSlide = {
+    type: "data_table" as const,
+    title: `SYNCTX / Fleet ${reportLabel} Expenses — ${year}`,
+    heading: `Year to Date Results — ${monthName} ${year} — All Stations Consolidated TX`,
+    stationRows,
+    categoryRows,
+    totals: {
+      prevYear: consolidated.ytdPrev,
+      currentYear: consolidated.ytdActual,
+      yoyPct: totYoyPct,
+      yoyAmt: consolidated.ytdActual - consolidated.ytdPrev,
+      budget: consolidated.ytdBudget,
+      budgetVariancePct: ytdVariancePct,
+      budgetVarianceAmt: ytdVarianceAmt,
+      annualBudget: consolidated.annualBudget,
+      remainderPct: totRemPct,
+      remainderAmt: remainderAmt,
+    },
+  };
+
+  const slides = [coverSlide, executiveSummarySlide, trendsSlide, dataTableSlide, detailedSlide, categorySlide, ytdSlide];
 
   return NextResponse.json({
     year,
