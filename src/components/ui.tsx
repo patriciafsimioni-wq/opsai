@@ -146,10 +146,12 @@ export function PageHeader({
   title,
   subtitle,
   action,
+  flagCategory,
 }: {
   title: string;
   subtitle?: string;
   action?: React.ReactNode;
+  flagCategory?: string;
 }) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -161,7 +163,18 @@ export function PageHeader({
           <p className="mt-1 text-sm text-[var(--color-muted)]">{subtitle}</p>
         )}
       </div>
-      {action}
+      <div className="flex items-center gap-2">
+        {flagCategory && (
+          <a
+            href={`/issues?create=1&title=${encodeURIComponent(flagCategory + " Issue")}&category=${encodeURIComponent(flagCategory)}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+            Flag Issue
+          </a>
+        )}
+        {action}
+      </div>
     </div>
   );
 }

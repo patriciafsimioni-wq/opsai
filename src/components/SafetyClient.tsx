@@ -11,6 +11,7 @@ import {
   Loader2,
   Zap,
   TrendingDown,
+  Flag,
 } from "lucide-react";
 import { Card, Badge, EmptyState } from "@/components/ui";
 import { ALERT_SEVERITY } from "@/lib/constants";
@@ -92,14 +93,22 @@ export function SafetyClient({ alerts }: { alerts: SafetyAlert[] }) {
             Driver safety events — live from Samsara + system alerts.
           </p>
         </div>
-        <button
-          onClick={handleSync}
-          disabled={syncing}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {syncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-          Sync from Samsara
-        </button>
+        <div className="flex items-center gap-2">
+          <a
+            href={`/issues?create=1&title=${encodeURIComponent("Safety Issue")}&category=Safety`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors"
+          >
+            <Flag size={14} /> Flag Issue
+          </a>
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {syncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+            Sync from Samsara
+          </button>
+        </div>
       </div>
 
       {syncResult && (

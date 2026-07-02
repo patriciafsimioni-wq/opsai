@@ -9,6 +9,7 @@ export default function FareyeRoutesPage() {
       <PageHeader
         title="FareEye Routes"
         subtitle="Planned routes — mileage, stops, and vehicle utilization by day."
+        flagCategory="FareEye Routes"
       />
       <FareyeRoutesClient />
     </div>

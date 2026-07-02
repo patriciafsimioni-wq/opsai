@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardHeader, Badge } from "@/components/ui";
-import { ClipboardCheck, AlertTriangle, Camera, CheckCircle2, XCircle } from "lucide-react";
+import { ClipboardCheck, AlertTriangle, Camera, CheckCircle2, XCircle, Flag } from "lucide-react";
 import { apiSend } from "@/lib/use-data";
 
 type Vehicle = { id: string; name: string; dxNumber: string | null; station?: string };
@@ -125,6 +125,12 @@ export default function DvirPage() {
           </h1>
           <p className="text-sm text-[var(--color-muted)]">Pre-trip and post-trip vehicle inspections</p>
         </div>
+        <button
+          onClick={() => window.open(`/issues?create=1&title=${encodeURIComponent("DVIR Issue")}&category=DVIR`, "_self")}
+          className="flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors"
+        >
+          <Flag size={14} /> Flag Issue
+        </button>
       </div>
 
       {/* Station Filter + Tabs */}

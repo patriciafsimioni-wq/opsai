@@ -9,7 +9,7 @@ export default async function MaintenancePage() {
   const manage = user ? canManage(user.role) : false;
   return (
     <div>
-      <PageHeader title="Maintenance" subtitle="Work orders, service schedules, and repair costs." />
+      <PageHeader title="Maintenance" subtitle="Work orders, service schedules, and repair costs." flagCategory="Maintenance" />
       <MaintenanceClient canManage={manage} />
     </div>
   );

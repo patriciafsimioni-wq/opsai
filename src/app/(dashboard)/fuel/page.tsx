@@ -9,7 +9,7 @@ export default async function FuelPage() {
   const manage = user ? canManage(user.role) : false;
   return (
     <div>
-      <PageHeader title="Fuel Management" subtitle="Track fuel purchases, volume, and cost." />
+      <PageHeader title="Fuel Management" subtitle="Track fuel purchases, volume, and cost." flagCategory="Fuel" />
       <FuelClient canManage={manage} />
     </div>
   );
