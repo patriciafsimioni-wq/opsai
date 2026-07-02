@@ -21,6 +21,7 @@ import {
 import { formatCurrency, relativeTime, formatDate } from "@/lib/utils";
 import { StationFilter } from "@/components/StationFilter";
 import { getSession } from "@/lib/auth";
+import { cookies } from "next/headers";
 import type { Station } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +29,25 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ station?: string }> }) {
   const params = await searchParams;
   const station = (params.station as Station) || null;
+
+  const user = await getSession();
+  const cookieStore = await cookies();
+  const viewAsRoleCookie = cookieStore.get("viewAsRole")?.value || null;
+  const isRealAdmin = user && (user.role === "ADMIN" || user.role === "GENERAL_MANAGER" || user.role === "FLEET_MANAGER");
+  const role = (isRealAdmin && viewAsRoleCookie) ? viewAsRoleCookie : (user?.role ?? "DRIVER");
+
+  const isAdmin = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"].includes(role);
+  const isManager = [...["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"], "STATION_MANAGER", "MANAGER"].includes(role);
+  const isMechanic = role === "MECHANIC";
+  const isVendor = role === "VENDOR";
+  const isDriver = role === "DRIVER";
+
+  const canSeeFuel = isManager;
+  const canSeeDrivers = isManager;
+  const canSeeRoutes = isManager;
+  const canSeeAlerts = isManager || isMechanic;
+  const canSeeCompliance = isAdmin;
+  const canSeeFinance = isManager;
 
   const vehicleWhere = station ? { station } : {};
   const [allVehicles, drivers, fareyeRoutes, alerts, workOrders, fuelLogs, issues] =
@@ -275,44 +295,52 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           accent="#16a34a"
           hint={`${utilization}% utilization`}
         />
-        <StatCard
-          label="Drivers"
-          value={drivers.length}
-          icon={<Users size={20} />}
-          accent="#7c3aed"
-        />
-        <StatCard
-          label="Open Alerts"
-          value={unreadAlerts}
-          icon={<AlertTriangle size={20} />}
-          accent="#dc2626"
-        />
+        {canSeeDrivers && (
+          <StatCard
+            label="Drivers"
+            value={drivers.length}
+            icon={<Users size={20} />}
+            accent="#7c3aed"
+          />
+        )}
+        {canSeeAlerts && (
+          <StatCard
+            label="Open Alerts"
+            value={unreadAlerts}
+            icon={<AlertTriangle size={20} />}
+            accent="#dc2626"
+          />
+        )}
         <StatCard
           label="Open Work Orders"
           value={openWO}
           icon={<Wrench size={20} />}
           accent="#d97706"
         />
-        <StatCard
-          label="Fuel (30d)"
-          value={formatCurrency(fuel30)}
-          icon={<Fuel size={20} />}
-          accent="#0891b2"
-        />
+        {canSeeFuel && (
+          <StatCard
+            label="Fuel (30d)"
+            value={formatCurrency(fuel30)}
+            icon={<Fuel size={20} />}
+            accent="#0891b2"
+          />
+        )}
       </div>
 
       {/* This Week Summary */}
       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
-          <p className="text-xs font-medium text-slate-400 uppercase">Fuel Spend This Week</p>
-          <p className="mt-1 text-xl font-bold">{formatCurrency(fuelThisWeek)}</p>
-          {fuelLastWeek > 0 && (
-            <p className={`mt-0.5 text-xs ${fuelThisWeek <= fuelLastWeek ? "text-emerald-600" : "text-red-500"}`}>
-              {fuelThisWeek <= fuelLastWeek ? "↓" : "↑"} {Math.abs(Math.round(((fuelThisWeek - fuelLastWeek) / fuelLastWeek) * 100))}% vs last week
-            </p>
-          )}
-          <p className="mt-1 text-xs text-slate-400">{fillUpsThisWeek} fill-ups</p>
-        </div>
+        {canSeeFuel && (
+          <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
+            <p className="text-xs font-medium text-slate-400 uppercase">Fuel Spend This Week</p>
+            <p className="mt-1 text-xl font-bold">{formatCurrency(fuelThisWeek)}</p>
+            {fuelLastWeek > 0 && (
+              <p className={`mt-0.5 text-xs ${fuelThisWeek <= fuelLastWeek ? "text-emerald-600" : "text-red-500"}`}>
+                {fuelThisWeek <= fuelLastWeek ? "↓" : "↑"} {Math.abs(Math.round(((fuelThisWeek - fuelLastWeek) / fuelLastWeek) * 100))}% vs last week
+              </p>
+            )}
+            <p className="mt-1 text-xs text-slate-400">{fillUpsThisWeek} fill-ups</p>
+          </div>
+        )}
         <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
           <p className="text-xs font-medium text-slate-400 uppercase">Services Completed</p>
           <p className="mt-1 text-xl font-bold">{servicesThisWeek}</p>
@@ -323,12 +351,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           )}
           <p className="mt-1 text-xs text-slate-400">this week</p>
         </div>
-        <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
-          <p className="text-xs font-medium text-slate-400 uppercase">Routes Dispatched</p>
-          <p className="mt-1 text-xl font-bold">{routesThisWeek}</p>
-          <p className="mt-0.5 text-xs text-slate-500">{Math.round(milesThisWeek).toLocaleString()} miles planned</p>
-          <p className="mt-1 text-xs text-slate-400">this week</p>
-        </div>
+        {canSeeRoutes && (
+          <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
+            <p className="text-xs font-medium text-slate-400 uppercase">Routes Dispatched</p>
+            <p className="mt-1 text-xl font-bold">{routesThisWeek}</p>
+            <p className="mt-0.5 text-xs text-slate-500">{Math.round(milesThisWeek).toLocaleString()} miles planned</p>
+            <p className="mt-1 text-xs text-slate-400">this week</p>
+          </div>
+        )}
         <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
           <p className="text-xs font-medium text-slate-400 uppercase">Maintenance Cost (90d)</p>
           <p className="mt-1 text-xl font-bold">{formatCurrency(maint90)}</p>
@@ -357,32 +387,37 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </div>
         </Card>
 
-        <Card>
-          <CardHeader title="FareEye Routes" subtitle="Planned miles · last 7 days" />
-          <div className="p-4">
-            <BarChartCard data={routeMilesPerDay} color="#7c3aed" />
-          </div>
-        </Card>
+        {canSeeRoutes && (
+          <Card>
+            <CardHeader title="FareEye Routes" subtitle="Planned miles · last 7 days" />
+            <div className="p-4">
+              <BarChartCard data={routeMilesPerDay} color="#7c3aed" />
+            </div>
+          </Card>
+        )}
 
-        <Card>
-          <CardHeader
-            title="Fuel Spend"
-            subtitle="Weekly trend"
-            action={
-              <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
-                <TrendingUp size={14} /> Last 8 weeks
-              </span>
-            }
-          />
-          <div className="p-4">
-            <AreaChartCard data={fuelTrend} color="#0891b2" prefix="$" />
-          </div>
-        </Card>
+        {canSeeFuel && (
+          <Card>
+            <CardHeader
+              title="Fuel Spend"
+              subtitle="Weekly trend"
+              action={
+                <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
+                  <TrendingUp size={14} /> Last 8 weeks
+                </span>
+              }
+            />
+            <div className="p-4">
+              <AreaChartCard data={fuelTrend} color="#0891b2" prefix="$" />
+            </div>
+          </Card>
+        )}
       </div>
 
       {/* lower panels */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* recent alerts */}
+        {canSeeAlerts && (
         <Card className="lg:col-span-2">
           <CardHeader
             title="Recent Alerts"
@@ -426,8 +461,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             })}
           </div>
         </Card>
+        )}
 
         {/* top drivers */}
+        {canSeeDrivers && (
         <Card>
           <CardHeader title="Top Drivers" subtitle="By safety score" />
           <div className="divide-y divide-[var(--color-border)]">
@@ -464,10 +501,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             ))}
           </div>
         </Card>
+        )}
       </div>
 
       {/* Compliance Audit */}
-      {(complianceIssues > 0 || regExpiringSoon.length > 0 || insExpiringSoon.length > 0) && (
+      {canSeeCompliance && (complianceIssues > 0 || regExpiringSoon.length > 0 || insExpiringSoon.length > 0) && (
         <div className="mt-6">
           <Card className="border-red-200 bg-red-50/30">
             <CardHeader
@@ -532,7 +570,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       )}
 
       {/* Vehicle Age Compliance */}
-      {agingVehicles.length > 0 && (
+      {canSeeCompliance && agingVehicles.length > 0 && (
         <div className="mt-6">
           <Card className="border-orange-200">
             <CardHeader
@@ -598,6 +636,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       )}
 
       {/* Vehicle Onboarding / Offboarding & Samsara Status */}
+      {isManager && (
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Recently Onboarded */}
         <Card>
@@ -682,6 +721,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </div>
         </Card>
       </div>
+      )}
 
       {/* upcoming maintenance */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -718,27 +758,29 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </div>
         </Card>
 
-        <Card>
-          <CardHeader title="Cost Summary" subtitle="Operational spend" />
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-b-xl bg-[var(--color-border)]">
-            <div className="bg-white p-5">
-              <p className="text-xs text-slate-400">Fuel · 30 days</p>
-              <p className="mt-1 text-xl font-bold">{formatCurrency(fuel30)}</p>
+        {canSeeFinance && (
+          <Card>
+            <CardHeader title="Cost Summary" subtitle="Operational spend" />
+            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-b-xl bg-[var(--color-border)]">
+              <div className="bg-white p-5">
+                <p className="text-xs text-slate-400">Fuel · 30 days</p>
+                <p className="mt-1 text-xl font-bold">{formatCurrency(fuel30)}</p>
+              </div>
+              <div className="bg-white p-5">
+                <p className="text-xs text-slate-400">Maintenance · 90 days</p>
+                <p className="mt-1 text-xl font-bold">{formatCurrency(maint90)}</p>
+              </div>
+              <div className="bg-white p-5">
+                <p className="text-xs text-slate-400">Today&apos;s Routes</p>
+                <p className="mt-1 text-xl font-bold">{todayRoutes}</p>
+              </div>
+              <div className="bg-white p-5">
+                <p className="text-xs text-slate-400">Fleet Utilization</p>
+                <p className="mt-1 text-xl font-bold">{utilization}%</p>
+              </div>
             </div>
-            <div className="bg-white p-5">
-              <p className="text-xs text-slate-400">Maintenance · 90 days</p>
-              <p className="mt-1 text-xl font-bold">{formatCurrency(maint90)}</p>
-            </div>
-            <div className="bg-white p-5">
-              <p className="text-xs text-slate-400">Today&apos;s Routes</p>
-              <p className="mt-1 text-xl font-bold">{todayRoutes}</p>
-            </div>
-            <div className="bg-white p-5">
-              <p className="text-xs text-slate-400">Fleet Utilization</p>
-              <p className="mt-1 text-xl font-bold">{utilization}%</p>
-            </div>
-          </div>
-        </Card>
+          </Card>
+        )}
       </div>
     </div>
   );
