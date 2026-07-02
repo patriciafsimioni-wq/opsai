@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Pencil, Trash2, Users, Star, RefreshCw } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Users, RefreshCw } from "lucide-react";
 import { Card, Button, Badge, Table, Th, Td, EmptyState, Avatar } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
@@ -19,7 +19,6 @@ const emptyForm = {
   licenseClass: "C",
   licenseExpiry: "",
   status: "ACTIVE",
-  rating: "4.5",
   safetyScore: "85",
 };
 
@@ -83,7 +82,6 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
       licenseClass: d.licenseClass ?? "C",
       licenseExpiry: d.licenseExpiry ? d.licenseExpiry.slice(0, 10) : "",
       status: d.status,
-      rating: String(d.rating),
       safetyScore: String(d.safetyScore),
     });
     setError("");
@@ -151,8 +149,7 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
               <Th>Status</Th>
               <Th>License</Th>
               <Th>Expiry</Th>
-              <Th>Rating</Th>
-              <Th>Safety</Th>
+              <Th>Safety Score</Th>
               <Th />
             </tr>
           </thead>
@@ -187,12 +184,6 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
                   <Td>
                     <span className={exp != null && exp < 30 ? "text-red-600" : "text-slate-600"}>
                       {formatDate(d.licenseExpiry)}
-                    </span>
-                  </Td>
-                  <Td>
-                    <span className="inline-flex items-center gap-1">
-                      <Star size={13} className="fill-amber-400 text-amber-400" />
-                      {d.rating.toFixed(1)}
                     </span>
                   </Td>
                   <Td>
@@ -279,9 +270,6 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
               onChange={(e) => setForm({ ...form, status: e.target.value })}
               options={DRIVER_STATUSES.map((s) => ({ value: s, label: DRIVER_STATUS[s].label }))}
             />
-          </Field>
-          <Field label="Rating (0-5)">
-            <Input type="number" step="0.1" value={form.rating} onChange={(e) => setForm({ ...form, rating: e.target.value })} />
           </Field>
           <Field label="Safety Score (0-100)">
             <Input type="number" value={form.safetyScore} onChange={(e) => setForm({ ...form, safetyScore: e.target.value })} />

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Star, ShieldCheck, Truck, Phone, Mail } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Truck, Phone, Mail } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { Card, CardHeader, Badge, Avatar, Table, Th, Td } from "@/components/ui";
 import { DRIVER_STATUS, TRIP_STATUS } from "@/lib/constants";
@@ -56,14 +56,7 @@ export default async function DriverDetailPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Card className="p-4">
-          <p className="text-xs text-slate-400">Rating</p>
-          <p className="mt-1 inline-flex items-center gap-1 text-xl font-bold">
-            <Star size={16} className="fill-amber-400 text-amber-400" />
-            {d.rating.toFixed(1)}
-          </p>
-        </Card>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
         <Card className="p-4">
           <p className="text-xs text-slate-400">Safety Score</p>
           <p
