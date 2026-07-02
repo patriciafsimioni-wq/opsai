@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Pencil, Trash2, Users, RefreshCw, AlertTriangle } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Users, RefreshCw, AlertTriangle, ArrowUpDown } from "lucide-react";
 import { Card, Button, Badge, Table, Th, Td, EmptyState, Avatar } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
@@ -26,6 +26,8 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
   const { data: drivers, loading, reload } = useData<DriverDTO[]>("/api/drivers");
   const [search, setSearch] = useState("");
   const [licenseFilter, setLicenseFilter] = useState("all");
+  const [stationFilter, setStationFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("name");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<DriverDTO | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -54,12 +56,18 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
     }
   }
 
+  const stations = useMemo(() => {
+    if (!drivers) return [];
+    const s = new Set(drivers.map((d) => d.station).filter(Boolean));
+    return Array.from(s).sort() as string[];
+  }, [drivers]);
+
   const filtered = useMemo(() => {
     if (!drivers) return [];
     const q = search.toLowerCase();
-    const now = new Date();
-    return drivers.filter((d) => {
+    let result = drivers.filter((d) => {
       if (q && !`${d.firstName} ${d.lastName}`.toLowerCase().includes(q) && !d.email.toLowerCase().includes(q) && !d.licenseNumber.toLowerCase().includes(q)) return false;
+      if (stationFilter !== "all" && d.station !== stationFilter) return false;
       if (licenseFilter !== "all" && d.licenseExpiry) {
         const exp = daysUntil(d.licenseExpiry);
         if (exp == null) return licenseFilter === "valid";
@@ -71,7 +79,17 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
       }
       return true;
     });
-  }, [drivers, search, licenseFilter]);
+    result = [...result].sort((a, b) => {
+      if (sortBy === "name") return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+      if (sortBy === "expiry-asc") return new Date(a.licenseExpiry || "9999").getTime() - new Date(b.licenseExpiry || "9999").getTime();
+      if (sortBy === "expiry-desc") return new Date(b.licenseExpiry || "0").getTime() - new Date(a.licenseExpiry || "0").getTime();
+      if (sortBy === "score-asc") return a.safetyScore - b.safetyScore;
+      if (sortBy === "score-desc") return b.safetyScore - a.safetyScore;
+      if (sortBy === "station") return (a.station || "ZZZ").localeCompare(b.station || "ZZZ");
+      return 0;
+    });
+    return result;
+  }, [drivers, search, licenseFilter, stationFilter, sortBy]);
 
   const expiryCounts = useMemo(() => {
     if (!drivers) return { expired: 0, within30: 0, within60: 0, within90: 0 };
@@ -141,6 +159,14 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
           />
         </div>
         <select
+          value={stationFilter}
+          onChange={(e) => setStationFilter(e.target.value)}
+          className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm outline-none focus:border-blue-500"
+        >
+          <option value="all">All Stations</option>
+          {stations.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select
           value={licenseFilter}
           onChange={(e) => setLicenseFilter(e.target.value)}
           className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm outline-none focus:border-blue-500"
@@ -151,6 +177,18 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
           <option value="60days">Expiring in 60 days ({expiryCounts.within60})</option>
           <option value="90days">Expiring in 90 days ({expiryCounts.within90})</option>
           <option value="valid">Valid</option>
+        </select>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm outline-none focus:border-blue-500"
+        >
+          <option value="name">Sort: Name</option>
+          <option value="station">Sort: Station</option>
+          <option value="expiry-asc">Sort: Expiry (oldest first)</option>
+          <option value="expiry-desc">Sort: Expiry (newest first)</option>
+          <option value="score-asc">Sort: Score (low to high)</option>
+          <option value="score-desc">Sort: Score (high to low)</option>
         </select>
         {canManage && (
           <>
@@ -191,6 +229,7 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
           <thead>
             <tr>
               <Th>Driver</Th>
+              <Th>Station</Th>
               <Th>Status</Th>
               <Th>License</Th>
               <Th>Expiry</Th>
@@ -214,6 +253,7 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
                       </div>
                     </Link>
                   </Td>
+                  <Td className="text-xs font-medium text-slate-600">{d.station || "—"}</Td>
                   <Td>
                     <Badge
                       bg={DRIVER_STATUS[d.status as keyof typeof DRIVER_STATUS].bg}
@@ -227,8 +267,10 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
                     <span className="ml-1 text-xs text-slate-400">Cl. {d.licenseClass}</span>
                   </Td>
                   <Td>
-                    <span className={exp != null && exp < 30 ? "text-red-600" : "text-slate-600"}>
+                    <span className={exp != null && exp < 0 ? "text-red-600 font-semibold" : exp != null && exp < 30 ? "text-amber-600 font-semibold" : "text-slate-600"}>
                       {formatDate(d.licenseExpiry)}
+                      {exp != null && exp < 0 && <span className="ml-1 text-xs">(Expired)</span>}
+                      {exp != null && exp >= 0 && exp <= 30 && <span className="ml-1 text-xs">({exp}d)</span>}
                     </span>
                   </Td>
                   <Td>

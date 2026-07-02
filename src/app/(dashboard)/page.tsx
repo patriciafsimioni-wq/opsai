@@ -38,7 +38,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         orderBy: { createdAt: "desc" },
         include: { vehicle: true },
         where: { type: { notIn: ["SPEEDING", "HARSH_DRIVING"] }, ...(station ? { vehicle: { station } } : {}) },
-        take: 6,
+        take: 20,
       }),
       prisma.workOrder.findMany({ include: { vehicle: true }, where: station ? { vehicle: { station } } : {} }),
       prisma.fuelLog.findMany({ where: station ? { vehicle: { station } } : {} }),
@@ -382,7 +382,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               </Link>
             }
           />
-          <div className="divide-y divide-[var(--color-border)]">
+          <div className="max-h-80 overflow-y-auto divide-y divide-[var(--color-border)]">
             {alerts.length === 0 && (
               <p className="px-5 py-8 text-center text-sm text-slate-400">
                 No alerts.
