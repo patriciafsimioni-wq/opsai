@@ -226,6 +226,10 @@ async function importFareyeRoutes(rows: Record<string, unknown>[]) {
 
     if (!routeId || !dateVal) { skipped++; continue; }
 
+    // Skip summary/header rows
+    const SUMMARY_LABELS = ["no. of gig shipments", "no. of jobs", "no. of routes", "overall", "route wise", "sporh", "spr", "total cost", "total travel time", "total waiting time", "total route duration", "total travel distance", "total weight", "unassigned jobs"];
+    if (SUMMARY_LABELS.includes(routeId.toLowerCase())) { skipped++; continue; }
+
     const dupeKey = `${routeId}|${dateVal.toISOString().slice(0, 10)}`;
     if (dupeSet.has(dupeKey)) { skipped++; continue; }
     dupeSet.add(dupeKey);
