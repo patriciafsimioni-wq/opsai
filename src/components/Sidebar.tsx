@@ -40,8 +40,8 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   return <SidebarContext.Provider value={{ open, toggle }}>{children}</SidebarContext.Provider>;
 }
 
-type NavItem = { href: string; label: string; icon: typeof LayoutDashboard };
-type NavSection = { title: string; items: NavItem[] };
+type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; roles?: string[] };
+type NavSection = { title: string; items: NavItem[]; roles?: string[] };
 
 const NAV_SECTIONS: NavSection[] = [
   {
@@ -53,12 +53,13 @@ const NAV_SECTIONS: NavSection[] = [
   },
   {
     title: "Fleet",
+    roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "MECHANIC", "DRIVER"],
     items: [
       { href: "/vehicles", label: "Vehicles", icon: Truck },
-      { href: "/drivers", label: "Drivers", icon: Users },
-      { href: "/fuel", label: "Fuel", icon: Fuel },
-      { href: "/fareye-routes", label: "FareEye Routes", icon: Navigation },
-      { href: "/offboarding", label: "Offboarding", icon: LogOut },
+      { href: "/drivers", label: "Drivers", icon: Users, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER"] },
+      { href: "/fuel", label: "Fuel", icon: Fuel, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER"] },
+      { href: "/fareye-routes", label: "FareEye Routes", icon: Navigation, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER"] },
+      { href: "/offboarding", label: "Offboarding", icon: LogOut, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"] },
     ],
   },
   {
@@ -74,18 +75,20 @@ const NAV_SECTIONS: NavSection[] = [
   },
   {
     title: "Finance",
+    roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER"],
     items: [
       { href: "/fleet-finance", label: "Fleet Finance", icon: Landmark },
       { href: "/finance-report", label: "Finance Report", icon: DollarSign },
       { href: "/service-costs", label: "Service Costs", icon: Receipt },
-      { href: "/budget-editor", label: "PM Budgets", icon: Settings2 },
+      { href: "/budget-editor", label: "PM Budgets", icon: Settings2, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"] },
     ],
   },
   {
     title: "Reports & Tools",
+    roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "MECHANIC"],
     items: [
       { href: "/reports", label: "Reports", icon: BarChart3 },
-      { href: "/uploads", label: "Smart Upload", icon: Upload },
+      { href: "/uploads", label: "Smart Upload", icon: Upload, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER"] },
       { href: "/alerts", label: "Alerts", icon: Bell },
       { href: "/safety", label: "Safety", icon: ShieldAlert },
       { href: "/issues", label: "Issue Tracker", icon: Flag },
@@ -93,6 +96,7 @@ const NAV_SECTIONS: NavSection[] = [
   },
   {
     title: "Admin",
+    roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"],
     items: [
       { href: "/users", label: "Users", icon: UserCog },
     ],
@@ -108,9 +112,18 @@ export function MobileMenuButton() {
   );
 }
 
-export function Sidebar({ alertCount }: { alertCount: number }) {
+export function Sidebar({ alertCount, userRole }: { alertCount: number; userRole?: string }) {
   const pathname = usePathname();
   const { open, toggle } = useSidebar();
+  const role = userRole ?? "ADMIN";
+
+  const visibleSections = NAV_SECTIONS
+    .filter((section) => !section.roles || section.roles.includes(role))
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !item.roles || item.roles.includes(role)),
+    }))
+    .filter((section) => section.items.length > 0);
 
   return (
     <>
@@ -132,7 +145,7 @@ export function Sidebar({ alertCount }: { alertCount: number }) {
         </button>
       </div>
       <nav className="flex-1 overflow-y-auto p-3">
-        {NAV_SECTIONS.map((section) => (
+        {visibleSections.map((section) => (
           <div key={section.title || "_top"} className={section.title ? "mt-4" : ""}>
             {section.title && (
               <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">

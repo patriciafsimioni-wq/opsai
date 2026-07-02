@@ -22,7 +22,7 @@ export default async function DashboardLayout({
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full overflow-hidden">
-        <Sidebar alertCount={alertCount} />
+        <Sidebar alertCount={alertCount} userRole={user.role} />
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar
             user={{ name: user.name, email: user.email, role: user.role, station: user.station }}
