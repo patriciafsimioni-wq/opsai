@@ -404,7 +404,7 @@ export function LogServiceClient({
                       <p className="font-medium">{o.title}</p>
                       {o.vendor && <p className="text-xs text-slate-400">{o.vendor}</p>}
                     </Td>
-                    <Td className="text-slate-600">{o.vehicle.name}</Td>
+                    <Td className="text-slate-600">{o.vehicle?.name ?? o.vehicleOther ?? "—"}</Td>
                     <Td>
                       <Badge bg="#eef2ff" fg="#3730a3">
                         {o.station}
