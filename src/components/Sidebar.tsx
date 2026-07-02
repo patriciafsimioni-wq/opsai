@@ -76,7 +76,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: "Finance",
     roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER"],
     items: [
-      { href: "/fleet-finance", label: "Fleet Finance", icon: Landmark },
+      { href: "/fleet-finance", label: "Fleet Finance", icon: Landmark, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"] },
       { href: "/finance-report", label: "Finance Report", icon: DollarSign },
       { href: "/service-costs", label: "Service Costs", icon: Receipt },
       { href: "/budget-editor", label: "PM Budgets", icon: Settings2, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"] },
