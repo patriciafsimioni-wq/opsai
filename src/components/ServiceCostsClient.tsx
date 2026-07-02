@@ -17,6 +17,27 @@ function monthLabel(key: string) {
   return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 }
 
+function classifyCategory(title: string): "PREVENTIVE" | "CORRECTIVE" {
+  const lower = title.toLowerCase();
+  if (lower.includes("oil change") || lower.includes("pm a") || lower.includes("pm b") || lower.includes("pm c") || lower.includes("tune up") || lower.includes("tune-up")) return "PREVENTIVE";
+  if (lower.includes("brake") || lower.includes("rotor") || lower.includes("slack adjust") || lower.includes("duralast") || lower.includes("dlg rotor") || lower.includes("brake wear")) return "PREVENTIVE";
+  if (lower.includes("tire") || lower.includes("tires")) return "PREVENTIVE";
+  if (lower.includes("battery") || lower.includes("parking brake actuator")) return "PREVENTIVE";
+  if (lower.includes("transmission")) return "PREVENTIVE";
+  if (lower.includes("coolant") || lower.includes("spark plug") || lower.includes("radiator")) return "PREVENTIVE";
+  if (lower.includes("wiper") || lower.includes("fluid") || lower.includes("filter")) return "PREVENTIVE";
+  if (lower.includes("caliper") || lower.includes("drivetrain")) return "PREVENTIVE";
+  if (lower.includes("turbo") || lower.includes("timing") || lower.includes("time belt")) return "PREVENTIVE";
+  if (lower.includes("dot") || lower.includes("inspection")) return "PREVENTIVE";
+  if (lower.includes("bulb") || lower.includes("light") || lower.includes("h11")) return "PREVENTIVE";
+  return "CORRECTIVE";
+}
+
+function getCategory(o: WorkOrderDTO): string {
+  if (o.service?.category) return o.service.category;
+  return classifyCategory(o.title);
+}
+
 export function ServiceCostsClient() {
   const { data: orders, loading } = useData<WorkOrderDTO[]>("/api/maintenance");
   const [monthFilter, setMonthFilter] = useState("");
@@ -38,7 +59,7 @@ export function ServiceCostsClient() {
   const filtered = useMemo(() => {
     return completed.filter((o) => {
       const mk = monthKey(new Date(o.completedAt!));
-      const cat = o.service?.category ?? "CORRECTIVE";
+      const cat = getCategory(o);
       return (
         (!monthFilter || mk === monthFilter) &&
         (!stationFilter || o.station === stationFilter) &&
@@ -54,7 +75,7 @@ export function ServiceCostsClient() {
         acc.labor += o.laborCost;
         acc.total += o.cost;
         acc.count += 1;
-        if ((o.service?.category ?? "CORRECTIVE") === "PREVENTIVE") acc.preventive += o.cost;
+        if ((getCategory(o)) === "PREVENTIVE") acc.preventive += o.cost;
         else acc.corrective += o.cost;
         return acc;
       },
@@ -67,7 +88,7 @@ export function ServiceCostsClient() {
     const map = new Map<string, { name: string; category: string; count: number; material: number; labor: number; total: number }>();
     for (const o of filtered) {
       const name = o.service?.name ?? o.title;
-      const category = o.service?.category ?? "CORRECTIVE";
+      const category = getCategory(o);
       const key = `${category}:${name}`;
       const cur = map.get(key) ?? { name, category, count: 0, material: 0, labor: 0, total: 0 };
       cur.count += 1;
@@ -98,13 +119,13 @@ export function ServiceCostsClient() {
     const base = completed.filter(
       (o) =>
         (!stationFilter || o.station === stationFilter) &&
-        (!categoryFilter || (o.service?.category ?? "CORRECTIVE") === categoryFilter),
+        (!categoryFilter || (getCategory(o)) === categoryFilter),
     );
     const map = new Map<string, { Preventive: number; Corrective: number }>();
     for (const o of base) {
       const mk = monthKey(new Date(o.completedAt!));
       const cur = map.get(mk) ?? { Preventive: 0, Corrective: 0 };
-      if ((o.service?.category ?? "CORRECTIVE") === "PREVENTIVE") cur.Preventive += o.cost;
+      if ((getCategory(o)) === "PREVENTIVE") cur.Preventive += o.cost;
       else cur.Corrective += o.cost;
       map.set(mk, cur);
     }
@@ -124,7 +145,7 @@ export function ServiceCostsClient() {
     () =>
       completed.filter(
         (o) =>
-          (o.service?.category ?? "CORRECTIVE") === "PREVENTIVE" &&
+          (getCategory(o)) === "PREVENTIVE" &&
           (!monthFilter || monthKey(new Date(o.completedAt!)) === monthFilter),
       ),
     [completed, monthFilter],
@@ -172,7 +193,7 @@ export function ServiceCostsClient() {
     for (const o of filtered) {
       const mk = monthLabel(monthKey(new Date(o.completedAt!)));
       const name = o.service?.name ?? o.title;
-      const category = SERVICE_CATEGORY[(o.service?.category ?? "CORRECTIVE") as keyof typeof SERVICE_CATEGORY].label;
+      const category = SERVICE_CATEGORY[(getCategory(o)) as keyof typeof SERVICE_CATEGORY].label;
       const key = `${mk}|${o.station}|${category}|${name}`;
       const cur = map.get(key) ?? { Month: mk, Station: o.station, Service: name, Category: category, Count: 0, Material: 0, Labor: 0, Total: 0 };
       cur.Count += 1;
