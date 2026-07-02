@@ -51,31 +51,37 @@ type ReportsApiResponse = {
   mileageDist: { label: string; value: number }[];
 };
 
+const APP_TZ = "America/Chicago";
+
 function formatDateRange(start: string, end: string, range: string): string {
   const s = new Date(start);
   const e = new Date(end);
   if (range === "week") {
-    return `${s.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${e.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    return `${s.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: APP_TZ })} – ${e.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: APP_TZ })}`;
   }
-  return s.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  return s.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: APP_TZ });
 }
 
 export function ReportsClient() {
   const [station, setStation] = useState("");
   const [range, setRange] = useState<"week" | "month">("month");
-  const [refDate, setRefDate] = useState(new Date().toISOString().slice(0, 10));
+  const [refDate, setRefDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  });
 
   const apiUrl = `/api/reports?range=${range}&date=${refDate}${station ? `&station=${station}` : ""}`;
   const { data, loading } = useData<ReportsApiResponse>(apiUrl);
 
   function navigate(dir: -1 | 1) {
-    const d = new Date(refDate);
+    const d = new Date(refDate + "T12:00:00");
     if (range === "week") {
       d.setDate(d.getDate() + dir * 7);
     } else {
+      d.setDate(1);
       d.setMonth(d.getMonth() + dir);
     }
-    setRefDate(d.toISOString().slice(0, 10));
+    setRefDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
   }
 
   const stats = data?.stats;

@@ -32,7 +32,7 @@ const RULES: { category: string; keywords: string[]; minMatches: number }[] = [
   },
   {
     category: "Service History",
-    keywords: ["service", "provider", "po #", "po#", "invoice", "cost", "odometer", "station", "vendor", "description"],
+    keywords: ["service", "provider", "po #", "po#", "invoice", "cost", "odometer", "station", "vendor", "description", "dx number", "vin number", "service category", "timestamp"],
     minMatches: 3,
   },
   {
@@ -148,29 +148,78 @@ export async function POST(req: Request) {
   // Excel / CSV classification
   try {
     const workbook = XLSX.read(buffer, { type: "buffer" });
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
-    const headers = data.length > 0 ? Object.keys(data[0]) : [];
-    const cls = classifyByHeaders(headers);
 
-    const result: Classification = {
-      category: cls.category,
-      confidence: cls.confidence,
-      reason: cls.reason,
-      preview: data.slice(0, 5),
-      columns: headers,
-      rowCount: data.length,
-    };
+    // Try all sheets to find one with data and matching headers
+    let bestResult: Classification & { sheetName: string; data: Record<string, unknown>[]; headers: string[] } | null = null;
+
+    for (const sName of workbook.SheetNames) {
+      const sheet = workbook.Sheets[sName];
+      const sheetData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+      if (sheetData.length === 0) continue;
+      const hdrs = Object.keys(sheetData[0]);
+      const cls = classifyByHeaders(hdrs);
+
+      // Also try matching by sheet name for LiveFleetAI templates
+      let sheetNameCategory = "";
+      const sLower = sName.toLowerCase();
+      if (sLower.includes("fuel")) sheetNameCategory = "Fuel Log";
+      else if (sLower.includes("service")) sheetNameCategory = "Service History";
+      else if (sLower.includes("fareye") || sLower.includes("route")) sheetNameCategory = "FareEye Routes";
+      else if (sLower.includes("fleet")) sheetNameCategory = "Fleet / Vehicles";
+      else if (sLower.includes("lease")) sheetNameCategory = "Fleet / Vehicles";
+      else if (sLower.includes("driver")) sheetNameCategory = "Driver Data";
+
+      // Use header match if found, otherwise use sheet name match
+      const finalCategory = cls.category !== "Unknown" ? cls.category : sheetNameCategory || "Unknown";
+      const finalConfidence = cls.category !== "Unknown" ? cls.confidence : (sheetNameCategory ? "medium" as const : "low" as const);
+      const finalReason = cls.category !== "Unknown" ? cls.reason : (sheetNameCategory ? `Matched by sheet name "${sName}"` : cls.reason);
+
+      if (!bestResult || (finalCategory !== "Unknown" && bestResult.category === "Unknown") || sheetData.length > (bestResult.data?.length ?? 0)) {
+        bestResult = {
+          category: finalCategory,
+          confidence: finalConfidence,
+          reason: finalReason,
+          preview: sheetData.slice(0, 5),
+          columns: hdrs,
+          rowCount: sheetData.length,
+          sheetName: sName,
+          data: sheetData,
+          headers: hdrs,
+        };
+      }
+    }
+
+    // If no sheets had data, fall back to first sheet
+    if (!bestResult) {
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+      const headers = data.length > 0 ? Object.keys(data[0]) : [];
+      const cls = classifyByHeaders(headers);
+      bestResult = { ...cls, preview: data.slice(0, 5), columns: headers, rowCount: data.length, sheetName, data, headers };
+    }
+
+    // Build per-sheet summary for multi-sheet files
+    const sheetSummary = workbook.SheetNames.map((sn) => {
+      const sh = workbook.Sheets[sn];
+      const sd = XLSX.utils.sheet_to_json<Record<string, unknown>>(sh, { defval: "" });
+      return { name: sn, rows: sd.length };
+    });
 
     return NextResponse.json({
       filename: file.name,
       size: file.size,
       type: file.type,
-      sheetName,
+      sheetName: bestResult.sheetName,
       sheetCount: workbook.SheetNames.length,
       sheets: workbook.SheetNames,
-      ...result,
+      sheetSummary,
+      category: bestResult.category,
+      confidence: bestResult.confidence,
+      reason: bestResult.reason,
+      preview: bestResult.preview,
+      columns: bestResult.columns,
+      rowCount: bestResult.rowCount,
     });
   } catch (e) {
     return NextResponse.json(

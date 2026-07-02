@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   let weekStart: Date | null = null;
   let weekEnd: Date | null = null;
   if (viewMode === "week") {
-    const ref = weekDateParam ? new Date(weekDateParam) : new Date();
+    const ref = weekDateParam ? new Date(weekDateParam + "T12:00:00Z") : new Date();
     weekStart = getMonday(ref);
     weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 6);
@@ -40,8 +40,8 @@ export async function GET(req: NextRequest) {
   const budgets = await prisma.pmBudget.findMany({ where: { year } });
 
   // Fetch completed work orders for current year up to selected month
-  const startCurrent = new Date(year, 0, 1);
-  const endCurrent = new Date(year, month, 0, 23, 59, 59);
+  const startCurrent = new Date(Date.UTC(year, 0, 1));
+  const endCurrent = new Date(Date.UTC(year, month, 0, 23, 59, 59));
   const woCurrent = await prisma.workOrder.findMany({
     where: {
       status: "COMPLETED",
@@ -51,8 +51,8 @@ export async function GET(req: NextRequest) {
   });
 
   // Fetch completed work orders for previous year up to same month
-  const startPrev = new Date(prevYear, 0, 1);
-  const endPrev = new Date(prevYear, month, 0, 23, 59, 59);
+  const startPrev = new Date(Date.UTC(prevYear, 0, 1));
+  const endPrev = new Date(Date.UTC(prevYear, month, 0, 23, 59, 59));
   const woPrev = await prisma.workOrder.findMany({
     where: {
       status: "COMPLETED",

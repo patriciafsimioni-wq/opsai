@@ -20,6 +20,8 @@ export function formatNumber(value: number, digits = 0) {
   }).format(value);
 }
 
+export const APP_TIMEZONE = "America/Chicago";
+
 export function formatDate(date: Date | string | null | undefined) {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
@@ -27,6 +29,7 @@ export function formatDate(date: Date | string | null | undefined) {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: APP_TIMEZONE,
   });
 }
 
@@ -38,6 +41,7 @@ export function formatDateTime(date: Date | string | null | undefined) {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: APP_TIMEZONE,
   });
 }
 

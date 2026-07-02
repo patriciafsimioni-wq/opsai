@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   const range = url.searchParams.get("range") ?? "month";
   const dateParam = url.searchParams.get("date") ?? "";
 
-  const ref = dateParam ? new Date(dateParam) : new Date();
+  const ref = dateParam ? new Date(dateParam + "T12:00:00Z") : new Date();
 
   let dateStart: Date;
   let dateEnd: Date;
@@ -31,8 +31,8 @@ export async function GET(req: NextRequest) {
     dateEnd.setDate(dateEnd.getDate() + 6);
     dateEnd.setHours(23, 59, 59, 999);
   } else {
-    dateStart = new Date(ref.getFullYear(), ref.getMonth(), 1);
-    dateEnd = new Date(ref.getFullYear(), ref.getMonth() + 1, 0, 23, 59, 59, 999);
+    dateStart = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), 1));
+    dateEnd = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth() + 1, 0, 23, 59, 59, 999));
   }
 
   const purchaseType = url.searchParams.get("purchaseType") ?? "";

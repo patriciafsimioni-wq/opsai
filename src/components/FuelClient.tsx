@@ -6,7 +6,7 @@ import { Card, Button, Table, Th, Td, EmptyState, StatCard } from "@/components/
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
 import type { FuelLogDTO, VehicleDTO, DriverDTO } from "@/lib/types";
-import { formatCurrency, formatDate, formatNumber } from "@/lib/utils";
+import { formatCurrency, formatDate, formatNumber, APP_TIMEZONE } from "@/lib/utils";
 import { STATION_LABEL } from "@/lib/constants";
 
 const emptyForm = {
@@ -54,15 +54,18 @@ function formatDateRange(start: string, end: string, range: string): string {
   const s = new Date(start);
   const e = new Date(end);
   if (range === "week") {
-    return `${s.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${e.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    return `${s.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: APP_TIMEZONE })} – ${e.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: APP_TIMEZONE })}`;
   }
-  return s.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  return s.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: APP_TIMEZONE });
 }
 
 export function FuelClient({ canManage }: { canManage: boolean }) {
   const [station, setStation] = useState("");
   const [range, setRange] = useState<"week" | "month">("month");
-  const [refDate, setRefDate] = useState(new Date().toISOString().slice(0, 10));
+  const [refDate, setRefDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  });
   const [purchaseType, setPurchaseType] = useState("");
   const [viewTab, setViewTab] = useState<"all" | "duplicates">("all");
 
@@ -79,13 +82,14 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
   const availableStations = data?.stations ?? [];
 
   function navigate(dir: -1 | 1) {
-    const d = new Date(refDate);
+    const d = new Date(refDate + "T12:00:00");
     if (range === "week") {
       d.setDate(d.getDate() + dir * 7);
     } else {
+      d.setDate(1);
       d.setMonth(d.getMonth() + dir);
     }
-    setRefDate(d.toISOString().slice(0, 10));
+    setRefDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
   }
 
   const logs = useMemo(() => data?.logs ?? [], [data]);

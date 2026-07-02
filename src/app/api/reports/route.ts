@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const range = sp.get("range") || "month"; // week | month
   const dateStr = sp.get("date") || new Date().toISOString().slice(0, 10);
 
-  const refDate = new Date(dateStr);
+  const refDate = new Date(dateStr + "T12:00:00Z");
 
   // Compute date window
   let dateStart: Date;
@@ -24,8 +24,8 @@ export async function GET(req: NextRequest) {
     dateEnd.setDate(dateEnd.getDate() + 6);
     dateEnd.setHours(23, 59, 59, 999);
   } else {
-    dateStart = new Date(refDate.getFullYear(), refDate.getMonth(), 1);
-    dateEnd = new Date(refDate.getFullYear(), refDate.getMonth() + 1, 0, 23, 59, 59, 999);
+    dateStart = new Date(Date.UTC(refDate.getUTCFullYear(), refDate.getUTCMonth(), 1));
+    dateEnd = new Date(Date.UTC(refDate.getUTCFullYear(), refDate.getUTCMonth() + 1, 0, 23, 59, 59, 999));
   }
 
   // Vehicle filter by station

@@ -17,8 +17,10 @@ type ClassifiedFile = {
   sheetName?: string;
   sheetCount?: number;
   sheets?: string[];
-  status: "classifying" | "classified" | "error";
+  status: "classifying" | "classified" | "error" | "importing" | "imported";
   error?: string;
+  file?: File;
+  importResult?: { imported: number; skipped: number; unmatched: number; total: number; errors: string[] };
 };
 
 const CONFIDENCE_STYLE = {
@@ -84,7 +86,7 @@ export function UploadsClient({ canManage }: { canManage: boolean }) {
 
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", file as File);
       const res = await fetch("/api/uploads/classify", { method: "POST", body: formData });
       const data = await res.json();
 
@@ -110,6 +112,7 @@ export function UploadsClient({ canManage }: { canManage: boolean }) {
                 sheetName: data.sheetName,
                 sheetCount: data.sheetCount,
                 sheets: data.sheets,
+                file,
               }
             : f,
         ),
@@ -138,6 +141,26 @@ export function UploadsClient({ canManage }: { canManage: boolean }) {
     },
     [handleFiles],
   );
+
+  const importFile = useCallback(async (entry: ClassifiedFile) => {
+    if (!entry.file) return;
+    setFiles((prev) => prev.map((f) => (f.id === entry.id ? { ...f, status: "importing" as const } : f)));
+    try {
+      const formData = new FormData();
+      formData.append("file", entry.file);
+      formData.append("category", entry.category);
+      if (entry.sheetName) formData.append("sheetName", entry.sheetName);
+      const res = await fetch("/api/uploads/import", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        setFiles((prev) => prev.map((f) => (f.id === entry.id ? { ...f, status: "error" as const, error: data.error ?? "Import failed" } : f)));
+        return;
+      }
+      setFiles((prev) => prev.map((f) => (f.id === entry.id ? { ...f, status: "imported" as const, importResult: data } : f)));
+    } catch (err) {
+      setFiles((prev) => prev.map((f) => (f.id === entry.id ? { ...f, status: "error" as const, error: String(err) } : f)));
+    }
+  }, []);
 
   const removeFile = (id: string) => {
     setFiles((prev) => prev.filter((f) => f.id !== id));
@@ -299,6 +322,16 @@ export function UploadsClient({ canManage }: { canManage: boolean }) {
                         </div>
                       )}
 
+                      {/* Import button for supported categories */}
+                      {f.category === "Service History" && f.rowCount > 0 && (
+                        <button
+                          onClick={() => importFile(f)}
+                          className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+                        >
+                          <Upload size={14} /> Import {f.rowCount} records
+                        </button>
+                      )}
+
                       {/* Data preview table */}
                       {f.preview.length > 0 && (
                         <details className="mt-2">
@@ -329,6 +362,31 @@ export function UploadsClient({ canManage }: { canManage: boolean }) {
                               </tbody>
                             </table>
                           </div>
+                        </details>
+                      )}
+                    </div>
+                  )}
+
+                  {f.status === "importing" && (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-blue-600">
+                      <Loader2 size={16} className="animate-spin" /> Importing records...
+                    </div>
+                  )}
+
+                  {f.status === "imported" && f.importResult && (
+                    <div className="mt-2 space-y-1">
+                      <div className="flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+                        <CheckCircle2 size={16} />
+                        Imported {f.importResult.imported} of {f.importResult.total} records
+                        {f.importResult.skipped > 0 && ` (${f.importResult.skipped} duplicates skipped)`}
+                        {f.importResult.unmatched > 0 && ` (${f.importResult.unmatched} unmatched)`}
+                      </div>
+                      {f.importResult.errors.length > 0 && (
+                        <details className="mt-1">
+                          <summary className="cursor-pointer text-xs text-amber-600">View {f.importResult.errors.length} issue(s)</summary>
+                          <ul className="mt-1 space-y-0.5 text-xs text-slate-500">
+                            {f.importResult.errors.map((err, i) => <li key={i}>{err}</li>)}
+                          </ul>
                         </details>
                       )}
                     </div>

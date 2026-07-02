@@ -13,25 +13,26 @@ export async function GET(req: NextRequest) {
   const where: Record<string, unknown> = {};
 
   if (dateParam) {
-    const d = new Date(dateParam);
+    const d = new Date(dateParam + "T12:00:00Z");
     let end: Date;
 
     if (range === "week") {
-      const dayOfWeek = d.getDay();
+      const dayOfWeek = d.getUTCDay();
       const monday = new Date(d);
-      monday.setDate(d.getDate() - ((dayOfWeek + 6) % 7));
-      monday.setHours(0, 0, 0, 0);
+      monday.setUTCDate(d.getUTCDate() - ((dayOfWeek + 6) % 7));
+      monday.setUTCHours(0, 0, 0, 0);
       end = new Date(monday);
-      end.setDate(monday.getDate() + 7);
+      end.setUTCDate(monday.getUTCDate() + 7);
       where.date = { gte: monday, lt: end };
     } else if (range === "month") {
-      const start = new Date(d.getFullYear(), d.getMonth(), 1);
-      end = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+      const start = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+      end = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
       where.date = { gte: start, lt: end };
     } else {
-      const next = new Date(d);
-      next.setDate(next.getDate() + 1);
-      where.date = { gte: d, lt: next };
+      const dayStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+      const next = new Date(dayStart);
+      next.setUTCDate(next.getUTCDate() + 1);
+      where.date = { gte: dayStart, lt: next };
     }
   }
 

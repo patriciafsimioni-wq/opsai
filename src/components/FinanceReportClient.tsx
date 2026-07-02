@@ -397,7 +397,7 @@ export function FinanceReportClient() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [viewMode, setViewMode] = useState<"week" | "month">("month");
-  const [weekDate, setWeekDate] = useState(now.toISOString().slice(0, 10));
+  const [weekDate, setWeekDate] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`);
   const [reportType, setReportType] = useState<"PM" | "CR">("PM");
   const weekParam = viewMode === "week" ? `&view=week&weekDate=${weekDate}` : "";
   const { data, loading } = useData<ReportData>(`/api/finance-report?year=${year}&month=${month}${weekParam}&reportType=${reportType}`);
@@ -521,9 +521,9 @@ export function FinanceReportClient() {
           <div className="flex items-center gap-1">
             <button
               onClick={() => {
-                const d = new Date(weekDate);
+                const d = new Date(weekDate + "T12:00:00");
                 d.setDate(d.getDate() - 7);
-                setWeekDate(d.toISOString().slice(0, 10));
+                setWeekDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
               }}
               className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
             >
@@ -531,14 +531,14 @@ export function FinanceReportClient() {
             </button>
             <span className="min-w-[180px] text-center text-sm font-medium text-slate-700">
               {data?.weekStart && data?.weekEnd
-                ? `${new Date(data.weekStart).toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date(data.weekEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+                ? `${new Date(data.weekStart).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/Chicago" })} \u2013 ${new Date(data.weekEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Chicago" })}`
                 : "Loading..."}
             </span>
             <button
               onClick={() => {
-                const d = new Date(weekDate);
+                const d = new Date(weekDate + "T12:00:00");
                 d.setDate(d.getDate() + 7);
-                setWeekDate(d.toISOString().slice(0, 10));
+                setWeekDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
               }}
               className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
             >

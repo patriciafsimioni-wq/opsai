@@ -48,6 +48,7 @@ export function Topbar({
             month: "long",
             day: "numeric",
             year: "numeric",
+            timeZone: "America/Chicago",
           })}
         </p>
       </div>
