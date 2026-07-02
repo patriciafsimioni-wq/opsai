@@ -15,6 +15,7 @@ import {
 } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
+import { DonutChart } from "@/components/charts";
 import type { VehicleDTO, DriverDTO } from "@/lib/types";
 import {
   VEHICLE_STATUS,
@@ -165,7 +166,50 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
     else alert(res.error);
   }
 
+  const statusCounts = useMemo(() => {
+    if (!vehicles) return {} as Record<string, number>;
+    const counts: Record<string, number> = {};
+    for (const s of VEHICLE_STATUSES) counts[s] = 0;
+    for (const v of vehicles) counts[v.status] = (counts[v.status] || 0) + 1;
+    return counts;
+  }, [vehicles]);
+
+  const donutData = useMemo(() => {
+    return VEHICLE_STATUSES.map((s) => ({
+      name: VEHICLE_STATUS[s].label,
+      value: statusCounts[s] || 0,
+      color: VEHICLE_STATUS[s].color,
+    })).filter((d) => d.value > 0);
+  }, [statusCounts]);
+
   return (
+    <>
+    {vehicles && vehicles.length > 0 && (
+      <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-1">
+          <div className="p-4">
+            <p className="text-xs font-medium uppercase text-slate-400">Fleet Overview</p>
+            <p className="mt-1 text-3xl font-bold">{vehicles.length}</p>
+            <p className="text-sm text-slate-500">Total Vehicles</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {VEHICLE_STATUSES.map((s) => (
+                <div key={s} className="flex items-center gap-2 text-xs">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: VEHICLE_STATUS[s].color }} />
+                  <span className="text-slate-600">{VEHICLE_STATUS[s].label}</span>
+                  <span className="ml-auto font-semibold">{statusCounts[s] || 0}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+        <Card className="lg:col-span-2">
+          <div className="p-4">
+            <p className="text-xs font-medium uppercase text-slate-400">Vehicle Status Distribution</p>
+            <DonutChart data={donutData} />
+          </div>
+        </Card>
+      </div>
+    )}
     <Card>
       <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] p-4">
         <div className="relative flex-1 min-w-[200px]">
@@ -430,5 +474,6 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
         )}
       </Modal>
     </Card>
+    </>
   );
 }
