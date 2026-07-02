@@ -60,6 +60,8 @@ export async function POST(req: Request) {
   }
   const poNumber = `${prefix}${String(nextSeq).padStart(3, "0")}`;
 
+  const service = await prisma.service.findUnique({ where: { id: d.serviceId }, select: { name: true } });
+
   const record = await prisma.workOrderRequest.create({
     data: {
       poNumber,
@@ -85,5 +87,22 @@ export async function POST(req: Request) {
       reviewedBy: { select: userSelect },
     },
   });
+
+  // Create alert for all management users
+  const vehicleLabel = record.vehicle
+    ? `${record.vehicle.licensePlate} - ${record.vehicle.name}`
+    : record.vehicleOther ?? "Unknown vehicle";
+  const serviceName = service?.name ?? "Unknown service";
+  const alertMessage = `New WO Request ${poNumber}: ${serviceName} for ${vehicleLabel} at ${d.station} — requested by ${auth.user.name}`;
+
+  await prisma.alert.create({
+    data: {
+      type: "MAINTENANCE_DUE",
+      severity: "WARNING",
+      message: alertMessage,
+      vehicleId: d.vehicleId || null,
+    },
+  });
+
   return NextResponse.json(record, { status: 201 });
 }

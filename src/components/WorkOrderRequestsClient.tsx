@@ -70,6 +70,9 @@ export function WorkOrderRequestsClient({
   );
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<"APPROVED" | "REJECTED">("APPROVED");
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   // --- Form state ---
   const [form, setForm] = useState({
@@ -246,6 +249,42 @@ export function WorkOrderRequestsClient({
     useOther &&
     !stationVehicles.find((v) => v.id === form.vehicleId);
 
+  const pendingFiltered = filtered.filter((r) => r.status === "PENDING");
+  const allPendingSelected = pendingFiltered.length > 0 && pendingFiltered.every((r) => selectedIds.has(r.id));
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (allPendingSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(pendingFiltered.map((r) => r.id)));
+    }
+  }
+
+  async function bulkUpdateStatus() {
+    if (selectedIds.size === 0) return;
+    setBulkProcessing(true);
+    const ids = Array.from(selectedIds);
+    await Promise.all(
+      ids.map((id) =>
+        apiSend(`/api/work-order-requests/${id}`, "PATCH", {
+          status: bulkAction,
+          reviewNote: `Bulk ${bulkAction.toLowerCase()} (${ids.length} requests)`,
+        }),
+      ),
+    );
+    setBulkProcessing(false);
+    setSelectedIds(new Set());
+    reload();
+  }
+
   return (
     <div className="space-y-4">
       {/* KPI cards */}
@@ -297,6 +336,36 @@ export function WorkOrderRequestsClient({
         </Button>
       </div>
 
+      {/* Bulk actions */}
+      {canManage && selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2">
+          <span className="text-sm font-medium text-blue-700">{selectedIds.size} selected</span>
+          <select
+            value={bulkAction}
+            onChange={(e) => setBulkAction(e.target.value as "APPROVED" | "REJECTED")}
+            className="rounded-lg border border-blue-200 bg-white px-3 py-1 text-sm"
+          >
+            <option value="APPROVED">Approve</option>
+            <option value="REJECTED">Reject</option>
+          </select>
+          <button
+            onClick={bulkUpdateStatus}
+            disabled={bulkProcessing}
+            className={`rounded-lg px-3 py-1 text-sm font-medium text-white transition-colors ${
+              bulkAction === "APPROVED" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
+            } disabled:opacity-50`}
+          >
+            {bulkProcessing ? "Processing..." : `${bulkAction === "APPROVED" ? "Approve" : "Reject"} All`}
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="text-xs text-slate-500 hover:text-slate-700"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* Request list */}
       <Card>
         <CardHeader title="Work Order Requests" />
@@ -313,12 +382,24 @@ export function WorkOrderRequestsClient({
             <Table>
               <thead>
                 <tr>
+                  {canManage && (
+                    <Th>
+                      <input
+                        type="checkbox"
+                        checked={allPendingSelected}
+                        onChange={toggleSelectAll}
+                        className="h-4 w-4 rounded border-slate-300"
+                        title="Select all pending"
+                      />
+                    </Th>
+                  )}
                   <Th>PO#</Th>
                   <Th>Station</Th>
                   <Th>Vehicle</Th>
                   <Th>Service</Th>
                   <Th>Requested By</Th>
-                  <Th>Date</Th>
+                  <Th>Date Submitted</Th>
+                  <Th>Service Date</Th>
                   <Th>Estimate</Th>
                   <Th>Status</Th>
                   <Th />
@@ -334,6 +415,8 @@ export function WorkOrderRequestsClient({
                       setExpandedId(expandedId === r.id ? null : r.id)
                     }
                     canManage={canManage}
+                    selected={selectedIds.has(r.id)}
+                    onSelect={() => toggleSelect(r.id)}
                     onReview={() => {
                       setReviewModal(r);
                       setReviewAction("APPROVED");
@@ -690,6 +773,8 @@ function RequestRow({
   expanded,
   onToggle,
   canManage,
+  selected,
+  onSelect,
   onReview,
   onDetail,
 }: {
@@ -697,12 +782,27 @@ function RequestRow({
   expanded: boolean;
   onToggle: () => void;
   canManage: boolean;
+  selected: boolean;
+  onSelect: () => void;
   onReview: () => void;
   onDetail: () => void;
 }) {
   return (
     <>
       <tr className="cursor-pointer hover:bg-slate-50" onClick={onToggle}>
+        {canManage && (
+          <Td>
+            {r.status === "PENDING" && (
+              <input
+                type="checkbox"
+                checked={selected}
+                onChange={(e) => { e.stopPropagation(); onSelect(); }}
+                onClick={(e) => e.stopPropagation()}
+                className="h-4 w-4 rounded border-slate-300"
+              />
+            )}
+          </Td>
+        )}
         <Td className="font-mono text-xs font-semibold text-slate-700">
           {r.poNumber ?? "—"}
         </Td>
@@ -720,6 +820,7 @@ function RequestRow({
           <p className="font-medium">{r.service?.name ?? "—"}</p>
         </Td>
         <Td className="text-slate-600">{r.requestedBy.name}</Td>
+        <Td className="text-slate-600">{formatDate(r.createdAt)}</Td>
         <Td className="text-slate-600">{formatDate(r.requestedDate)}</Td>
         <Td className="font-semibold">
           {r.vendorEstimate != null ? formatCurrency(r.vendorEstimate) : "—"}
@@ -755,7 +856,7 @@ function RequestRow({
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={9} className="border-b border-[var(--color-border)] bg-slate-50 px-6 py-3">
+          <td colSpan={canManage ? 12 : 11} className="border-b border-[var(--color-border)] bg-slate-50 px-6 py-3">
             <RequestDetail r={r} />
           </td>
         </tr>
