@@ -416,7 +416,7 @@ export function FinanceReportClient() {
       const el = reportRef.current;
       const canvas = await html2canvas(el, { scale: 2, useCORS: true, logging: false });
       const imgData = canvas.toDataURL("image/png");
-      const margin = 40;
+      const margin = 80;
       const pdfW = canvas.width + margin * 2;
       const pdfH = canvas.height + margin * 2;
       const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [pdfW, pdfH] });

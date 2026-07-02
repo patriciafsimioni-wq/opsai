@@ -324,9 +324,10 @@ export function SlidePresentation({ year, month, reportType, onClose }: { year: 
       const slideEls = allSlidesRef.current.querySelectorAll("[data-slide]");
       if (slideEls.length === 0) return;
 
-      const margin = 30;
+      const margin = 60;
       const first = slideEls[0] as HTMLElement;
-      const canvas0 = await html2canvas(first, { scale: 2, useCORS: true, logging: false });
+      const canvasOpts = { scale: 2, useCORS: true, logging: false, scrollY: 0, scrollX: 0, windowHeight: first.scrollHeight + 100 };
+      const canvas0 = await html2canvas(first, canvasOpts);
       const pdfW = canvas0.width + margin * 2;
       const pdfH = canvas0.height + margin * 2;
       const pdf = new jsPDF({
@@ -338,7 +339,7 @@ export function SlidePresentation({ year, month, reportType, onClose }: { year: 
 
       for (let i = 1; i < slideEls.length; i++) {
         const el = slideEls[i] as HTMLElement;
-        const canvas = await html2canvas(el, { scale: 2, useCORS: true, logging: false });
+        const canvas = await html2canvas(el, { ...canvasOpts, windowHeight: el.scrollHeight + 100 });
         pdf.addPage([canvas.width + margin * 2, canvas.height + margin * 2], "landscape");
         pdf.addImage(canvas.toDataURL("image/png"), "PNG", margin, margin, canvas.width, canvas.height);
       }
@@ -404,10 +405,10 @@ export function SlidePresentation({ year, month, reportType, onClose }: { year: 
         </div>
       </div>
 
-      {/* Hidden container with ALL slides for PDF export */}
-      <div ref={allSlidesRef} className="fixed left-[-9999px] top-0">
+      {/* Hidden container with ALL slides for PDF export — no height constraints so full content is captured */}
+      <div ref={allSlidesRef} className="fixed left-[-9999px] top-0" style={{ overflow: "visible" }}>
         {slides.map((s, i) => (
-          <div key={i} data-slide className="w-[960px]" style={{ aspectRatio: "16/9" }}>
+          <div key={i} data-slide className="w-[960px] bg-white" style={{ minHeight: 540, overflow: "visible" }}>
             {s.type === "cover" && <CoverSlideView slide={s} />}
             {s.type === "executive_summary" && <ExecSummarySlideView slide={s} />}
             {s.type === "detailed_analysis" && <DetailedSlideView slide={s} year={data.year} />}
