@@ -1,5 +1,6 @@
 "use client";
 
+import { createContext, useContext, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -26,8 +27,18 @@ import {
   Truck as TruckLogo,
   LogOut,
   Flag,
+  Menu,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const SidebarContext = createContext<{ open: boolean; toggle: () => void }>({ open: false, toggle: () => {} });
+export function useSidebar() { return useContext(SidebarContext); }
+export function SidebarProvider({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const toggle = useCallback(() => setOpen((v) => !v), []);
+  return <SidebarContext.Provider value={{ open, toggle }}>{children}</SidebarContext.Provider>;
+}
 
 type NavItem = { href: string; label: string; icon: typeof LayoutDashboard };
 type NavSection = { title: string; items: NavItem[] };
@@ -88,16 +99,37 @@ const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
+export function MobileMenuButton() {
+  const { toggle } = useSidebar();
+  return (
+    <button onClick={toggle} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden">
+      <Menu size={22} />
+    </button>
+  );
+}
+
 export function Sidebar({ alertCount }: { alertCount: number }) {
   const pathname = usePathname();
+  const { open, toggle } = useSidebar();
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] lg:flex">
-      <div className="flex h-16 items-center gap-2 border-b border-[var(--color-border)] px-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white">
-          <TruckLogo size={18} />
+    <>
+    {/* Overlay for mobile */}
+    {open && <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={toggle} />}
+    <aside className={cn(
+      "fixed inset-y-0 left-0 z-50 w-60 shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] transition-transform duration-200 lg:static lg:translate-x-0 lg:flex",
+      open ? "flex translate-x-0" : "hidden -translate-x-full lg:flex lg:translate-x-0"
+    )}>
+      <div className="flex h-16 items-center justify-between border-b border-[var(--color-border)] px-5">
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white">
+            <TruckLogo size={18} />
+          </div>
+          <span className="text-lg font-bold tracking-tight">Live Fleet AI</span>
         </div>
-        <span className="text-lg font-bold tracking-tight">Live Fleet AI</span>
+        <button onClick={toggle} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 lg:hidden">
+          <X size={20} />
+        </button>
       </div>
       <nav className="flex-1 overflow-y-auto p-3">
         {NAV_SECTIONS.map((section) => (
@@ -118,6 +150,7 @@ export function Sidebar({ alertCount }: { alertCount: number }) {
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={toggle}
                     className={cn(
                       "flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                       active
@@ -146,5 +179,6 @@ export function Sidebar({ alertCount }: { alertCount: number }) {
         <p className="mt-1">All systems operational</p>
       </div>
     </aside>
+    </>
   );
 }

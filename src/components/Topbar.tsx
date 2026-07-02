@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 import { Bell, LogOut, ChevronDown } from "lucide-react";
+import { MobileMenuButton } from "@/components/Sidebar";
 import { Avatar } from "@/components/ui";
 import type { Role } from "@prisma/client";
 
@@ -39,6 +40,7 @@ export function Topbar({
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)]/80 px-5 backdrop-blur">
       <div className="flex items-center gap-2 lg:hidden">
+        <MobileMenuButton />
         <span className="text-lg font-bold">Live Fleet AI</span>
       </div>
       <div className="hidden lg:block">
