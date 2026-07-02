@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Pencil, Trash2, Users, RefreshCw } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Users, RefreshCw, AlertTriangle } from "lucide-react";
 import { Card, Button, Badge, Table, Th, Td, EmptyState, Avatar } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
@@ -25,6 +25,7 @@ const emptyForm = {
 export function DriversClient({ canManage }: { canManage: boolean }) {
   const { data: drivers, loading, reload } = useData<DriverDTO[]>("/api/drivers");
   const [search, setSearch] = useState("");
+  const [licenseFilter, setLicenseFilter] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<DriverDTO | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -56,14 +57,35 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
   const filtered = useMemo(() => {
     if (!drivers) return [];
     const q = search.toLowerCase();
-    return drivers.filter(
-      (d) =>
-        !q ||
-        `${d.firstName} ${d.lastName}`.toLowerCase().includes(q) ||
-        d.email.toLowerCase().includes(q) ||
-        d.licenseNumber.toLowerCase().includes(q),
-    );
-  }, [drivers, search]);
+    const now = new Date();
+    return drivers.filter((d) => {
+      if (q && !`${d.firstName} ${d.lastName}`.toLowerCase().includes(q) && !d.email.toLowerCase().includes(q) && !d.licenseNumber.toLowerCase().includes(q)) return false;
+      if (licenseFilter !== "all" && d.licenseExpiry) {
+        const exp = daysUntil(d.licenseExpiry);
+        if (exp == null) return licenseFilter === "valid";
+        if (licenseFilter === "expired" && exp >= 0) return false;
+        if (licenseFilter === "30days" && (exp < 0 || exp > 30)) return false;
+        if (licenseFilter === "60days" && (exp < 0 || exp > 60)) return false;
+        if (licenseFilter === "90days" && (exp < 0 || exp > 90)) return false;
+        if (licenseFilter === "valid" && exp < 0) return false;
+      }
+      return true;
+    });
+  }, [drivers, search, licenseFilter]);
+
+  const expiryCounts = useMemo(() => {
+    if (!drivers) return { expired: 0, within30: 0, within60: 0, within90: 0 };
+    let expired = 0, within30 = 0, within60 = 0, within90 = 0;
+    for (const d of drivers) {
+      const exp = daysUntil(d.licenseExpiry);
+      if (exp == null) continue;
+      if (exp < 0) expired++;
+      else if (exp <= 30) within30++;
+      else if (exp <= 60) within60++;
+      else if (exp <= 90) within90++;
+    }
+    return { expired, within30, within60, within90 };
+  }, [drivers]);
 
   function openCreate() {
     setEditing(null);
@@ -118,6 +140,18 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
             className="h-9 w-full rounded-lg border border-[var(--color-border)] bg-white pl-9 pr-3 text-sm outline-none focus:border-blue-500"
           />
         </div>
+        <select
+          value={licenseFilter}
+          onChange={(e) => setLicenseFilter(e.target.value)}
+          className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm outline-none focus:border-blue-500"
+        >
+          <option value="all">All Licenses</option>
+          <option value="expired">Expired ({expiryCounts.expired})</option>
+          <option value="30days">Expiring in 30 days ({expiryCounts.within30})</option>
+          <option value="60days">Expiring in 60 days ({expiryCounts.within60})</option>
+          <option value="90days">Expiring in 90 days ({expiryCounts.within90})</option>
+          <option value="valid">Valid</option>
+        </select>
         {canManage && (
           <>
             <Button variant="secondary" onClick={syncSamsaraDrivers} disabled={syncing}>
@@ -130,6 +164,17 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
           </>
         )}
       </div>
+
+      {(expiryCounts.expired > 0 || expiryCounts.within30 > 0) && (
+        <div className="mx-4 mt-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+          <AlertTriangle size={16} className="shrink-0" />
+          <span>
+            {expiryCounts.expired > 0 && <strong className="text-red-700">{expiryCounts.expired} expired</strong>}
+            {expiryCounts.expired > 0 && expiryCounts.within30 > 0 && " and "}
+            {expiryCounts.within30 > 0 && <strong>{expiryCounts.within30} expiring within 30 days</strong>}
+          </span>
+        </div>
+      )}
 
       {syncResult && (
         <div className={`mx-4 mt-3 rounded-lg border px-4 py-2 text-sm ${syncResult.startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
