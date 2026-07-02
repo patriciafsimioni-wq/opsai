@@ -20,6 +20,15 @@ export async function GET(req: NextRequest) {
   const sw = stationWhere(auth.user);
   if (sw) where.station = sw.station;
 
+  // Issues are private: only visible to creator, assignee, or admins/managers
+  const adminRoles = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"];
+  if (!adminRoles.includes(auth.user.role)) {
+    where.OR = [
+      { createdById: auth.user.id },
+      { assignedToId: auth.user.id },
+    ];
+  }
+
   const issues = await prisma.issue.findMany({
     where,
     include: {

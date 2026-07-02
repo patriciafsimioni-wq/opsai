@@ -20,6 +20,7 @@ import {
 } from "@/lib/constants";
 import { formatCurrency, relativeTime, formatDate } from "@/lib/utils";
 import { StationFilter } from "@/components/StationFilter";
+import { getSession } from "@/lib/auth";
 import type { Station } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -42,12 +43,20 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       }),
       prisma.workOrder.findMany({ include: { vehicle: true }, where: station ? { vehicle: { station } } : {} }),
       prisma.fuelLog.findMany({ where: station ? { vehicle: { station } } : {} }),
-      prisma.issue.findMany({
-        where: { status: { in: ["OPEN", "IN_PROGRESS"] }, ...(station ? { station } : {}) },
-        orderBy: { createdAt: "desc" },
-        include: { createdBy: { select: { name: true } }, assignedTo: { select: { name: true } } },
-        take: 5,
-      }),
+      (async () => {
+        const user = await getSession();
+        const adminRoles = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"];
+        const issueWhere: Record<string, unknown> = { status: { in: ["OPEN", "IN_PROGRESS"] }, ...(station ? { station } : {}) };
+        if (user && !adminRoles.includes(user.role)) {
+          issueWhere.OR = [{ createdById: user.id }, { assignedToId: user.id }];
+        }
+        return prisma.issue.findMany({
+          where: issueWhere,
+          orderBy: { createdAt: "desc" },
+          include: { createdBy: { select: { name: true } }, assignedTo: { select: { name: true } } },
+          take: 5,
+        });
+      })(),
     ]);
   const vehicles = allVehicles;
 
