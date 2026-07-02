@@ -53,7 +53,6 @@ const NAV_SECTIONS: NavSection[] = [
   },
   {
     title: "Fleet",
-    roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "MECHANIC", "DRIVER"],
     items: [
       { href: "/vehicles", label: "Vehicles", icon: Truck },
       { href: "/drivers", label: "Drivers", icon: Users, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER"] },
@@ -85,7 +84,7 @@ const NAV_SECTIONS: NavSection[] = [
   },
   {
     title: "Reports & Tools",
-    roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "MECHANIC"],
+    roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "MECHANIC", "VENDOR"],
     items: [
       { href: "/reports", label: "Reports", icon: BarChart3 },
       { href: "/uploads", label: "Smart Upload", icon: Upload, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER"] },
