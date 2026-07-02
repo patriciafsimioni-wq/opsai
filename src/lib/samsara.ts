@@ -174,53 +174,47 @@ export interface SamsaraDriverSafetyScore {
 }
 
 export async function getSamsaraDriverSafetyScores(): Promise<SamsaraDriverSafetyScore[]> {
-  // Samsara doesn't have a direct "safety score" endpoint in v1,
-  // so we compute from safety events in the last 30 days
+  const drivers = await getSamsaraDrivers();
+  const activeDrivers = drivers.filter((d) => d.driverActivationStatus === "active");
+
   const now = Date.now();
   const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
-  const events = await getSamsaraSafetyEvents(thirtyDaysAgo, now);
 
-  const driverMap = new Map<string, SamsaraDriverSafetyScore>();
+  const results: SamsaraDriverSafetyScore[] = [];
 
-  for (const evt of events) {
-    if (!evt.driver) continue;
-    const dId = evt.driver.id;
-    if (!driverMap.has(dId)) {
-      driverMap.set(dId, {
-        driverId: dId,
-        driverName: evt.driver.name,
-        safetyScore: 100,
-        totalEvents: 0,
-        harshAccelCount: 0,
-        harshBrakeCount: 0,
-        harshTurnCount: 0,
-        speedingCount: 0,
-        crashCount: 0,
-        distanceMeters: 0,
+  for (const driver of activeDrivers) {
+    try {
+      const data = await samsaraFetch<{
+        safetyScore: number;
+        totalHarshEventCount: number;
+        harshAccelCount: number;
+        harshBrakingCount: number;
+        harshTurningCount: number;
+        crashCount: number;
+        totalDistanceDrivenMeters: number;
+      }>(`/v1/fleet/drivers/${driver.id}/safety/score`, {
+        startMs: String(thirtyDaysAgo),
+        endMs: String(now),
       });
+
+      results.push({
+        driverId: driver.id,
+        driverName: driver.name,
+        safetyScore: data.safetyScore,
+        totalEvents: data.totalHarshEventCount,
+        harshAccelCount: data.harshAccelCount,
+        harshBrakeCount: data.harshBrakingCount,
+        harshTurnCount: data.harshTurningCount,
+        speedingCount: 0,
+        crashCount: data.crashCount,
+        distanceMeters: data.totalDistanceDrivenMeters,
+      });
+    } catch {
+      // skip drivers whose score can't be fetched
     }
-    const d = driverMap.get(dId)!;
-    d.totalEvents++;
-    const label = evt.behaviorLabel?.toLowerCase() ?? "";
-    if (label.includes("accel")) d.harshAccelCount++;
-    else if (label.includes("brak")) d.harshBrakeCount++;
-    else if (label.includes("turn") || label.includes("corner")) d.harshTurnCount++;
-    else if (label.includes("speed")) d.speedingCount++;
-    else if (label.includes("crash") || label.includes("collision")) d.crashCount++;
   }
 
-  // Compute safety score: start at 100, deduct per event type
-  for (const d of driverMap.values()) {
-    let score = 100;
-    score -= d.crashCount * 15;
-    score -= d.speedingCount * 3;
-    score -= d.harshBrakeCount * 2;
-    score -= d.harshAccelCount * 2;
-    score -= d.harshTurnCount * 1;
-    d.safetyScore = Math.max(0, Math.min(100, score));
-  }
-
-  return Array.from(driverMap.values());
+  return results;
 }
 
 export function isConfigured(): boolean {
