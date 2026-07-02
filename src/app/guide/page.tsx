@@ -27,6 +27,15 @@ function Bullet({ children }: { children: React.ReactNode }) {
   return <li className="ml-4 list-disc">{children}</li>;
 }
 
+function Screenshot({ src, alt }: { src: string; alt: string }) {
+  return (
+    <div className="my-4 overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={alt} className="w-full" loading="lazy" />
+    </div>
+  );
+}
+
 function RoleTable() {
   const roles = [
     ["Admin", "Full access to everything, user management, \"View as\" role switcher"],
@@ -135,6 +144,7 @@ export default function GuidePage() {
           </Section>
 
           <Section id="dashboard" title="Dashboard (Fleet Overview)">
+            <Screenshot src="/guide-screenshots/dashboard.png" alt="Dashboard - Fleet Overview" />
             <p>The dashboard is <strong>role-aware</strong> &mdash; each user only sees widgets for the pages they have access to. <strong>All boxes and cards are clickable</strong> and link to their corresponding page.</p>
             <SubSection title="Issue Tracker Box">
               <p>Always visible at the top. Shows open issues assigned to you or created by you. Displays &quot;No open issues&quot; when empty.</p>
@@ -181,6 +191,7 @@ export default function GuidePage() {
           </Section>
 
           <Section id="vehicles" title="Vehicles">
+            <Screenshot src="/guide-screenshots/vehicles.png" alt="Vehicles page" />
             <SubSection title="Vehicle List">
               <ul>
                 <Bullet><strong>Summary bar</strong> at top showing total count and <strong>donut chart</strong> of status distribution</Bullet>
@@ -206,6 +217,7 @@ export default function GuidePage() {
           </Section>
 
           <Section id="drivers" title="Drivers">
+            <Screenshot src="/guide-screenshots/drivers.png" alt="Drivers page" />
             <ul>
               <Bullet>Synced from Samsara (215+ drivers)</Bullet>
               <Bullet>View driver details, assigned vehicle, safety score</Bullet>
@@ -222,6 +234,7 @@ export default function GuidePage() {
           </Section>
 
           <Section id="fareye" title="FareEye Routes">
+            <Screenshot src="/guide-screenshots/fareye-routes.png" alt="FareEye Routes page" />
             <ul>
               <Bullet>View daily dispatched routes with planned vs actual miles</Bullet>
               <Bullet>Filter by station and date</Bullet>
@@ -238,6 +251,7 @@ export default function GuidePage() {
           </Section>
 
           <Section id="maintenance" title="Maintenance">
+            <Screenshot src="/guide-screenshots/maintenance.png" alt="Maintenance / Work Orders page" />
             <SubSection title="Pending WO Requests Banner">
               <p>When there are pending requests, a <strong>prominent amber banner</strong> appears at the top showing each request&apos;s PO#, service, vehicle, station, and requester with a link to review.</p>
             </SubSection>
@@ -264,6 +278,7 @@ export default function GuidePage() {
           </Section>
 
           <Section id="dvir" title="DVIR (Driver Vehicle Inspection Report)">
+            <Screenshot src="/guide-screenshots/dvir.png" alt="DVIR page" />
             <p><strong>All users can access this.</strong></p>
             <SubSection title="New Inspection">
               <ol className="ml-4 list-decimal space-y-1">
@@ -277,6 +292,7 @@ export default function GuidePage() {
           </Section>
 
           <Section id="wo-requests" title="Work Order Requests">
+            <Screenshot src="/guide-screenshots/work-order-requests.png" alt="Work Order Requests page" />
             <SubSection title="Submitting a Request">
               <ol className="ml-4 list-decimal space-y-1">
                 <li>Fill out: vehicle, service needed, priority, description</li>
@@ -293,6 +309,7 @@ export default function GuidePage() {
           </Section>
 
           <Section id="issues" title="Issue Tracker">
+            <Screenshot src="/guide-screenshots/issues.png" alt="Issue Tracker page" />
             <p>Flag and track issues across your fleet operations. Issues are <strong>private</strong> &mdash; only visible to the creator, the assigned person, and Admins/GMs/Fleet Managers.</p>
             <SubSection title="Creating Issues">
               <ul>
@@ -309,6 +326,7 @@ export default function GuidePage() {
           </Section>
 
           <Section id="fuel" title="Fuel Management">
+            <Screenshot src="/guide-screenshots/fuel.png" alt="Fuel Management page" />
             <ul>
               <Bullet>View all fuel transactions with date, vehicle, driver, station, type, volume, price/gal, total cost</Bullet>
               <Bullet>Filter by station, fuel type, and date (Week/Month) &mdash; all dates in US Central Time</Bullet>
@@ -318,6 +336,7 @@ export default function GuidePage() {
           </Section>
 
           <Section id="finance" title="Finance Report">
+            <Screenshot src="/guide-screenshots/finance-report.png" alt="Finance Report page" />
             <ul>
               <Bullet>Monthly financial overview with slide-style presentation</Bullet>
               <Bullet>Selected month badge shown in top-left of slides toolbar</Bullet>
@@ -328,6 +347,7 @@ export default function GuidePage() {
           </Section>
 
           <Section id="fleet-finance" title="Fleet Finance (Executive Dashboard)">
+            <Screenshot src="/guide-screenshots/fleet-finance.png" alt="Fleet Finance page" />
             <p>High-level financial KPIs for leadership (not accessible to Station Managers or below):</p>
             <ul>
               <Bullet>Total Fleet Asset Value, Total Amount Invested, Lease Commitments</Bullet>
@@ -339,6 +359,7 @@ export default function GuidePage() {
           </Section>
 
           <Section id="offboarding" title="Offboarding">
+            <Screenshot src="/guide-screenshots/offboarding.png" alt="Offboarding page" />
             <ul>
               <Bullet>Track vehicles being offboarded with reason, mileage, pickup date, sold amount</Bullet>
               <Bullet><strong>Edit button</strong> on in-progress vehicles to change reason, mileage, pickup date, sold amount</Bullet>
@@ -354,6 +375,7 @@ export default function GuidePage() {
           </Section>
 
           <Section id="alerts" title="Alerts">
+            <Screenshot src="/guide-screenshots/alerts.png" alt="Alerts page" />
             <ul>
               <Bullet>Every alert links to the vehicle/driver page to resolve</Bullet>
               <Bullet>Types: Maintenance due, registration expiring, DVIR failures, camera missing, license expiration, new WO requests</Bullet>
@@ -361,6 +383,7 @@ export default function GuidePage() {
           </Section>
 
           <Section id="safety" title="Safety">
+            <Screenshot src="/guide-screenshots/safety.png" alt="Safety page" />
             <ul>
               <Bullet>Safety events and scores synced from Samsara</Bullet>
               <Bullet>Click <strong>&quot;Sync from Samsara&quot;</strong> to pull real safety events and update scores</Bullet>
@@ -370,6 +393,7 @@ export default function GuidePage() {
           </Section>
 
           <Section id="reports" title="Reports">
+            <Screenshot src="/guide-screenshots/reports.png" alt="Reports page" />
             <ul>
               <Bullet>Generate and export fleet reports</Bullet>
               <Bullet><strong>Cost Trend chart</strong>: Fuel vs maintenance cost over last 6 months</Bullet>
@@ -378,6 +402,7 @@ export default function GuidePage() {
           </Section>
 
           <Section id="uploads" title="Smart Upload">
+            <Screenshot src="/guide-screenshots/uploads.png" alt="Smart Upload page" />
             <SubSection title="Uploading Data">
               <ol className="ml-4 list-decimal space-y-1">
                 <li>Click <strong>&quot;Download Template&quot;</strong> to get the Excel template</li>
@@ -389,6 +414,7 @@ export default function GuidePage() {
           </Section>
 
           <Section id="users" title="User Management">
+            <Screenshot src="/guide-screenshots/users.png" alt="User Management page" />
             <p>Admin/GM only:</p>
             <ul>
               <Bullet>View, edit, delete users</Bullet>
