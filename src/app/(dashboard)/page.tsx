@@ -213,15 +213,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </div>
 
       {/* Issue Tracker */}
-      {issues.length > 0 && (
-        <Card className="mb-6">
-          <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-3">
-            <div className="flex items-center gap-2">
-              <Flag size={18} className="text-amber-600" />
-              <h2 className="text-sm font-semibold">Open Issues ({issues.length})</h2>
-            </div>
-            <Link href="/issues" className="text-xs font-medium text-blue-600 hover:underline">View All</Link>
+      <Card className="mb-6">
+        <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-3">
+          <div className="flex items-center gap-2">
+            <Flag size={18} className="text-amber-600" />
+            <h2 className="text-sm font-semibold">Open Issues ({issues.length})</h2>
           </div>
+          <Link href="/issues" className="text-xs font-medium text-blue-600 hover:underline">View All</Link>
+        </div>
+        {issues.length === 0 ? (
+          <p className="px-5 py-4 text-center text-sm text-slate-400">No open issues. Create one from the <Link href="/issues" className="text-blue-600 hover:underline">Issue Tracker</Link>.</p>
+        ) : (
           <div className="divide-y divide-[var(--color-border)]">
             {issues.map((issue) => {
               const priorityColor = issue.priority === "URGENT" ? "text-red-600" : issue.priority === "HIGH" ? "text-orange-600" : issue.priority === "MEDIUM" ? "text-amber-600" : "text-slate-500";
@@ -246,8 +248,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               );
             })}
           </div>
-        </Card>
-      )}
+        )}
+      </Card>
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-6">
