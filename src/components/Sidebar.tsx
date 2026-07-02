@@ -86,10 +86,10 @@ const NAV_SECTIONS: NavSection[] = [
     title: "Reports & Tools",
     roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "MECHANIC", "VENDOR"],
     items: [
-      { href: "/reports", label: "Reports", icon: BarChart3 },
+      { href: "/reports", label: "Reports", icon: BarChart3, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "MECHANIC"] },
       { href: "/uploads", label: "Smart Upload", icon: Upload, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER"] },
-      { href: "/alerts", label: "Alerts", icon: Bell },
-      { href: "/safety", label: "Safety", icon: ShieldAlert },
+      { href: "/alerts", label: "Alerts", icon: Bell, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "MECHANIC"] },
+      { href: "/safety", label: "Safety", icon: ShieldAlert, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "MECHANIC"] },
       { href: "/issues", label: "Issue Tracker", icon: Flag },
     ],
   },
