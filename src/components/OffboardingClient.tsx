@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Pencil } from "lucide-react";
 import { Card, CardHeader, Badge, Button } from "@/components/ui";
 import { Modal, Field, Input, Select } from "@/components/form";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -275,6 +276,7 @@ export function OffboardingClient({
 
                   {/* Action buttons for incomplete steps */}
                   <div className="mt-4 flex flex-wrap gap-2">
+                    <EditOffboardButton vehicle={v} onSave={updateStep} />
                     {!v.offboardMileage && (
                       <MileageButton vehicleId={v.id} currentOdo={v.odometer} onSave={updateStep} />
                     )}
@@ -417,6 +419,59 @@ function PickupDateButton({ vehicleId, onSave }: { vehicleId: string; onSave: (i
             <Input value={val} onChange={(e) => setVal(e.target.value)} type="date" />
             <div className="mt-3 flex gap-2">
               <Button onClick={() => { onSave(vehicleId, { offboardPickupDate: val }); setShow(false); }} className="flex-1">Save</Button>
+              <Button onClick={() => setShow(false)} className="flex-1 bg-slate-100 text-slate-700">Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function EditOffboardButton({ vehicle, onSave }: { vehicle: InProgressVehicle; onSave: (id: string, data: Record<string, unknown>) => void }) {
+  const [show, setShow] = useState(false);
+  const [reason, setReason] = useState(vehicle.offboardReason || "");
+  const [mileage, setMileage] = useState(vehicle.offboardMileage ? String(vehicle.offboardMileage) : "");
+  const [soldAmount, setSoldAmount] = useState(vehicle.offboardSoldAmount ? String(vehicle.offboardSoldAmount) : "");
+  const [pickupDate, setPickupDate] = useState(vehicle.offboardPickupDate ? new Date(vehicle.offboardPickupDate).toISOString().slice(0, 10) : "");
+  return (
+    <>
+      <Button onClick={() => setShow(true)} className="text-xs" variant="secondary">
+        <Pencil size={13} /> Edit
+      </Button>
+      {show && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setShow(false)}>
+          <div className="bg-white rounded-lg p-5 w-96 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <p className="font-semibold mb-3">Edit Offboarding — {vehicle.dxNumber ?? vehicle.name}</p>
+            <div className="space-y-3">
+              <Field label="Reason">
+                <Select value={reason} onChange={(e) => setReason(e.target.value)} options={REASONS} />
+              </Field>
+              <Field label="Mileage">
+                <Input value={mileage} onChange={(e) => setMileage(e.target.value)} placeholder="Enter mileage" type="number" />
+              </Field>
+              <Field label="Pickup Date">
+                <Input value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} type="date" />
+              </Field>
+              <Field label="Sold Amount">
+                <Input value={soldAmount} onChange={(e) => setSoldAmount(e.target.value)} placeholder="$0.00" type="number" />
+              </Field>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <Button
+                onClick={() => {
+                  const data: Record<string, unknown> = {};
+                  if (reason && reason !== vehicle.offboardReason) data.offboardReason = reason;
+                  if (mileage) data.offboardMileage = Number(mileage);
+                  if (pickupDate) data.offboardPickupDate = pickupDate;
+                  if (soldAmount) data.offboardSoldAmount = Number(soldAmount);
+                  if (Object.keys(data).length > 0) onSave(vehicle.id, data);
+                  setShow(false);
+                }}
+                className="flex-1"
+              >
+                Save Changes
+              </Button>
               <Button onClick={() => setShow(false)} className="flex-1 bg-slate-100 text-slate-700">Cancel</Button>
             </div>
           </div>
