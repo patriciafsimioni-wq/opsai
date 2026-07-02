@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Search, Trash2, Wrench } from "lucide-react";
+import Link from "next/link";
+import { Plus, Search, Trash2, Wrench, ClipboardList, AlertTriangle } from "lucide-react";
 import { Card, Button, Badge, Table, Th, Td, EmptyState, StatCard } from "@/components/ui";
 import { Field, Input, Select, Textarea, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
-import type { WorkOrderDTO, VehicleDTO, ServiceDTO } from "@/lib/types";
+import type { WorkOrderDTO, VehicleDTO, ServiceDTO, WorkOrderRequestDTO } from "@/lib/types";
 import {
   WO_STATUS,
   WO_STATUSES,
@@ -41,6 +42,11 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
   const { data: orders, loading, reload } = useData<WorkOrderDTO[]>("/api/maintenance");
   const { data: vehicles } = useData<VehicleDTO[]>("/api/vehicles");
   const { data: services } = useData<ServiceDTO[]>("/api/services");
+  const { data: woRequests } = useData<WorkOrderRequestDTO[]>("/api/work-order-requests");
+
+  const pendingRequests = useMemo(() => {
+    return (woRequests ?? []).filter((r) => r.status === "PENDING");
+  }, [woRequests]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [stationFilter, setStationFilter] = useState("");
@@ -157,6 +163,56 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
 
   return (
     <div className="space-y-4">
+      {/* Pending WO Requests banner */}
+      {pendingRequests.length > 0 && (
+        <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={18} className="text-amber-600" />
+              <h3 className="text-sm font-bold text-amber-800">
+                {pendingRequests.length} Pending Work Order Request{pendingRequests.length > 1 ? "s" : ""}
+              </h3>
+            </div>
+            <Link
+              href="/work-order-requests"
+              className="rounded-lg bg-amber-600 px-3 py-1 text-xs font-medium text-white hover:bg-amber-700 transition-colors"
+            >
+              Review All
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {pendingRequests.slice(0, 5).map((r) => (
+              <div key={r.id} className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <ClipboardList size={16} className="text-amber-600" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">
+                      {r.poNumber ? <span className="font-mono mr-2">{r.poNumber}</span> : null}
+                      {r.service?.name ?? "Service request"}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {r.vehicle ? `${r.vehicle.licensePlate} - ${r.vehicle.name}` : r.vehicleOther ?? ""}
+                      {" "}&middot; {r.station} &middot; by {r.requestedBy.name}
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/work-order-requests"
+                  className="rounded-md bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700 hover:bg-amber-200 transition-colors"
+                >
+                  Review
+                </Link>
+              </div>
+            ))}
+            {pendingRequests.length > 5 && (
+              <p className="text-center text-xs text-amber-600">
+                +{pendingRequests.length - 5} more pending requests
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Open" value={stats.open} icon={<Wrench size={18} />} accent="#d97706" />
         <StatCard label="In Progress" value={stats.inProgress} icon={<Wrench size={18} />} accent="#2563eb" />
