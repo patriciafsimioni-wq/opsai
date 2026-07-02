@@ -16,7 +16,8 @@ export async function GET() {
 }
 
 const schema = z.object({
-  vehicleId: z.string().min(1),
+  vehicleId: z.string().min(1).optional(),
+  vehicleOther: z.string().optional().nullable(),
   serviceId: z.string().optional().nullable(),
   station: z.enum(["AUS", "ACT", "IAH", "CLL", "BPT", "HRL", "LRD"]),
   type: z.enum(["SCHEDULED_SERVICE", "REPAIR", "INSPECTION", "TIRE", "OIL_CHANGE", "RECALL"]),
@@ -58,7 +59,8 @@ export async function POST(req: Request) {
       : null;
   const order = await prisma.workOrder.create({
     data: {
-      vehicleId: d.vehicleId,
+      vehicleId: d.vehicleId || null,
+      vehicleOther: d.vehicleOther || null,
       serviceId: d.serviceId || null,
       station: d.station,
       type: d.type,

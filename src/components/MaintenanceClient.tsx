@@ -63,7 +63,7 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
     const q = search.toLowerCase();
     return orders.filter((o) => {
       const matchSearch =
-        !q || o.title.toLowerCase().includes(q) || o.vehicle.name.toLowerCase().includes(q);
+        !q || o.title.toLowerCase().includes(q) || (o.vehicle?.name ?? o.vehicleOther ?? "").toLowerCase().includes(q);
       return (
         matchSearch &&
         (!statusFilter || o.status === statusFilter) &&
@@ -342,7 +342,7 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
                         {titleCase(o.type)}
                       </p>
                     </Td>
-                    <Td className="text-slate-600">{o.vehicle.name}</Td>
+                    <Td className="text-slate-600">{o.vehicle?.name ?? o.vehicleOther ?? "—"}</Td>
                     <Td>
                       <Badge bg="#eef2ff" fg="#3730a3">{o.station}</Badge>
                     </Td>

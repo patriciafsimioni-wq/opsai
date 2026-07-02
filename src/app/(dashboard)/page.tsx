@@ -762,7 +762,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{w.title}</p>
-                  <p className="text-xs text-slate-400">{w.vehicle.name}</p>
+                  <p className="text-xs text-slate-400">{w.vehicle?.name ?? w.vehicleOther ?? "—"}</p>
                 </div>
                 <span className="text-xs text-slate-500">
                   {formatDate(w.scheduledFor)}

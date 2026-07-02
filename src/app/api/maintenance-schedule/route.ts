@@ -138,6 +138,7 @@ export async function GET(req: NextRequest) {
   // Group by vehicle
   const woByVehicle: Record<string, { title: string; completedAt: Date | null; odometerAt: number | null }[]> = {};
   for (const wo of completedWOs) {
+    if (!wo.vehicleId) continue;
     if (!woByVehicle[wo.vehicleId]) woByVehicle[wo.vehicleId] = [];
     woByVehicle[wo.vehicleId].push(wo);
   }

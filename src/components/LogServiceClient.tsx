@@ -31,6 +31,7 @@ export function LogServiceClient({
       station: "IAH",
       vin: "",
       vehicleId: "",
+      vehicleOther: "",
       category: "PREVENTIVE",
       serviceId: "",
       odometer: "",
@@ -102,10 +103,12 @@ export function LogServiceClient({
   const provider =
     form.serviceProvider === "Other" ? form.serviceProviderOther.trim() : form.serviceProvider;
 
+  const hasVehicle = form.vehicleId === "OTHER" ? form.vehicleOther.trim() : form.vehicleId;
+
   const valid =
     form.station &&
     form.vin.trim() &&
-    form.vehicleId &&
+    hasVehicle &&
     form.serviceId &&
     form.odometer !== "" &&
     provider &&
@@ -136,7 +139,8 @@ export function LogServiceClient({
     }
 
     const payload = {
-      vehicleId: form.vehicleId,
+      vehicleId: form.vehicleId === "OTHER" ? undefined : form.vehicleId,
+      vehicleOther: form.vehicleId === "OTHER" ? form.vehicleOther.trim() : undefined,
       serviceId: form.serviceId,
       station: form.station,
       type: form.category === "CORRECTIVE" ? "REPAIR" : "SCHEDULED_SERVICE",
@@ -197,16 +201,33 @@ export function LogServiceClient({
           <Field label="DX Number or License Plate" required>
             <Select
               value={form.vehicleId}
-              onChange={(e) => onSelectVehicle(e.target.value)}
+              onChange={(e) => {
+                if (e.target.value === "OTHER") {
+                  setForm({ ...form, vehicleId: "OTHER", vin: "" });
+                } else {
+                  onSelectVehicle(e.target.value);
+                }
+              }}
               options={[
                 { value: "", label: "Choose…" },
                 ...(vehicles ?? []).map((v) => ({
                   value: v.id,
                   label: `${v.licensePlate} · ${v.name}`,
                 })),
+                { value: "OTHER", label: "Other (not listed)" },
               ]}
             />
           </Field>
+
+          {form.vehicleId === "OTHER" && (
+            <Field label="Vehicle Description" required>
+              <Input
+                value={form.vehicleOther}
+                onChange={(e) => setForm({ ...form, vehicleOther: e.target.value })}
+                placeholder="Enter vehicle name, plate, or description"
+              />
+            </Field>
+          )}
 
           <Field label="VIN Number" required>
             <Input
