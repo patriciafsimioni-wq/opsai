@@ -311,32 +311,36 @@ export function SlidePresentation({ year, month, reportType, onClose }: { year: 
   const { data, loading } = useData<SlidesData>(`/api/finance-report/slides?year=${year}&month=${month}&reportType=${reportType}`);
   const [currentSlide, setCurrentSlide] = useState(0);
   const slidesRef = useRef<HTMLDivElement>(null);
+  const allSlidesRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
 
   async function handleExportPDF() {
-    if (!slidesRef.current) return;
+    if (!allSlidesRef.current) return;
     setExporting(true);
     try {
       const html2canvas = (await import("html2canvas-pro")).default;
       const { jsPDF } = await import("jspdf");
 
-      const slideEls = slidesRef.current.querySelectorAll("[data-slide]");
+      const slideEls = allSlidesRef.current.querySelectorAll("[data-slide]");
       if (slideEls.length === 0) return;
 
+      const margin = 30;
       const first = slideEls[0] as HTMLElement;
       const canvas0 = await html2canvas(first, { scale: 2, useCORS: true, logging: false });
+      const pdfW = canvas0.width + margin * 2;
+      const pdfH = canvas0.height + margin * 2;
       const pdf = new jsPDF({
         orientation: "landscape",
         unit: "px",
-        format: [canvas0.width, canvas0.height],
+        format: [pdfW, pdfH],
       });
-      pdf.addImage(canvas0.toDataURL("image/png"), "PNG", 0, 0, canvas0.width, canvas0.height);
+      pdf.addImage(canvas0.toDataURL("image/png"), "PNG", margin, margin, canvas0.width, canvas0.height);
 
       for (let i = 1; i < slideEls.length; i++) {
         const el = slideEls[i] as HTMLElement;
         const canvas = await html2canvas(el, { scale: 2, useCORS: true, logging: false });
-        pdf.addPage([canvas.width, canvas.height], "landscape");
-        pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, canvas.width, canvas.height);
+        pdf.addPage([canvas.width + margin * 2, canvas.height + margin * 2], "landscape");
+        pdf.addImage(canvas.toDataURL("image/png"), "PNG", margin, margin, canvas.width, canvas.height);
       }
 
       const label = reportType === "CR" ? "Corrective_Repairs" : "PM";
@@ -398,6 +402,19 @@ export function SlidePresentation({ year, month, reportType, onClose }: { year: 
             {slide.type === "ytd_summary" && <YtdSlideView slide={slide} year={data.year} />}
           </div>
         </div>
+      </div>
+
+      {/* Hidden container with ALL slides for PDF export */}
+      <div ref={allSlidesRef} className="fixed left-[-9999px] top-0">
+        {slides.map((s, i) => (
+          <div key={i} data-slide className="w-[960px]" style={{ aspectRatio: "16/9" }}>
+            {s.type === "cover" && <CoverSlideView slide={s} />}
+            {s.type === "executive_summary" && <ExecSummarySlideView slide={s} />}
+            {s.type === "detailed_analysis" && <DetailedSlideView slide={s} year={data.year} />}
+            {s.type === "category_detail" && <CategoryDetailSlideView slide={s} />}
+            {s.type === "ytd_summary" && <YtdSlideView slide={s} year={data.year} />}
+          </div>
+        ))}
       </div>
 
       {/* Navigation */}

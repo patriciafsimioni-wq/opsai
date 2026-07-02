@@ -416,8 +416,11 @@ export function FinanceReportClient() {
       const el = reportRef.current;
       const canvas = await html2canvas(el, { scale: 2, useCORS: true, logging: false });
       const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [canvas.width, canvas.height] });
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+      const margin = 40;
+      const pdfW = canvas.width + margin * 2;
+      const pdfH = canvas.height + margin * 2;
+      const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [pdfW, pdfH] });
+      pdf.addImage(imgData, "PNG", margin, margin, canvas.width, canvas.height);
       const label = reportType === "CR" ? "Corrective_Repairs" : "PM";
       pdf.save(`${label}_Finance_Report_${MONTHS[month - 1]}_${year}.pdf`);
     } catch {
