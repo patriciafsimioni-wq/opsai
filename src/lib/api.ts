@@ -4,10 +4,12 @@ import type { SessionUser } from "@/lib/auth";
 import type { Station } from "@prisma/client";
 
 /** Returns a Prisma `where` clause fragment to scope queries by the user's station(s).
- *  Returns `null` for users who can see all stations. */
+ *  Returns `null` for users who can see all stations.
+ *  Returns empty `in` for scoped users without a station (matches nothing). */
 export function stationWhere(user: SessionUser): { station: { in: Station[] } } | null {
   const s = getUserStationFilter(user);
-  if (!s || s.length === 0) return null;
+  if (s === null) return null; // all-station role
+  // Empty array = scoped role with no station assigned = see nothing
   return { station: { in: s as Station[] } };
 }
 

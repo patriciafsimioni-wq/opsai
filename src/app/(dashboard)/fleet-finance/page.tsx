@@ -16,10 +16,10 @@ export default async function FleetFinancePage({ searchParams }: { searchParams:
 
   const params = await searchParams;
   const userStations = getUserStationFilter(user);
-  const selectedStation = userStations ? userStations.join(",") : (typeof params.station === "string" ? params.station : "");
+  const selectedStation = userStations !== null ? userStations.join(",") : (typeof params.station === "string" ? params.station : "");
 
   const whereClause: Record<string, unknown> = {};
-  if (userStations) {
+  if (userStations !== null) {
     whereClause.station = { in: userStations as Station[] };
   } else if (selectedStation) {
     whereClause.station = selectedStation as Station;

@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
   const where: Record<string, unknown> = {
     date: { gte: dateStart, lte: dateEnd },
   };
-  if (userStations) {
+  if (userStations !== null) {
     where.vehicle = { station: { in: userStations } };
   } else if (station) {
     where.vehicle = { station };

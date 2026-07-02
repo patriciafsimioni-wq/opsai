@@ -101,10 +101,10 @@ export async function GET(req: NextRequest) {
 
   const url = new URL(req.url);
   const userStations = getUserStationFilter(auth.user);
-  const stationFilter = userStations ? "" : (url.searchParams.get("station") ?? "ALL");
+  const stationFilter = userStations !== null ? "" : (url.searchParams.get("station") ?? "ALL");
 
   const vehicleWhere: Record<string, unknown> = {};
-  if (userStations) {
+  if (userStations !== null) {
     vehicleWhere.station = { in: userStations };
   } else if (stationFilter && stationFilter !== "ALL") {
     vehicleWhere.station = stationFilter;

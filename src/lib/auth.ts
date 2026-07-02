@@ -128,7 +128,7 @@ export function isStationScoped(role: Role): boolean {
 
 export function getUserStationFilter(user: SessionUser): string[] | null {
   if (!isStationScoped(user.role)) return null; // sees all
-  if (!user.station) return ["__NONE__"]; // no station assigned = see nothing
+  if (!user.station) return []; // no station assigned = empty array = see nothing
   // Support comma-separated multi-station values
   return user.station.split(",").map((s) => s.trim()).filter(Boolean);
 }
