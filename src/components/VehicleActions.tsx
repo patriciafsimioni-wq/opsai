@@ -132,13 +132,19 @@ export function VehicleActions({ vehicleId, branding: initialBranding, offboarde
                       <Camera size={20} className="text-slate-300" />
                     )}
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Paste URL…"
-                    value={brandingPhotos[i]}
-                    onChange={(e) => saveBrandingPhoto(i, e.target.value)}
-                    className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-[10px] text-slate-600"
-                  />
+                  <label className="block w-full cursor-pointer rounded border border-dashed border-[var(--color-border)] px-2 py-1 text-[10px] text-center text-slate-500 hover:border-blue-400 hover:bg-blue-50">
+                    {brandingPhotos[i] ? "Change" : "Upload"}
+                    <input type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const fd = new FormData();
+                      fd.append("file", file);
+                      const res = await fetch("/api/uploads", { method: "POST", body: fd });
+                      const data = await res.json().catch(() => ({}));
+                      if (res.ok && (data as { url: string }).url) saveBrandingPhoto(i, (data as { url: string }).url);
+                      e.target.value = "";
+                    }} />
+                  </label>
                 </div>
               ))}
             </div>
@@ -203,17 +209,23 @@ export function VehicleActions({ vehicleId, branding: initialBranding, offboarde
                       <Camera size={20} className="text-slate-300" />
                     )}
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Paste photo URL…"
-                    value={offboardPhotos[i]}
-                    onChange={(e) => {
-                      const next = [...offboardPhotos];
-                      next[i] = e.target.value;
-                      setOffboardPhotos(next);
-                    }}
-                    className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
-                  />
+                  <label className="block w-full cursor-pointer rounded border border-dashed border-[var(--color-border)] px-2 py-1 text-xs text-center text-slate-500 hover:border-blue-400 hover:bg-blue-50">
+                    {offboardPhotos[i] ? "Change" : "Upload"}
+                    <input type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const fd = new FormData();
+                      fd.append("file", file);
+                      const res = await fetch("/api/uploads", { method: "POST", body: fd });
+                      const data = await res.json().catch(() => ({}));
+                      if (res.ok && (data as { url: string }).url) {
+                        const next = [...offboardPhotos];
+                        next[i] = (data as { url: string }).url;
+                        setOffboardPhotos(next);
+                      }
+                      e.target.value = "";
+                    }} />
+                  </label>
                 </div>
               ))}
             </div>

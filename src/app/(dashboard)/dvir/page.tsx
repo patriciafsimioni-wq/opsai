@@ -68,7 +68,7 @@ export default function DvirPage() {
   );
   const [notes, setNotes] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
-  const [photoUrl, setPhotoUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -239,22 +239,33 @@ export default function DvirPage() {
             {/* Photos */}
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">
-                <Camera size={12} className="inline mr-1" /> Photos (paste URLs)
+                <Camera size={12} className="inline mr-1" /> Photos
               </label>
               <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={photoUrl}
-                  onChange={(e) => setPhotoUrl(e.target.value)}
-                  placeholder="Paste photo URL..."
-                  className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                />
-                <button
-                  onClick={() => { if (photoUrl.trim()) { setPhotos((p) => [...p, photoUrl.trim()]); setPhotoUrl(""); } }}
-                  className="rounded-lg bg-slate-600 px-4 py-2 text-sm text-white hover:bg-slate-700"
-                >
-                  Add
-                </button>
+                <label className="flex-1 cursor-pointer rounded-lg border-2 border-dashed border-slate-300 px-3 py-3 text-center text-sm text-slate-500 hover:border-blue-400 hover:bg-blue-50">
+                  {uploading ? "Uploading..." : "Tap to upload photo or take picture"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    disabled={uploading}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setUploading(true);
+                      const fd = new FormData();
+                      fd.append("file", file);
+                      const res = await fetch("/api/uploads", { method: "POST", body: fd });
+                      const data = await res.json().catch(() => ({}));
+                      if (res.ok && (data as { url: string }).url) {
+                        setPhotos((p) => [...p, (data as { url: string }).url]);
+                      }
+                      setUploading(false);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
               </div>
               {photos.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
