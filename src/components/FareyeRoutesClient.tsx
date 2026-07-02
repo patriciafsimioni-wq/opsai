@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useData } from "@/lib/use-data";
 import { STATION_LABEL } from "@/lib/constants";
+import { Download } from "lucide-react";
 
 type FareyeRoute = {
   id: string;
@@ -249,6 +250,71 @@ export function FareyeRoutesClient() {
   const { data, loading } = useData<ApiResponse>(`/api/fareye-routes?${params.toString()}`);
   const initialized = useRef(false);
 
+  const downloadMileageReport = useCallback(() => {
+    if (!data || data.routes.length === 0) return;
+    const periodLabel = range === "day" ? "Daily" : range === "week" ? "Weekly" : "Monthly";
+    const stationLabel = station || "All_Stations";
+    const dateLabel = selectedDate || "all_dates";
+    const filename = `FareEye_Mileage_Report_${periodLabel}_${stationLabel}_${dateLabel}.csv`;
+
+    const headers = [
+      "Date", "Route ID", "Station", "Driver", "Vehicle Type", "Vehicle Tag",
+      "Miles", "Travel Time (min)", "Route Duration (min)", "Leave By Time",
+      "Planned End Time", "Stops", "Total Weight", "Total Pallets",
+      "Vehicle Utilization %", "SPORH", "Planned Hours",
+    ];
+    const csvRows = [headers.join(",")];
+    for (const r of data.routes) {
+      csvRows.push([
+        new Date(r.date).toISOString().slice(0, 10),
+        `"${r.routeId}"`,
+        r.station,
+        `"${(r as Record<string, unknown>).driverName ?? ""}"`,
+        `"${r.vehicleType}"`,
+        `"${r.vehicleTag ?? ""}"`,
+        r.miles.toFixed(1),
+        r.travelMinutes,
+        r.routeDurationMinutes,
+        r.leaveByTime ?? "",
+        r.plannedEndTime ?? "",
+        r.stops,
+        r.totalWeight,
+        r.totalPallets,
+        r.vehicleUtilization.toFixed(1),
+        r.sporh.toFixed(2),
+        r.plannedHours.toFixed(1),
+      ].join(","));
+    }
+
+    // Summary row
+    csvRows.push("");
+    csvRows.push("Summary");
+    csvRows.push(`Total Routes,${data.summary.totalRoutes}`);
+    csvRows.push(`Total Miles,${data.summary.totalMiles.toLocaleString()}`);
+    csvRows.push(`Total Stops,${data.summary.totalStops.toLocaleString()}`);
+    csvRows.push(`Avg Utilization,${data.summary.avgUtilization.toFixed(1)}%`);
+    csvRows.push(`Avg SPORH,${data.summary.avgSporh.toFixed(2)}`);
+    csvRows.push(`Total Planned Hours,${data.summary.totalPlannedHrs.toFixed(1)}`);
+
+    // Station breakdown
+    if (Object.keys(data.byStation).length > 0) {
+      csvRows.push("");
+      csvRows.push("Station Breakdown");
+      csvRows.push("Station,Routes,Miles,Stops,Avg Utilization %");
+      for (const [st, stats] of Object.entries(data.byStation)) {
+        csvRows.push(`${st},${stats.count},${stats.miles.toLocaleString()},${stats.stops},${stats.avgUtil.toFixed(1)}`);
+      }
+    }
+
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [data, range, station, selectedDate]);
+
   useEffect(() => {
     if (data?.availableDates && data.availableDates.length > 0 && !initialized.current) {
       initialized.current = true;
@@ -308,6 +374,15 @@ export function FareyeRoutesClient() {
             ))}
           </select>
         </div>
+
+        <button
+          onClick={downloadMileageReport}
+          disabled={!data || data.routes.length === 0}
+          className="ml-auto flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <Download size={16} />
+          Download Mileage Report
+        </button>
       </div>
 
       {/* Summary cards */}
