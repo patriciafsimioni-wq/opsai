@@ -44,7 +44,7 @@ const emptyForm = {
   assignedDriverId: "",
 };
 
-type SortKey = "name" | "station" | "type" | "status" | "leasing" | "odometer" | "fuel";
+type SortKey = "name" | "station" | "type" | "status" | "leasing" | "odometer" | "fuel" | "camera";
 
 const STATUS_ORDER: Record<string, number> = { ACTIVE: 0, IDLE: 1, MAINTENANCE: 2, OUT_OF_SERVICE: 3 };
 
@@ -57,6 +57,7 @@ function sortValue(v: VehicleDTO, key: SortKey): string | number {
     case "leasing": return (v.leasingCompany ?? "").toLowerCase();
     case "odometer": return v.odometer ?? 0;
     case "fuel": return v.fuelLevel ?? 0;
+    case "camera": return v.hasSamsaraCamera ? 0 : 1;
   }
 }
 
@@ -338,6 +339,7 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
               <Th><SortHeader label="Leasing" col="leasing" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
               <Th><SortHeader label="Odometer" col="odometer" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
               <Th><SortHeader label="Fuel" col="fuel" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+              <Th><SortHeader label="Camera" col="camera" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
               <Th />
             </tr>
           </thead>
@@ -392,6 +394,17 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
                     </div>
                     <ProgressBar value={v.fuelLevel} />
                   </div>
+                </Td>
+                <Td>
+                  {v.hasSamsaraCamera ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">
+                      <Camera size={11} /> Connected
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                      <Camera size={11} /> Not connected
+                    </span>
+                  )}
                 </Td>
                 <Td>
                   {canManage && (
