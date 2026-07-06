@@ -17,6 +17,8 @@ import {
   VEHICLE_STATUS,
   ALERT_SEVERITY,
   ALERT_TYPE_LABEL,
+  STATION_TARGETS,
+  STATION_LABEL,
 } from "@/lib/constants";
 import { formatCurrency, relativeTime, formatDate } from "@/lib/utils";
 import { StationFilter } from "@/components/StationFilter";
@@ -91,6 +93,41 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     MAINTENANCE: fleetVehicles.filter((v) => v.status === "MAINTENANCE").length,
     OUT_OF_SERVICE: fleetVehicles.filter((v) => v.status === "OUT_OF_SERVICE").length,
   };
+
+  // Fleet plan vs actual — active vehicles per station across the whole fleet
+  // (independent of the station filter), compared to DHL contracted targets.
+  const activeByStation = await prisma.vehicle.groupBy({
+    by: ["station"],
+    where: { NOT: { offboardStatus: { in: ["IN_PROGRESS", "COMPLETED"] } } },
+    _count: true,
+  });
+  const stationActual: Record<string, number> = {};
+  for (const s of activeByStation) if (s.station) stationActual[s.station] = s._count;
+  const planRows = Object.keys(STATION_TARGETS)
+    .map((st) => {
+      const target = STATION_TARGETS[st];
+      const actual = stationActual[st] ?? 0;
+      return { station: st, target, actual, delta: actual - target };
+    })
+    .sort((a, b) => b.target - a.target);
+  const planTargetTotal = planRows.reduce((s, r) => s + r.target, 0);
+  const planActualTotal = planRows.reduce((s, r) => s + r.actual, 0);
+
+  // Live on Samsara — vehicles currently running (engine on) per station.
+  const liveByStationRaw = await prisma.vehicle.groupBy({
+    by: ["station"],
+    where: {
+      engineOn: true,
+      NOT: { offboardStatus: { in: ["IN_PROGRESS", "COMPLETED"] } },
+    },
+    _count: true,
+  });
+  const liveByStation: Record<string, number> = {};
+  for (const s of liveByStationRaw) if (s.station) liveByStation[s.station] = s._count;
+  const liveStationRows = Object.keys(STATION_TARGETS)
+    .map((st) => ({ station: st, live: liveByStation[st] ?? 0 }))
+    .sort((a, b) => b.live - a.live);
+  const liveTotal = liveStationRows.reduce((s, r) => s + r.live, 0);
 
   const unreadAlerts = await prisma.alert.count({ where: { read: false, type: { notIn: ["SPEEDING", "HARSH_DRIVING"] }, ...(station ? { vehicle: { station } } : {}) } });
   const openWO = workOrders.filter(
@@ -274,7 +311,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <StationFilter />
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/15">
+          <Link href="/vehicles" className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/15 transition-colors hover:bg-white/20">
             <p className="text-xs font-medium text-blue-100">Fleet Utilization</p>
             <div className="mt-1 flex items-end gap-2">
               <span className="text-2xl font-bold">{utilization}%</span>
@@ -282,23 +319,50 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/20">
               <div className="h-full rounded-full bg-white" style={{ width: `${utilization}%` }} />
             </div>
-          </div>
-          <div className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/15">
+          </Link>
+          <Link href="/vehicles" className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/15 transition-colors hover:bg-white/20">
             <p className="text-xs font-medium text-blue-100">Active / Total</p>
             <p className="mt-1 text-2xl font-bold">{statusCounts.ACTIVE}<span className="text-lg font-medium text-blue-200">/{fleetVehicles.length}</span></p>
             <p className="mt-1 text-xs text-blue-100">vehicles on the road</p>
-          </div>
+          </Link>
           {canSeeAlerts && (
-            <div className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/15">
+            <Link href="/alerts" className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/15 transition-colors hover:bg-white/20">
               <p className="text-xs font-medium text-blue-100">Open Alerts</p>
               <p className="mt-1 text-2xl font-bold">{unreadAlerts}</p>
               <p className="mt-1 text-xs text-blue-100">need attention</p>
-            </div>
+            </Link>
           )}
-          <div className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/15">
+          <Link href="/maintenance" className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/15 transition-colors hover:bg-white/20">
             <p className="text-xs font-medium text-blue-100">Open Work Orders</p>
             <p className="mt-1 text-2xl font-bold">{openWO}</p>
             <p className="mt-1 text-xs text-blue-100">{todayRoutes} routes today</p>
+          </Link>
+        </div>
+
+        {/* Live on Samsara — running vans per station */}
+        <div className="mt-4 rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/15">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="flex items-center gap-1.5 text-xs font-medium text-blue-100">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
+              Live on Samsara · running now
+            </p>
+            <span className="text-xs font-semibold">{liveTotal} vans</span>
+          </div>
+          <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+            {liveStationRows.map((r) => (
+              <Link
+                key={r.station}
+                href={`/map?station=${r.station}`}
+                className="rounded-lg bg-white/10 px-2 py-1.5 text-center transition-colors hover:bg-white/20"
+                title={`${STATION_LABEL[r.station] ?? r.station} — ${r.live} running`}
+              >
+                <p className="text-[10px] font-medium text-blue-100">{r.station}</p>
+                <p className="text-lg font-bold leading-tight">{r.live}</p>
+              </Link>
+            ))}
           </div>
         </div>
       </div>
@@ -394,6 +458,60 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           />
         )}
       </div>
+
+      {/* Fleet Plan vs Actual — DHL station targets */}
+      {isManager && (
+        <div className="mt-6">
+          <Card>
+            <CardHeader
+              title="Fleet Plan vs Actual"
+              subtitle="Vehicles running per station vs DHL contracted plan"
+              action={
+                <span className={`text-xs font-semibold ${planActualTotal > planTargetTotal ? "text-red-600" : planActualTotal < planTargetTotal ? "text-amber-600" : "text-emerald-600"}`}>
+                  {planActualTotal} running / {planTargetTotal} planned
+                  {planActualTotal !== planTargetTotal && ` · ${planActualTotal > planTargetTotal ? "+" : ""}${planActualTotal - planTargetTotal}`}
+                </span>
+              }
+            />
+            <div className="grid grid-cols-2 gap-px overflow-hidden bg-[var(--color-border)] sm:grid-cols-4 lg:grid-cols-7">
+              {planRows.map((r) => {
+                const over = r.delta > 0;
+                const under = r.delta < 0;
+                const pct = r.target > 0 ? Math.min(100, Math.round((r.actual / r.target) * 100)) : 0;
+                return (
+                  <Link
+                    key={r.station}
+                    href={`/vehicles?station=${r.station}`}
+                    className="bg-white p-4 hover:bg-slate-50 transition-colors"
+                    title={STATION_LABEL[r.station] ?? r.station}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-slate-700">{r.station}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                          over ? "bg-red-100 text-red-700" : under ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
+                        }`}
+                      >
+                        {over ? `+${r.delta} over` : under ? `${r.delta} short` : "on plan"}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-2xl font-bold">
+                      {r.actual}
+                      <span className="text-sm font-medium text-slate-400"> / {r.target}</span>
+                    </p>
+                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className={`h-full rounded-full ${over ? "bg-red-500" : "bg-blue-500"}`}
+                        style={{ width: `${over ? 100 : pct}%` }}
+                      />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* This Week Summary */}
       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">

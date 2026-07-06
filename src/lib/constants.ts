@@ -65,6 +65,17 @@ export const STATION_LABEL: Record<string, string> = {
   LRD: "LRD — Laredo",
 };
 
+// DHL contracted fleet plan — target vehicles per station.
+export const STATION_TARGETS: Record<string, number> = {
+  IAH: 48,
+  AUS: 34,
+  HRL: 12,
+  ACT: 5,
+  LRD: 4,
+  CLL: 4,
+  BPT: 3,
+};
+
 export const SERVICE_CATEGORY = {
   PREVENTIVE: { label: "Preventive", bg: "#dcfce7", fg: "#166534" },
   CORRECTIVE: { label: "Corrective", bg: "#fee2e2", fg: "#991b1b" },
