@@ -131,6 +131,7 @@ const schema = z.object({
   pricePerLiter: z.coerce.number().min(0),
   odometer: z.coerce.number().min(0).optional().nullable(),
   location: z.string().optional().nullable(),
+  transactionTime: z.string().optional().nullable(),
   purchaseType: z.enum(["UNLEADED", "DIESEL", "DEF", "NON_FUEL"]).optional(),
 });
 
@@ -151,6 +152,7 @@ export async function POST(req: Request) {
       totalCost: Math.round(d.liters * d.pricePerLiter * 100) / 100,
       odometer: d.odometer ?? null,
       location: d.location || null,
+      transactionTime: d.transactionTime || null,
       purchaseType: d.purchaseType ?? "DIESEL",
     },
   });

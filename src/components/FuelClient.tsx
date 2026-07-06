@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Search, Trash2, Fuel, ChevronLeft, ChevronRight, AlertTriangle, CreditCard, Flag } from "lucide-react";
+import { Plus, Search, Trash2, Fuel, ChevronLeft, ChevronRight, AlertTriangle, CreditCard, Flag, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Card, Button, Table, Th, Td, EmptyState, StatCard } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
@@ -17,8 +18,13 @@ const emptyForm = {
   pricePerLiter: "1.20",
   odometer: "",
   location: "",
+  transactionTime: "",
   purchaseType: "UNLEADED",
 };
+
+type FuelSortKey =
+  | "date" | "vehicle" | "driver" | "type" | "station"
+  | "volume" | "price" | "total" | "location" | "time" | "status";
 
 type PurchaseBreakdownItem = {
   type: string;
@@ -74,7 +80,14 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
   const { data: vehicles } = useData<VehicleDTO[]>("/api/vehicles");
   const { data: drivers } = useData<DriverDTO[]>("/api/drivers");
   const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<FuelSortKey>("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [modalOpen, setModalOpen] = useState(false);
+
+  function toggleSort(key: FuelSortKey) {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("asc"); }
+  }
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -107,14 +120,39 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
   const filtered = useMemo(() => {
     const base = viewTab === "duplicates" ? duplicateOnlyLogs : logs;
     const q = search.toLowerCase();
-    return base.filter(
+    const rows = base.filter(
       (l) =>
         !q ||
         l.vehicle.name.toLowerCase().includes(q) ||
         (l.location ?? "").toLowerCase().includes(q) ||
         (l.driverName ?? "").toLowerCase().includes(q),
     );
-  }, [logs, duplicateOnlyLogs, viewTab, search]);
+    const val = (l: FuelLogDTO): string | number => {
+      switch (sortKey) {
+        case "date": return new Date(l.date!).getTime();
+        case "vehicle": return l.vehicle.name.toLowerCase();
+        case "driver": return (l.driverName || (l.driver ? `${l.driver.firstName} ${l.driver.lastName}` : "")).toLowerCase();
+        case "type": return (PURCHASE_TYPE_LABEL[l.purchaseType] ?? l.purchaseType).toLowerCase();
+        case "station": return (l.vehicle.station ?? "").toLowerCase();
+        case "volume": return l.liters;
+        case "price": return l.pricePerLiter;
+        case "total": return l.totalCost;
+        case "location": return (l.location ?? "").toLowerCase();
+        case "time": return (l.transactionTime ?? "");
+        case "status": {
+          const key = `${l.vehicleId}|${new Date(l.date!).toISOString().slice(0, 10)}`;
+          return (inactiveCardSet.has(l.vehicleId) ? 2 : 0) + (duplicateSet.has(key) ? 1 : 0);
+        }
+      }
+    };
+    return rows.sort((a, b) => {
+      const av = val(a), bv = val(b);
+      let cmp: number;
+      if (typeof av === "number" && typeof bv === "number") cmp = av - bv;
+      else cmp = String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: "base" });
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [logs, duplicateOnlyLogs, viewTab, search, sortKey, sortDir, duplicateSet, inactiveCardSet]);
 
   const breakdown = data?.purchaseBreakdown ?? [];
   const gasCost = breakdown.find((b) => b.type === "UNLEADED")?.totalCost ?? 0;
@@ -290,15 +328,17 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
           <Table>
             <thead>
               <tr>
-                <Th>Date</Th>
-                <Th>Vehicle</Th>
-                <Th>Driver</Th>
-                <Th>Type</Th>
-                <Th>Station</Th>
-                <Th>Volume</Th>
-                <Th>Price/Gal</Th>
-                <Th>Total</Th>
-                <Th>Status</Th>
+                <Th><FuelSortHeader label="Date" col="date" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+                <Th><FuelSortHeader label="Vehicle" col="vehicle" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+                <Th><FuelSortHeader label="Driver" col="driver" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+                <Th><FuelSortHeader label="Type" col="type" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+                <Th><FuelSortHeader label="Station" col="station" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+                <Th><FuelSortHeader label="Location" col="location" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+                <Th><FuelSortHeader label="Txn Time" col="time" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+                <Th><FuelSortHeader label="Volume" col="volume" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+                <Th><FuelSortHeader label="Price/Gal" col="price" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+                <Th><FuelSortHeader label="Total" col="total" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+                <Th><FuelSortHeader label="Status" col="status" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
                 <Th />
               </tr>
             </thead>
@@ -323,6 +363,8 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
                       </span>
                     </Td>
                     <Td className="text-slate-600">{l.vehicle.station ?? "—"}</Td>
+                    <Td className="text-slate-600">{l.location ?? "—"}</Td>
+                    <Td className="text-slate-600">{l.transactionTime ?? "—"}</Td>
                     <Td>{formatNumber(l.liters, 1)} Gal</Td>
                     <Td>{formatCurrency(l.pricePerLiter)}</Td>
                     <Td className="font-medium">{formatCurrency(l.totalCost)}</Td>
@@ -420,9 +462,45 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
           <Field label="Location">
             <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
           </Field>
+          <Field label="Transaction Time">
+            <Input type="time" value={form.transactionTime} onChange={(e) => setForm({ ...form, transactionTime: e.target.value })} />
+          </Field>
         </div>
         {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
       </Modal>
     </div>
+  );
+}
+
+function FuelSortHeader({
+  label,
+  col,
+  sortKey,
+  sortDir,
+  onClick,
+}: {
+  label: string;
+  col: FuelSortKey;
+  sortKey: FuelSortKey;
+  sortDir: "asc" | "desc";
+  onClick: (key: FuelSortKey) => void;
+}) {
+  const active = sortKey === col;
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(col)}
+      className={cn(
+        "-mx-1 flex items-center gap-1 rounded px-1 py-0.5 uppercase hover:text-slate-700",
+        active && "text-slate-800",
+      )}
+    >
+      {label}
+      {active ? (
+        sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />
+      ) : (
+        <ChevronsUpDown size={13} className="text-slate-300" />
+      )}
+    </button>
   );
 }

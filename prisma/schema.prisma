@@ -409,6 +409,7 @@ model FuelLog {
   totalCost     Float
   odometer      Float?
   location      String?
+  transactionTime String?
   purchaseType  PurchaseType @default(DIESEL)
   cardNumber    String?
   createdAt     DateTime     @default(now())
