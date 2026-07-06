@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Search, Trash2, Route } from "lucide-react";
+import { Plus, Search, Trash2, Route, RefreshCw } from "lucide-react";
 import { Card, Button, Badge, Table, Th, Td, EmptyState } from "@/components/ui";
 import { Field, Input, Select, Textarea, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
@@ -30,6 +30,31 @@ export function TripsClient({ canManage }: { canManage: boolean }) {
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
+
+  async function syncFromSamsara() {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch("/api/samsara/trips-sync", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) setSyncResult(`Error: ${data.error || "Sync failed"}`);
+      else {
+        setSyncResult(
+          data.created > 0
+            ? `Imported ${data.created} trips from Samsara (${data.vehiclesWithTrips} vehicles).`
+            : `No new trips found in the last 14 days.`,
+        );
+        reload();
+      }
+    } catch {
+      setSyncResult("Error: Network request failed");
+    } finally {
+      setSyncing(false);
+      setTimeout(() => setSyncResult(null), 12000);
+    }
+  }
 
   const filtered = useMemo(() => {
     if (!trips) return [];
@@ -90,11 +115,21 @@ export function TripsClient({ canManage }: { canManage: boolean }) {
           ))}
         </select>
         {canManage && (
-          <Button onClick={() => { setForm(emptyForm); setError(""); setModalOpen(true); }}>
-            <Plus size={16} /> New Trip
-          </Button>
+          <>
+            <Button variant="secondary" onClick={syncFromSamsara} disabled={syncing}>
+              <RefreshCw size={16} className={syncing ? "animate-spin" : ""} /> {syncing ? "Syncing…" : "Sync from Samsara"}
+            </Button>
+            <Button onClick={() => { setForm(emptyForm); setError(""); setModalOpen(true); }}>
+              <Plus size={16} /> New Trip
+            </Button>
+          </>
         )}
       </div>
+      {syncResult && (
+        <p className={`px-4 py-2 text-xs ${syncResult.startsWith("Error") ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-700"}`}>
+          {syncResult}
+        </p>
+      )}
 
       {loading ? (
         <p className="p-8 text-center text-sm text-slate-400">Loading…</p>

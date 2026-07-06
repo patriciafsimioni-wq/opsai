@@ -225,6 +225,47 @@ export async function getSamsaraDriverSafetyScores(): Promise<SamsaraDriverSafet
   return results;
 }
 
+export interface SamsaraTrip {
+  id?: string;
+  startMs: number;
+  endMs: number;
+  startLocation?: string;
+  endLocation?: string;
+  startCoordinates?: { latitude: number; longitude: number };
+  endCoordinates?: { latitude: number; longitude: number };
+  distanceMeters?: number;
+}
+
+export class SamsaraPermissionError extends Error {}
+
+// Pulls trips for a single vehicle over a time window using the v1 Trips
+// endpoint. Requires the API token to have "Vehicle Trips" (read) permission —
+// a 401 is surfaced as SamsaraPermissionError so callers can guide the user.
+export async function getSamsaraTrips(
+  vehicleId: string,
+  startMs: number,
+  endMs: number,
+): Promise<SamsaraTrip[]> {
+  const res = await fetch("https://api.samsara.com/v1/fleet/trips", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ vehicleId: Number(vehicleId), startMs, endMs }),
+  });
+  if (res.status === 401) {
+    const text = await res.text();
+    throw new SamsaraPermissionError(text);
+  }
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Samsara trips ${res.status}: ${text}`);
+  }
+  const json = (await res.json()) as { trips?: SamsaraTrip[] };
+  return json.trips ?? [];
+}
+
 export function isConfigured(): boolean {
   return !!API_KEY;
 }
