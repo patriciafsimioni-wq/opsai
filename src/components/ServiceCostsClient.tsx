@@ -16,6 +16,9 @@ function monthLabel(key: string) {
   const [y, m] = key.split("-").map(Number);
   return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 }
+function dateLabel(d: Date) {
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
 
 function classifyCategory(title: string): "PREVENTIVE" | "CORRECTIVE" {
   const lower = title.toLowerCase();
@@ -41,6 +44,7 @@ function getCategory(o: WorkOrderDTO): string {
 export function ServiceCostsClient() {
   const { data: orders, loading } = useData<WorkOrderDTO[]>("/api/maintenance");
   const [monthFilter, setMonthFilter] = useState("");
+  const [yearFilter, setYearFilter] = useState("");
   const [stationFilter, setStationFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
 
@@ -50,23 +54,48 @@ export function ServiceCostsClient() {
     [orders],
   );
 
-  const monthOptions = useMemo(() => {
+  const yearOptions = useMemo(() => {
     const set = new Set<string>();
-    for (const o of completed) set.add(monthKey(new Date(o.completedAt!)));
+    for (const o of completed) set.add(String(new Date(o.completedAt!).getUTCFullYear()));
     return Array.from(set).sort().reverse();
   }, [completed]);
 
+  const monthOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const o of completed) {
+      const mk = monthKey(new Date(o.completedAt!));
+      if (yearFilter && !mk.startsWith(`${yearFilter}-`)) continue;
+      set.add(mk);
+    }
+    return Array.from(set).sort().reverse();
+  }, [completed, yearFilter]);
+
   const filtered = useMemo(() => {
     return completed.filter((o) => {
-      const mk = monthKey(new Date(o.completedAt!));
+      const d = new Date(o.completedAt!);
+      const mk = monthKey(d);
+      const yr = String(d.getUTCFullYear());
       const cat = getCategory(o);
       return (
+        (!yearFilter || yr === yearFilter) &&
         (!monthFilter || mk === monthFilter) &&
         (!stationFilter || o.station === stationFilter) &&
         (!categoryFilter || cat === categoryFilter)
       );
     });
-  }, [completed, monthFilter, stationFilter, categoryFilter]);
+  }, [completed, monthFilter, yearFilter, stationFilter, categoryFilter]);
+
+  const dateRange = useMemo(() => {
+    if (filtered.length === 0) return null;
+    let min = new Date(filtered[0].completedAt!);
+    let max = min;
+    for (const o of filtered) {
+      const d = new Date(o.completedAt!);
+      if (d < min) min = d;
+      if (d > max) max = d;
+    }
+    return { min, max };
+  }, [filtered]);
 
   const totals = useMemo(() => {
     return filtered.reduce(
@@ -144,11 +173,16 @@ export function ServiceCostsClient() {
   const prevOrders = useMemo(
     () =>
       completed.filter(
-        (o) =>
-          (getCategory(o)) === "PREVENTIVE" &&
-          (!monthFilter || monthKey(new Date(o.completedAt!)) === monthFilter),
+        (o) => {
+          const d = new Date(o.completedAt!);
+          return (
+            (getCategory(o)) === "PREVENTIVE" &&
+            (!yearFilter || String(d.getUTCFullYear()) === yearFilter) &&
+            (!monthFilter || monthKey(d) === monthFilter)
+          );
+        },
       ),
-    [completed, monthFilter],
+    [completed, monthFilter, yearFilter],
   );
 
   const prevMatrix = useMemo(() => {
@@ -215,6 +249,19 @@ export function ServiceCostsClient() {
       <Card>
         <div className="flex flex-wrap items-center gap-3 p-4">
           <select
+            value={yearFilter}
+            onChange={(e) => {
+              setYearFilter(e.target.value);
+              setMonthFilter("");
+            }}
+            className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm"
+          >
+            <option value="">All years</option>
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+          <select
             value={monthFilter}
             onChange={(e) => setMonthFilter(e.target.value)}
             className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm"
@@ -247,6 +294,27 @@ export function ServiceCostsClient() {
           <div className="ml-auto">
             <ExportButton rows={csvRows} filename="service-costs.csv" label="Export CSV" />
           </div>
+        </div>
+        <div className="border-t border-[var(--color-border)] px-4 py-3 text-sm text-slate-500">
+          {loading ? (
+            "Loading…"
+          ) : dateRange ? (
+            <>
+              <span className="font-medium text-slate-700">
+                {monthFilter
+                  ? monthLabel(monthFilter)
+                  : yearFilter
+                    ? `Year ${yearFilter}`
+                    : "All time"}
+              </span>{" "}
+              · showing services from{" "}
+              <span className="font-medium text-slate-700">{dateLabel(dateRange.min)}</span> to{" "}
+              <span className="font-medium text-slate-700">{dateLabel(dateRange.max)}</span>{" "}
+              · {totals.count} {totals.count === 1 ? "service" : "services"}
+            </>
+          ) : (
+            "No services for this selection"
+          )}
         </div>
       </Card>
 
@@ -295,7 +363,7 @@ export function ServiceCostsClient() {
           <div>
             <h3 className="text-sm font-semibold">Preventive Maintenance — Cost per Station</h3>
             <p className="text-xs text-slate-400">
-              {monthFilter ? monthLabel(monthFilter) : "All months"} · cost per station for each preventive service group
+              {monthFilter ? monthLabel(monthFilter) : yearFilter ? `Year ${yearFilter}` : "All months"} · cost per station for each preventive service group
             </p>
           </div>
           <ExportButton rows={prevMatrixCsv} filename="preventive-cost-by-station.csv" label="Export matrix" />
