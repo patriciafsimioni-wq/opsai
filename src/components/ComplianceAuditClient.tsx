@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ShieldCheck, ShieldAlert, ShieldX, Search } from "lucide-react";
+import { ShieldCheck, ShieldAlert, ShieldX, Search, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { Card, Table, Th, Td, EmptyState } from "@/components/ui";
 import { STATION_LABEL } from "@/lib/constants";
-import { daysUntil } from "@/lib/utils";
+import { daysUntil, cn } from "@/lib/utils";
 
 type Row = {
   id: string;
@@ -60,10 +60,32 @@ function rowState(v: Row): DocState {
 const STATIONS_IN_DATA = (rows: Row[]) =>
   [...new Set(rows.map((r) => r.station).filter(Boolean))].sort() as string[];
 
+type SortKey = "name" | "station" | "registration" | "insurance";
+
+// null expiries sort last in ascending order.
+function sortValue(v: Row, key: SortKey): string | number {
+  switch (key) {
+    case "name": return (v.dxNumber || v.name).toLowerCase();
+    case "station": return (v.station ?? "").toLowerCase();
+    case "registration": return v.registrationExpiry ? new Date(v.registrationExpiry).getTime() : Number.POSITIVE_INFINITY;
+    case "insurance": return v.insuranceExpiry ? new Date(v.insuranceExpiry).getTime() : Number.POSITIVE_INFINITY;
+  }
+}
+
 export function ComplianceAuditClient({ vehicles }: { vehicles: Row[] }) {
   const [search, setSearch] = useState("");
   const [station, setStation] = useState("");
   const [filter, setFilter] = useState<"" | DocState>("");
+  const [sortKey, setSortKey] = useState<SortKey>("registration");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
 
   const counts = useMemo(() => {
     const c = { expired: 0, expiring: 0, missing: 0, valid: 0 };
@@ -73,17 +95,26 @@ export function ComplianceAuditClient({ vehicles }: { vehicles: Row[] }) {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return vehicles.filter((v) => {
-      const matchSearch =
-        !q ||
-        v.name.toLowerCase().includes(q) ||
-        (v.dxNumber ?? "").toLowerCase().includes(q) ||
-        (v.licensePlate ?? "").toLowerCase().includes(q);
-      const matchStation = !station || v.station === station;
-      const matchStatus = !filter || rowState(v) === filter;
-      return matchSearch && matchStation && matchStatus;
-    });
-  }, [vehicles, search, station, filter]);
+    return vehicles
+      .filter((v) => {
+        const matchSearch =
+          !q ||
+          v.name.toLowerCase().includes(q) ||
+          (v.dxNumber ?? "").toLowerCase().includes(q) ||
+          (v.licensePlate ?? "").toLowerCase().includes(q);
+        const matchStation = !station || v.station === station;
+        const matchStatus = !filter || rowState(v) === filter;
+        return matchSearch && matchStation && matchStatus;
+      })
+      .sort((a, b) => {
+        const av = sortValue(a, sortKey);
+        const bv = sortValue(b, sortKey);
+        let cmp: number;
+        if (typeof av === "number" && typeof bv === "number") cmp = av - bv;
+        else cmp = String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: "base" });
+        return sortDir === "asc" ? cmp : -cmp;
+      });
+  }, [vehicles, search, station, filter, sortKey, sortDir]);
 
   const cards: { key: DocState; label: string; icon: typeof ShieldCheck; bg: string; fg: string; n: number }[] = [
     { key: "expired", label: "Expired", icon: ShieldX, bg: "bg-red-50", fg: "text-red-700", n: counts.expired },
@@ -148,10 +179,10 @@ export function ComplianceAuditClient({ vehicles }: { vehicles: Row[] }) {
           <Table>
             <thead>
               <tr>
-                <Th>Vehicle</Th>
-                <Th>Station</Th>
-                <Th>Registration Expiry</Th>
-                <Th>Insurance Expiry</Th>
+                <Th><SortHeader label="Vehicle" col="name" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+                <Th><SortHeader label="Station" col="station" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+                <Th><SortHeader label="Registration Expiry" col="registration" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+                <Th><SortHeader label="Insurance Expiry" col="insurance" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
               </tr>
             </thead>
             <tbody>
@@ -175,5 +206,34 @@ export function ComplianceAuditClient({ vehicles }: { vehicles: Row[] }) {
         )}
       </Card>
     </div>
+  );
+}
+
+function SortHeader({
+  label,
+  col,
+  sortKey,
+  sortDir,
+  onClick,
+}: {
+  label: string;
+  col: SortKey;
+  sortKey: SortKey;
+  sortDir: "asc" | "desc";
+  onClick: (col: SortKey) => void;
+}) {
+  const active = sortKey === col;
+  return (
+    <button
+      onClick={() => onClick(col)}
+      className={cn("inline-flex items-center gap-1 hover:text-slate-900", active ? "text-slate-900" : "text-slate-500")}
+    >
+      {label}
+      {active ? (
+        sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />
+      ) : (
+        <ChevronsUpDown size={13} className="text-slate-300" />
+      )}
+    </button>
   );
 }

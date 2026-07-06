@@ -167,6 +167,27 @@ export function MapView() {
   const filtered = positions.filter(matchesFilters);
   const movingCount = filtered.filter((p) => p.status === "ACTIVE").length;
 
+  // Keep latest positions available to the fit-bounds effect without making it
+  // refit on every poll tick.
+  const positionsRef = useRef<PositionDTO[]>([]);
+  positionsRef.current = positions;
+
+  // When the station selection changes, recenter/zoom the map to those vehicles
+  // (e.g. ACT is in Waco, far from the default Houston view).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const pts = positionsRef.current.filter(
+      (p) => stationFilter.size === 0 || (p.station != null && stationFilter.has(p.station)),
+    );
+    if (pts.length === 0) return;
+    if (pts.length === 1) {
+      map.flyTo([pts[0].lat, pts[0].lng], 12);
+    } else {
+      map.fitBounds(L.latLngBounds(pts.map((p) => [p.lat, p.lng] as [number, number])).pad(0.2));
+    }
+  }, [stationFilter]);
+
   function toggleStation(s: string) {
     setStationFilter((prev) => {
       const next = new Set(prev);
@@ -196,7 +217,8 @@ export function MapView() {
         <div className="border-b border-[var(--color-border)] p-3">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm font-semibold">
-              {movingCount} active · {positions.length} total
+              {movingCount} active · {filtered.length}
+              {stationFilter.size > 0 ? ` of ${positions.length}` : ""} total
             </span>
             <button
               onClick={toggleLive}

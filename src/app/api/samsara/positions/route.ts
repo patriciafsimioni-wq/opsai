@@ -42,7 +42,9 @@ export async function GET() {
     vehicles.filter((v) => v.samsaraId).map((v) => [v.samsaraId!, v]),
   );
 
-  const positions = [];
+  // Keyed by our vehicle id so multiple Samsara devices resolving to the same
+  // vehicle collapse into one marker (keep the freshest GPS reading).
+  const byVehicle = new Map<string, { timestamp: string; pos: Record<string, unknown> }>();
   for (const s of stats) {
     if (!s.gps?.latitude || !s.gps?.longitude) continue;
 
@@ -54,25 +56,32 @@ export async function GET() {
     }
     if (!vehicle) continue;
 
+    const existing = byVehicle.get(vehicle.id);
+    if (existing && existing.timestamp >= s.gps.time) continue;
+
     const engineOn = s.engineStates?.value === "On";
-    positions.push({
-      id: vehicle.id,
-      vehicleId: vehicle.id,
-      name: vehicle.name || vehicle.dxNumber || s.name,
-      make: vehicle.make,
-      model: vehicle.model,
-      type: vehicle.type,
-      station: vehicle.station,
-      status: engineOn ? "ACTIVE" : vehicle.status,
-      lat: s.gps.latitude,
-      lng: s.gps.longitude,
-      heading: s.gps.headingDegrees || 0,
-      speed: s.gps.speedMilesPerHour || 0,
-      fuelLevel: vehicle.fuelLevel,
-      assignedDriver: vehicle.assignedDriver,
+    byVehicle.set(vehicle.id, {
       timestamp: s.gps.time,
+      pos: {
+        id: vehicle.id,
+        vehicleId: vehicle.id,
+        name: vehicle.name || vehicle.dxNumber || s.name,
+        make: vehicle.make,
+        model: vehicle.model,
+        type: vehicle.type,
+        station: vehicle.station,
+        status: engineOn ? "ACTIVE" : vehicle.status,
+        lat: s.gps.latitude,
+        lng: s.gps.longitude,
+        heading: s.gps.headingDegrees || 0,
+        speed: s.gps.speedMilesPerHour || 0,
+        fuelLevel: vehicle.fuelLevel,
+        assignedDriver: vehicle.assignedDriver,
+        timestamp: s.gps.time,
+      },
     });
   }
+  const positions = [...byVehicle.values()].map((e) => e.pos);
 
   return NextResponse.json({ positions });
 }
