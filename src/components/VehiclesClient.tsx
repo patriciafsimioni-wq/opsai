@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Pencil, Trash2, Truck, RefreshCw, Camera } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Truck, RefreshCw, Camera, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import {
   Card,
   Button,
@@ -26,7 +26,7 @@ import {
   STATIONS,
   titleCase,
 } from "@/lib/constants";
-import { formatNumber } from "@/lib/utils";
+import { formatNumber, cn } from "@/lib/utils";
 
 const emptyForm = {
   name: "",
@@ -44,13 +44,39 @@ const emptyForm = {
   assignedDriverId: "",
 };
 
+type SortKey = "name" | "station" | "type" | "status" | "leasing" | "odometer" | "fuel";
+
+const STATUS_ORDER: Record<string, number> = { ACTIVE: 0, IDLE: 1, MAINTENANCE: 2, OUT_OF_SERVICE: 3 };
+
+function sortValue(v: VehicleDTO, key: SortKey): string | number {
+  switch (key) {
+    case "name": return v.name.toLowerCase();
+    case "station": return (v.station ?? "").toLowerCase();
+    case "type": return (v.type ?? "").toLowerCase();
+    case "status": return STATUS_ORDER[v.status] ?? 99;
+    case "leasing": return (v.leasingCompany ?? "").toLowerCase();
+    case "odometer": return v.odometer ?? 0;
+    case "fuel": return v.fuelLevel ?? 0;
+  }
+}
+
 export function VehiclesClient({ canManage }: { canManage: boolean }) {
   const { data: vehicles, loading, reload } = useData<VehicleDTO[]>("/api/vehicles");
   const { data: drivers } = useData<DriverDTO[]>("/api/drivers");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [stationFilter, setStationFilter] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<VehicleDTO | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -88,10 +114,14 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
         return matchSearch && matchStatus && matchStation;
       })
       .sort((a, b) => {
-        const cmp = a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
+        const av = sortValue(a, sortKey);
+        const bv = sortValue(b, sortKey);
+        let cmp: number;
+        if (typeof av === "number" && typeof bv === "number") cmp = av - bv;
+        else cmp = String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: "base" });
         return sortDir === "asc" ? cmp : -cmp;
       });
-  }, [activeVehicles, search, statusFilter, stationFilter, sortDir]);
+  }, [activeVehicles, search, statusFilter, stationFilter, sortKey, sortDir]);
 
   async function syncSamsara() {
     setSyncing(true);
@@ -266,14 +296,6 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
             </option>
           ))}
         </select>
-        <select
-          value={sortDir}
-          onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
-          className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm"
-        >
-          <option value="asc">Sort: A → Z</option>
-          <option value="desc">Sort: Z → A</option>
-        </select>
         {canManage && (
           <>
             <Button variant="secondary" onClick={syncSamsara} disabled={syncing}>
@@ -309,13 +331,13 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
         <Table>
           <thead>
             <tr>
-              <Th>Vehicle</Th>
-              <Th>Station</Th>
-              <Th>Type</Th>
-              <Th>Status</Th>
-              <Th>Leasing</Th>
-              <Th>Odometer</Th>
-              <Th>Fuel</Th>
+              <Th><SortHeader label="Vehicle" col="name" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+              <Th><SortHeader label="Station" col="station" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+              <Th><SortHeader label="Type" col="type" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+              <Th><SortHeader label="Status" col="status" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+              <Th><SortHeader label="Leasing" col="leasing" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+              <Th><SortHeader label="Odometer" col="odometer" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+              <Th><SortHeader label="Fuel" col="fuel" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
               <Th />
             </tr>
           </thead>
@@ -513,5 +535,38 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
       </Modal>
     </Card>
     </>
+  );
+}
+
+function SortHeader({
+  label,
+  col,
+  sortKey,
+  sortDir,
+  onClick,
+}: {
+  label: string;
+  col: SortKey;
+  sortKey: SortKey;
+  sortDir: "asc" | "desc";
+  onClick: (key: SortKey) => void;
+}) {
+  const active = sortKey === col;
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(col)}
+      className={cn(
+        "-mx-1 flex items-center gap-1 rounded px-1 py-0.5 uppercase hover:text-slate-700",
+        active && "text-slate-800",
+      )}
+    >
+      {label}
+      {active ? (
+        sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />
+      ) : (
+        <ChevronsUpDown size={13} className="text-slate-300" />
+      )}
+    </button>
   );
 }
