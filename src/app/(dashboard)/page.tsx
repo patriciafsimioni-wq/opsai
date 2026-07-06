@@ -79,12 +79,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       })(),
     ]);
   const vehicles = allVehicles;
+  // Fleet total excludes vehicles off-boarded or in the off-boarding process —
+  // those are managed on the Off-boarding page and must not inflate counts.
+  const fleetVehicles = vehicles.filter(
+    (v) => v.offboardStatus !== "IN_PROGRESS" && v.offboardStatus !== "COMPLETED",
+  );
 
   const statusCounts = {
-    ACTIVE: vehicles.filter((v) => v.status === "ACTIVE").length,
-    IDLE: vehicles.filter((v) => v.status === "IDLE").length,
-    MAINTENANCE: vehicles.filter((v) => v.status === "MAINTENANCE").length,
-    OUT_OF_SERVICE: vehicles.filter((v) => v.status === "OUT_OF_SERVICE").length,
+    ACTIVE: fleetVehicles.filter((v) => v.status === "ACTIVE").length,
+    IDLE: fleetVehicles.filter((v) => v.status === "IDLE").length,
+    MAINTENANCE: fleetVehicles.filter((v) => v.status === "MAINTENANCE").length,
+    OUT_OF_SERVICE: fleetVehicles.filter((v) => v.status === "OUT_OF_SERVICE").length,
   };
 
   const unreadAlerts = await prisma.alert.count({ where: { read: false, type: { notIn: ["SPEEDING", "HARSH_DRIVING"] }, ...(station ? { vehicle: { station } } : {}) } });
@@ -149,8 +154,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   }
 
   const utilization =
-    vehicles.length > 0
-      ? Math.round((statusCounts.ACTIVE / vehicles.length) * 100)
+    fleetVehicles.length > 0
+      ? Math.round((statusCounts.ACTIVE / fleetVehicles.length) * 100)
       : 0;
 
   // maintenance spend — monthly, last 6 months (completed work orders)
@@ -280,7 +285,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </div>
           <div className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/15">
             <p className="text-xs font-medium text-blue-100">Active / Total</p>
-            <p className="mt-1 text-2xl font-bold">{statusCounts.ACTIVE}<span className="text-lg font-medium text-blue-200">/{vehicles.length}</span></p>
+            <p className="mt-1 text-2xl font-bold">{statusCounts.ACTIVE}<span className="text-lg font-medium text-blue-200">/{fleetVehicles.length}</span></p>
             <p className="mt-1 text-xs text-blue-100">vehicles on the road</p>
           </div>
           {canSeeAlerts && (
@@ -341,7 +346,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-6">
         <StatCard
           label="Vehicles"
-          value={vehicles.length}
+          value={fleetVehicles.length}
           icon={<Truck size={20} />}
           accent="#2563eb"
           href="/vehicles"
