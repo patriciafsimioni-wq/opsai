@@ -2,15 +2,27 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, requireManager, badRequest, stationWhere } from "@/lib/api";
+import { sendEmail, buildWorkOrderAssignmentEmail } from "@/lib/email";
+
+const ASSIGNEE_SELECT = { select: { id: true, name: true, email: true } } as const;
 
 export async function GET() {
   const auth = await requireApiUser();
   if ("error" in auth) return auth.error;
+  // Vendors only see work orders assigned to them.
+  if (auth.user.role === "VENDOR") {
+    const mine = await prisma.workOrder.findMany({
+      where: { assignedToId: auth.user.id },
+      orderBy: { createdAt: "desc" },
+      include: { vehicle: true, service: true, assignedTo: ASSIGNEE_SELECT },
+    });
+    return NextResponse.json(mine);
+  }
   const sw = stationWhere(auth.user);
   const orders = await prisma.workOrder.findMany({
     where: sw ? { vehicle: { is: sw } } : undefined,
     orderBy: { createdAt: "desc" },
-    include: { vehicle: true, service: true },
+    include: { vehicle: true, service: true, assignedTo: ASSIGNEE_SELECT },
   });
   return NextResponse.json(orders);
 }
@@ -38,6 +50,7 @@ const schema = z.object({
   invoiceUrl: z.string().optional().nullable(),
   scheduledFor: z.string().optional().nullable(),
   completedAt: z.string().optional().nullable(),
+  assignedToId: z.string().optional().nullable(),
 });
 
 export async function POST(req: Request) {
@@ -75,6 +88,7 @@ export async function POST(req: Request) {
       cost: materialCost + laborCost,
       performedBy: d.performedBy || null,
       vendor: d.vendor || null,
+      assignedToId: d.assignedToId || null,
       vin: d.vin || null,
       odometerAt: d.odometerAt ?? null,
       poNumber: d.poNumber || null,
@@ -84,5 +98,45 @@ export async function POST(req: Request) {
       completedAt,
     },
   });
+
+  // Notify the assigned vendor with the full list of their open work orders.
+  if (d.assignedToId) {
+    void notifyAssignee(d.assignedToId, order.id).catch((e) =>
+      console.error("[Maintenance] assignment email failed:", e),
+    );
+  }
+
   return NextResponse.json(order, { status: 201 });
+}
+
+async function notifyAssignee(assignedToId: string, newOrderId: string) {
+  const assignee = await prisma.user.findUnique({ where: { id: assignedToId } });
+  if (!assignee?.email) return;
+
+  const openOrders = await prisma.workOrder.findMany({
+    where: { assignedToId, status: { notIn: ["COMPLETED", "CANCELLED"] } },
+    orderBy: { createdAt: "desc" },
+    include: { vehicle: { select: { name: true } } },
+  });
+  const newOrder = openOrders.find((o) => o.id === newOrderId) ?? openOrders[0];
+  if (!newOrder) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://opsai-opal.vercel.app";
+  const email = buildWorkOrderAssignmentEmail({
+    vendorName: assignee.name,
+    newItem: {
+      title: newOrder.title,
+      vehicle: newOrder.vehicle?.name ?? newOrder.vehicleOther ?? "—",
+      station: newOrder.station,
+    },
+    openOrders: openOrders.map((o) => ({
+      title: o.title,
+      vehicle: o.vehicle?.name ?? o.vehicleOther ?? "—",
+      station: o.station,
+      poNumber: o.poNumber,
+      status: o.status,
+    })),
+    appUrl,
+  });
+  await sendEmail({ to: assignee.email, ...email });
 }

@@ -149,6 +149,7 @@ model User {
   issuesCreated     Issue[]            @relation("issueCreatedBy")
   issuesAssigned    Issue[]            @relation("issueAssignedTo")
   issueComments     IssueComment[]
+  assignedWorkOrders WorkOrder[]       @relation("assignedWorkOrders")
   createdAt         DateTime           @default(now())
 }
 
@@ -360,6 +361,8 @@ model WorkOrder {
   performedBy  String?
   odometerAt   Float?
   vendor       String?
+  assignedTo   User?           @relation("assignedWorkOrders", fields: [assignedToId], references: [id])
+  assignedToId String?
   vin          String?
   poNumber     String?
   invoiceNumber String?

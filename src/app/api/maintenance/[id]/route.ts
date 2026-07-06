@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireManager, badRequest } from "@/lib/api";
+import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { canManage } from "@/lib/auth";
 
 const schema = z.object({
   status: z.enum(["OPEN", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
@@ -32,7 +33,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireManager();
+  const auth = await requireApiUser();
   if ("error" in auth) return auth.error;
   const { id } = await params;
   const body = await req.json().catch(() => null);
@@ -42,6 +43,17 @@ export async function PATCH(
 
   const current = await prisma.workOrder.findUnique({ where: { id } });
   if (!current) return badRequest("Work order not found");
+
+  // Managers can edit any work order; a vendor may only complete/update a
+  // work order that is assigned to them.
+  if (!canManage(auth.user.role)) {
+    if (auth.user.role !== "VENDOR" || current.assignedToId !== auth.user.id) {
+      return NextResponse.json(
+        { error: "Forbidden — this work order is not assigned to you" },
+        { status: 403 },
+      );
+    }
+  }
 
   // Recompute costs if any cost component changed.
   let costFields: { materialCost?: number; laborHours?: number; laborRate?: number; laborCost?: number; cost?: number } = {};

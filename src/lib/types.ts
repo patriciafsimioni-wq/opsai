@@ -37,6 +37,7 @@ export type TripDTO = Json<Trip> & {
 export type WorkOrderDTO = Json<WorkOrder> & {
   vehicle: Json<Vehicle>;
   service?: Json<Service> | null;
+  assignedTo?: { id: string; name: string; email: string } | null;
 };
 
 export type ServiceDTO = Json<Service> & {

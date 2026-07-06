@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Trash2, Wrench, ClipboardList, AlertTriangle } from "lucide-react";
+import { Plus, Search, Trash2, Wrench, ClipboardList, AlertTriangle, CheckCircle2, Upload } from "lucide-react";
 import { Card, Button, Badge, Table, Th, Td, EmptyState, StatCard } from "@/components/ui";
 import { Field, Input, Select, Textarea, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
@@ -38,11 +38,22 @@ const emptyForm = {
   scheduledFor: "",
 };
 
-export function MaintenanceClient({ canManage }: { canManage: boolean }) {
+export function MaintenanceClient({
+  canManage,
+  isVendor = false,
+  performerName = "",
+}: {
+  canManage: boolean;
+  isVendor?: boolean;
+  performerName?: string;
+}) {
   const { data: orders, loading, reload } = useData<WorkOrderDTO[]>("/api/maintenance");
-  const { data: vehicles } = useData<VehicleDTO[]>("/api/vehicles");
-  const { data: services } = useData<ServiceDTO[]>("/api/services");
-  const { data: woRequests } = useData<WorkOrderRequestDTO[]>("/api/work-order-requests");
+  const { data: vehicles } = useData<VehicleDTO[]>(isVendor ? null : "/api/vehicles");
+  const { data: services } = useData<ServiceDTO[]>(isVendor ? null : "/api/services");
+  const { data: woRequests } = useData<WorkOrderRequestDTO[]>(
+    isVendor ? null : "/api/work-order-requests",
+  );
+  const [completing, setCompleting] = useState<WorkOrderDTO | null>(null);
 
   const pendingRequests = useMemo(() => {
     return (woRequests ?? []).filter((r) => r.status === "PENDING");
@@ -341,6 +352,9 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
                         {cat ? SERVICE_CATEGORY[cat as keyof typeof SERVICE_CATEGORY].label + " · " : ""}
                         {titleCase(o.type)}
                       </p>
+                      {!isVendor && o.assignedTo && (
+                        <p className="text-xs font-medium text-blue-600">Assigned: {o.assignedTo.name}</p>
+                      )}
                     </Td>
                     <Td className="text-slate-600">{o.vehicle?.name ?? o.vehicleOther ?? "—"}</Td>
                     <Td>
@@ -387,6 +401,20 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
                         >
                           <Trash2 size={15} />
                         </button>
+                      )}
+                      {isVendor && (
+                        o.status === "COMPLETED" ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600">
+                            <CheckCircle2 size={14} /> Done
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => setCompleting(o)}
+                            className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-green-700"
+                          >
+                            <CheckCircle2 size={14} /> Service Done
+                          </button>
+                        )
                       )}
                     </Td>
                   </tr>
@@ -489,6 +517,149 @@ export function MaintenanceClient({ canManage }: { canManage: boolean }) {
         </div>
         {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
       </Modal>
+
+      {completing && (
+        <ServiceDoneModal
+          order={completing}
+          performerName={performerName}
+          onClose={() => setCompleting(null)}
+          onSaved={() => { setCompleting(null); reload(); }}
+        />
+      )}
     </div>
+  );
+}
+
+function ServiceDoneModal({
+  order,
+  performerName,
+  onClose,
+  onSaved,
+}: {
+  order: WorkOrderDTO;
+  performerName: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState({
+    completedAt: new Date().toISOString().slice(0, 10),
+    odometerAt: order.odometerAt != null ? String(order.odometerAt) : "",
+    materialCost: order.materialCost ? String(order.materialCost) : "",
+    serviceCost: order.laborCost ? String(order.laborCost) : "",
+    poNumber: order.poNumber ?? "",
+    invoiceNumber: order.invoiceNumber ?? "",
+    description: order.description ?? order.title,
+  });
+  const [file, setFile] = useState<File | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const total = Number(form.materialCost || 0) + Number(form.serviceCost || 0);
+  const valid =
+    form.odometerAt !== "" &&
+    form.materialCost !== "" &&
+    form.serviceCost !== "" &&
+    form.completedAt &&
+    form.description.trim();
+
+  async function submit() {
+    setSaving(true);
+    setError("");
+
+    let invoiceUrl: string | undefined;
+    if (file) {
+      const fd = new FormData();
+      fd.append("file", file);
+      const up = await fetch("/api/uploads", { method: "POST", body: fd });
+      const upData = await up.json().catch(() => ({}));
+      if (!up.ok) {
+        setSaving(false);
+        setError((upData as { error?: string }).error ?? "Invoice upload failed");
+        return;
+      }
+      invoiceUrl = (upData as { url: string }).url;
+    }
+
+    const res = await apiSend(`/api/maintenance/${order.id}`, "PATCH", {
+      status: "COMPLETED",
+      completedAt: form.completedAt,
+      odometerAt: form.odometerAt,
+      materialCost: form.materialCost,
+      serviceCost: form.serviceCost,
+      poNumber: form.poNumber.trim() || null,
+      invoiceNumber: form.invoiceNumber.trim() || null,
+      description: form.description.trim(),
+      performedBy: performerName,
+      ...(invoiceUrl ? { invoiceUrl } : {}),
+    });
+    setSaving(false);
+    if (res.ok) {
+      onSaved();
+    } else {
+      setError(res.error ?? "Failed to complete service");
+    }
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Service Done"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button onClick={submit} disabled={saving || !valid}>
+            {file ? <Upload size={16} /> : <CheckCircle2 size={16} />}{" "}
+            {saving ? "Saving…" : "Save & Log Service"}
+          </Button>
+        </>
+      }
+    >
+      <div className="mb-3 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+        <p className="font-medium text-slate-800">{order.title}</p>
+        <p className="text-xs text-slate-500">
+          {order.vehicle?.name ?? order.vehicleOther ?? "—"} · {order.station}
+        </p>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Date completed" required>
+          <Input type="date" value={form.completedAt} onChange={(e) => setForm({ ...form, completedAt: e.target.value })} />
+        </Field>
+        <Field label="Odometer" required>
+          <Input type="number" min="0" value={form.odometerAt} onChange={(e) => setForm({ ...form, odometerAt: e.target.value })} />
+        </Field>
+        <Field label="Material cost ($)" required>
+          <Input type="number" min="0" step="0.01" value={form.materialCost} onChange={(e) => setForm({ ...form, materialCost: e.target.value })} />
+        </Field>
+        <Field label="Service cost ($)" required>
+          <Input type="number" min="0" step="0.01" value={form.serviceCost} onChange={(e) => setForm({ ...form, serviceCost: e.target.value })} />
+        </Field>
+        <Field label="PO / Work Order #">
+          <Input value={form.poNumber} onChange={(e) => setForm({ ...form, poNumber: e.target.value })} />
+        </Field>
+        <Field label="Invoice #">
+          <Input value={form.invoiceNumber} onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })} />
+        </Field>
+        <div className="col-span-2 flex items-center justify-between rounded-lg bg-slate-50 px-4 py-2.5 text-sm">
+          <span className="text-slate-500">Material {formatCurrency(Number(form.materialCost || 0))} + Service {formatCurrency(Number(form.serviceCost || 0))}</span>
+          <span className="font-semibold">Total {formatCurrency(total)}</span>
+        </div>
+        <Field label="Service description" required className="col-span-2">
+          <Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        </Field>
+        <div className="col-span-2 flex flex-col gap-1">
+          <span className="text-xs font-medium text-[var(--color-muted)]">Invoice photo <span className="text-slate-400">(optional, max 5 MB)</span></span>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*,application/pdf"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            className="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-slate-200"
+          />
+        </div>
+      </div>
+      {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+    </Modal>
   );
 }

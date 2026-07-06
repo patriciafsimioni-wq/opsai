@@ -6,7 +6,7 @@ import { requireManager, badRequest } from "@/lib/api";
 const schema = z.object({
   vehicleId: z.string().min(1),
   service: z.string().min(1),
-  action: z.enum(["done", "skip"]),
+  action: z.enum(["done", "skip", "assigned"]),
   note: z.string().optional().nullable(),
 });
 

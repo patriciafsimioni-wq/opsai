@@ -84,7 +84,7 @@ function StatusBadge({ status }: { status: string }) {
 function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss }: {
   vehicle: VehicleSchedule;
   onClose: () => void;
-  onDismiss: (vehicleId: string, service: string, action: "done" | "skip") => void;
+  onDismiss: (vehicleId: string, service: string, action: "done" | "skip" | "assigned", note?: string) => void;
   onUndismiss: (vehicleId: string, service: string) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
@@ -148,7 +148,7 @@ function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss }: {
                   </span>
                   {(ts.status === "never_performed" || ts.status === "overdue") && (
                     <div className="flex gap-1">
-                      <AssignButton vehicleId={vehicle.id} vehicleName={vehicle.dxNumber ?? vehicle.name} service={ts.service} station={vehicle.station} onAssigned={() => { onDismiss(vehicle.id, ts.service, "done"); }} />
+                      <AssignButton vehicleId={vehicle.id} vehicleName={vehicle.dxNumber ?? vehicle.name} service={ts.service} station={vehicle.station} onAssigned={(name) => { onDismiss(vehicle.id, ts.service, "assigned", name); }} />
                       <button onClick={() => onDismiss(vehicle.id, ts.service, "done")} className="rounded px-2 py-1 text-[10px] font-medium text-green-700 hover:bg-green-50" title="Mark as done"><Check size={12} /> Done</button>
                       <button onClick={() => onDismiss(vehicle.id, ts.service, "skip")} className="rounded px-2 py-1 text-[10px] font-medium text-slate-500 hover:bg-slate-100" title="Skip"><SkipForward size={12} /> Skip</button>
                     </div>
@@ -216,7 +216,7 @@ function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss }: {
                     <td className="px-3 py-2 text-right">
                       {(s.status === "never_performed" || s.status === "overdue" || s.status === "upcoming") && (
                         <div className="flex justify-end gap-1">
-                          <AssignButton vehicleId={vehicle.id} vehicleName={vehicle.dxNumber ?? vehicle.name} service={s.service} station={vehicle.station} onAssigned={() => { onDismiss(vehicle.id, s.service, "done"); }} />
+                          <AssignButton vehicleId={vehicle.id} vehicleName={vehicle.dxNumber ?? vehicle.name} service={s.service} station={vehicle.station} onAssigned={(name) => { onDismiss(vehicle.id, s.service, "assigned", name); }} />
                           <button onClick={() => onDismiss(vehicle.id, s.service, "done")} className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-green-700 hover:bg-green-50" title="Mark as done"><Check size={11} /></button>
                           <button onClick={() => onDismiss(vehicle.id, s.service, "skip")} className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-slate-500 hover:bg-slate-100" title="Skip this service"><SkipForward size={11} /></button>
                         </div>
@@ -248,7 +248,7 @@ function AssignButton({ vehicleId, vehicleName, service, station, onAssigned }: 
   vehicleName: string;
   service: string;
   station: string;
-  onAssigned: () => void;
+  onAssigned: (assigneeName: string) => void;
 }) {
   const [show, setShow] = useState(false);
   const { data: users } = useData<UserOption[]>("/api/users");
@@ -275,12 +275,13 @@ function AssignButton({ vehicleId, vehicleName, service, station, onAssigned }: 
         status: "SCHEDULED",
         station,
         performedBy: assignee?.name ?? "",
-        vendor: assignee?.role === "VENDOR" ? assignee.name : undefined,
+        vendor: assignee?.name,
+        assignedToId: assigneeId,
       }),
     });
     setSaving(false);
     setShow(false);
-    onAssigned();
+    onAssigned(assignee?.name ?? "");
   }
 
   return (
@@ -331,8 +332,8 @@ export function MaintenanceScheduleClient() {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleSchedule | null>(null);
   const [filter, setFilter] = useState<"all" | "alerts" | "overdue" | "upcoming" | "never_performed">("all");
 
-  async function handleDismiss(vehicleId: string, service: string, action: "done" | "skip") {
-    const res = await apiSend("/api/maintenance-schedule/dismiss", "POST", { vehicleId, service, action });
+  async function handleDismiss(vehicleId: string, service: string, action: "done" | "skip" | "assigned", note?: string) {
+    const res = await apiSend("/api/maintenance-schedule/dismiss", "POST", { vehicleId, service, action, note: note ?? null });
     if (res.ok) {
       reload();
       setSelectedVehicle(null);

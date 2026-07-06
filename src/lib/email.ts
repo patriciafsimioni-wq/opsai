@@ -193,3 +193,73 @@ export function buildApprovalEmail(params: {
 
   return { subject, html };
 }
+
+export function buildWorkOrderAssignmentEmail(params: {
+  vendorName: string;
+  newItem: { title: string; vehicle: string; station: string };
+  openOrders: { title: string; vehicle: string; station: string; poNumber: string | null; status: string }[];
+  appUrl: string;
+}): { subject: string; html: string } {
+  const { vendorName, newItem, openOrders, appUrl } = params;
+
+  const subject = `New work order assigned to you — ${newItem.title}`;
+
+  const rows = openOrders
+    .map(
+      (o) => `<tr>
+      <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${o.poNumber ?? "—"}</td>
+      <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${o.title}</td>
+      <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${o.vehicle}</td>
+      <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${o.station}</td>
+      <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${o.status}</td>
+    </tr>`,
+    )
+    .join("");
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"/></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 640px; margin: 0 auto; padding: 20px; color: #1e293b;">
+  <div style="border-bottom: 3px solid #2563eb; padding-bottom: 16px; margin-bottom: 24px;">
+    <h1 style="margin: 0; font-size: 20px; color: #0f172a;">${BRAND}</h1>
+    <p style="margin: 4px 0 0; font-size: 13px; color: #64748b;">Work Order Assignment</p>
+  </div>
+
+  <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+    <p style="margin: 0; font-size: 14px; font-weight: 600; color: #2563eb;">
+      A new service was assigned to you: ${newItem.title} — ${newItem.vehicle} (${newItem.station})
+    </p>
+  </div>
+
+  <p style="font-size: 14px; line-height: 1.6;">Hi ${vendorName},</p>
+  <p style="font-size: 14px; line-height: 1.6;">
+    You have <strong>${openOrders.length}</strong> open work order${openOrders.length === 1 ? "" : "s"} assigned to you.
+    When you finish a service, open it in the portal and click <strong>Service Done</strong> to record the details — it goes straight to logged services.
+  </p>
+
+  <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px;">
+    <thead>
+      <tr>
+        <th style="padding: 8px 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left;">PO#</th>
+        <th style="padding: 8px 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left;">Service</th>
+        <th style="padding: 8px 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left;">Vehicle</th>
+        <th style="padding: 8px 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left;">Station</th>
+        <th style="padding: 8px 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left;">Status</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+
+  <div style="text-align: center; margin: 24px 0;">
+    <a href="${appUrl}/maintenance" style="display: inline-block; background: #2563eb; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">View My Work Orders</a>
+  </div>
+
+  <p style="font-size: 13px; color: #64748b; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+    This is an automated notification from ${BRAND}. Do not reply to this email.
+  </p>
+</body>
+</html>`;
+
+  return { subject, html };
+}
