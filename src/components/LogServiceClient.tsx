@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ClipboardCheck, Lock, Upload } from "lucide-react";
+import { ClipboardCheck, Lock, Upload, Pencil, X } from "lucide-react";
 import { Card, CardHeader, Button, Badge, Table, Th, Td, EmptyState } from "@/components/ui";
 import { Field, Input, Select, Textarea } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
@@ -48,11 +48,45 @@ export function LogServiceClient({
   );
 
   const [form, setForm] = useState(initialForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
   useEffect(() => {
     if (serviceProviders.length > 0 && !form.serviceProvider) {
       setForm((f) => ({ ...f, serviceProvider: serviceProviders[0] }));
     }
   }, [serviceProviders]);
+
+  function startEdit(o: WorkOrderDTO) {
+    const category = o.service?.category ?? (o.type === "REPAIR" ? "CORRECTIVE" : "PREVENTIVE");
+    const knownProvider = o.vendor && serviceProviders.includes(o.vendor);
+    setForm({
+      station: o.station ?? "IAH",
+      vin: o.vin ?? "",
+      vehicleId: o.vehicleId ?? (o.vehicleOther ? "OTHER" : ""),
+      vehicleOther: o.vehicleOther ?? "",
+      category,
+      serviceId: o.serviceId ?? "",
+      odometer: o.odometerAt != null ? String(o.odometerAt) : "",
+      serviceProvider: o.vendor ? (knownProvider ? o.vendor : "Other") : "",
+      serviceProviderOther: o.vendor && !knownProvider ? o.vendor : "",
+      completedAt: o.completedAt ? String(o.completedAt).slice(0, 10) : todayStr(),
+      poNumber: o.poNumber ?? "",
+      invoiceNumber: o.invoiceNumber ?? "",
+      materialCost: String(o.materialCost ?? ""),
+      serviceCost: String(o.laborCost ?? ""),
+      description: o.description ?? "",
+    });
+    setEditingId(o.id);
+    setError("");
+    setSavedMsg("");
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm({ ...initialForm });
+    setFile(null);
+    if (fileRef.current) fileRef.current.value = "";
+  }
   const [file, setFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
@@ -159,15 +193,25 @@ export function LogServiceClient({
       performedBy: performerName,
       completedAt: form.completedAt,
     };
-    const res = await apiSend("/api/maintenance", "POST", payload);
+    const res = editingId
+      ? await apiSend(`/api/maintenance/${editingId}`, "PATCH", {
+          ...payload,
+          ...(invoiceUrl ? { invoiceUrl } : {}),
+        })
+      : await apiSend("/api/maintenance", "POST", payload);
     setSaving(false);
     if (res.ok) {
-      setSavedMsg(`Logged "${payload.title}" — ${formatCurrency(total)}`);
+      setSavedMsg(
+        editingId
+          ? `Updated "${payload.title}" — ${formatCurrency(total)}`
+          : `Logged "${payload.title}" — ${formatCurrency(total)}`,
+      );
+      setEditingId(null);
       setForm({ ...initialForm });
       setFile(null);
       if (fileRef.current) fileRef.current.value = "";
       reload();
-    } else setError(res.error ?? "Failed to log service");
+    } else setError(res.error ?? (editingId ? "Failed to update service" : "Failed to log service"));
   }
 
   if (!canManage) {
@@ -186,8 +230,13 @@ export function LogServiceClient({
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
       <Card className="lg:col-span-2">
         <CardHeader
-          title="Maintenance / Repair Service Order"
-          subtitle="Add the service information below — read requirements with attention."
+          title={editingId ? "Edit Service Order" : "Maintenance / Repair Service Order"}
+          subtitle={editingId ? "Update the service details below and save your changes." : "Add the service information below — read requirements with attention."}
+          action={editingId ? (
+            <Button variant="secondary" onClick={cancelEdit} className="h-8">
+              <X size={14} /> Cancel edit
+            </Button>
+          ) : undefined}
         />
         <div className="space-y-4 p-5">
           <Field label="Station" required>
@@ -372,7 +421,7 @@ export function LogServiceClient({
           {savedMsg && <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{savedMsg}</p>}
           <Button onClick={save} disabled={saving || !valid} className="w-full">
             {file ? <Upload size={16} /> : <ClipboardCheck size={16} />}{" "}
-            {saving ? "Submitting…" : "Submit"}
+            {saving ? (editingId ? "Saving…" : "Submitting…") : editingId ? "Save Changes" : "Submit"}
           </Button>
         </div>
       </Card>
@@ -395,6 +444,7 @@ export function LogServiceClient({
                   <Th>PO</Th>
                   <Th>Date</Th>
                   <Th>Total</Th>
+                  <Th></Th>
                 </tr>
               </thead>
               <tbody>
@@ -416,6 +466,14 @@ export function LogServiceClient({
                     <Td className="text-slate-600">{o.poNumber ?? "—"}</Td>
                     <Td className="text-slate-600">{formatDate(o.completedAt)}</Td>
                     <Td className="font-semibold">{formatCurrency(o.cost)}</Td>
+                    <Td>
+                      <button
+                        onClick={() => startEdit(o)}
+                        className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                      >
+                        <Pencil size={13} /> Edit
+                      </button>
+                    </Td>
                   </tr>
                 ))}
               </tbody>

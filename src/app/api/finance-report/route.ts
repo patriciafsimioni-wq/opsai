@@ -337,7 +337,7 @@ export async function GET(req: NextRequest) {
         inPeriod = woMonth === month;
       }
 
-      if (inPeriod && (cat === "Mechanical Repairs" || cat === "Engine Services")) {
+      if (inPeriod && (cat === "Mechanical Repairs" || cat === "Engine Services" || cat === "Cosmetic / Utility")) {
         const v = wo.vehicle as { station?: string; dxNumber?: string; name?: string } | null;
         serviceDetails.push({
           title: wo.title,

@@ -661,10 +661,13 @@ export function FinanceReportClient() {
 
         const mechItems = filtered.filter((s) => s.category === "Mechanical Repairs");
         const engineItems = filtered.filter((s) => s.category === "Engine Services");
+        const cosmeticItems = filtered.filter((s) => s.category === "Cosmetic / Utility");
         const mechTotal = mechItems.reduce((s, r) => s + r.cost, 0);
         const engineTotal = engineItems.reduce((s, r) => s + r.cost, 0);
+        const cosmeticTotal = cosmeticItems.reduce((s, r) => s + r.cost, 0);
 
         return (
+          <>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {/* Mechanical Repairs */}
             <div className="rounded-xl border border-[var(--color-border)] bg-white shadow-sm">
@@ -734,6 +737,41 @@ export function FinanceReportClient() {
               </div>
             </div>
           </div>
+
+          {/* Cosmetic / Utility */}
+          <div className="mt-4 rounded-xl border border-[var(--color-border)] bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-[var(--color-border)] bg-indigo-50 px-4 py-3 rounded-t-xl">
+              <h3 className="text-sm font-bold text-indigo-900">Cosmetic / Utility</h3>
+              <span className="text-sm font-bold text-indigo-900">${cosmeticTotal.toLocaleString()}</span>
+            </div>
+            <div className="max-h-[320px] overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-white">
+                  <tr className="border-b border-[var(--color-border)]">
+                    <th className="px-3 py-2 text-left font-semibold text-slate-500">Vehicle</th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-500">Service</th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-500">Vendor</th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-500">Date</th>
+                    <th className="px-3 py-2 text-right font-semibold text-slate-500">Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cosmeticItems.length === 0 ? (
+                    <tr><td colSpan={5} className="px-3 py-4 text-center text-slate-400">No cosmetic / utility services this period</td></tr>
+                  ) : cosmeticItems.map((s, i) => (
+                    <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
+                      <td className="px-3 py-1.5 font-medium">{s.vehicle}</td>
+                      <td className="px-3 py-1.5 text-slate-700">{s.title}</td>
+                      <td className="px-3 py-1.5 text-slate-500">{s.vendor}</td>
+                      <td className="px-3 py-1.5 text-slate-500">{s.date}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums font-medium">${s.cost.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          </>
         );
       })()}
 

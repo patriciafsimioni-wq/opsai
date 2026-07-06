@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Truck, Pause, Play, Search } from "lucide-react";
+import { Truck, Pause, Play, Search, RefreshCw } from "lucide-react";
 import type { PositionDTO } from "@/lib/types";
 import { VEHICLE_STATUS } from "@/lib/constants";
 
@@ -49,6 +49,37 @@ export function MapView() {
   const liveRef = useRef(true);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState("");
+
+  async function refreshPositions() {
+    try {
+      const res = await fetch("/api/samsara/positions");
+      const data = await res.json();
+      setPositions(data.positions || []);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function syncSamsara() {
+    setSyncing(true);
+    setSyncMsg("");
+    try {
+      const res = await fetch("/api/samsara/sync", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSyncMsg(data.error || "Sync failed");
+      } else {
+        setSyncMsg(`Updated ${data.updated ?? 0} of ${data.samsaraVehicles ?? 0} vehicles`);
+        await refreshPositions();
+      }
+    } catch {
+      setSyncMsg("Sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   // init map
   useEffect(() => {
@@ -164,6 +195,17 @@ export function MapView() {
               {live ? "Live" : "Paused"}
             </button>
           </div>
+          <button
+            onClick={syncSamsara}
+            disabled={syncing}
+            className="mb-1 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-[var(--color-primary)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            <RefreshCw size={13} className={syncing ? "animate-spin" : ""} />
+            {syncing ? "Syncing…" : "Sync Samsara"}
+          </button>
+          {syncMsg && (
+            <p className="mb-2 text-center text-[11px] text-slate-500">{syncMsg}</p>
+          )}
           <div className="relative">
             <Search size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
