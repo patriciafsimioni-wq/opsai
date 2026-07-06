@@ -16,6 +16,12 @@ export async function GET() {
 
   const stats = await getSamsaraGpsPositions();
   const vehicles = await prisma.vehicle.findMany({
+    where: {
+      OR: [
+        { offboardStatus: null },
+        { offboardStatus: { notIn: ["IN_PROGRESS", "COMPLETED"] } },
+      ],
+    },
     select: {
       id: true,
       dxNumber: true,
