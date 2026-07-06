@@ -21,6 +21,8 @@ type VehicleData = {
   leasingCompany: string | null;
   leaseEndDate: string | null;
   registrationMonth: string | null;
+  registrationExpiry: string | null;
+  insuranceExpiry: string | null;
   lifecycleStatus: string;
   purchasePrice: number | null;
   taxesAndFees: number | null;
@@ -63,6 +65,8 @@ export function VehicleEditForm({ vehicle }: { vehicle: VehicleData }) {
         leasingCompany: form.leasingCompany || null,
         leaseEndDate: form.leaseEndDate || null,
         registrationMonth: form.registrationMonth || null,
+        registrationExpiry: form.registrationExpiry || null,
+        insuranceExpiry: form.insuranceExpiry || null,
         lifecycleStatus: form.lifecycleStatus,
         purchasePrice: form.purchasePrice ? Number(form.purchasePrice) : null,
         taxesAndFees: form.taxesAndFees ? Number(form.taxesAndFees) : null,
@@ -116,6 +120,8 @@ export function VehicleEditForm({ vehicle }: { vehicle: VehicleData }) {
         <Field label="Leasing Company" value={form.leasingCompany ?? ""} onChange={(v) => set("leasingCompany", v)} />
         <Field label="Lease End Date" value={form.leaseEndDate ?? ""} onChange={(v) => set("leaseEndDate", v)} type="date" />
         <Field label="Registration Month" value={form.registrationMonth ?? ""} onChange={(v) => set("registrationMonth", v)} />
+        <Field label="Registration Expiry" value={form.registrationExpiry ?? ""} onChange={(v) => set("registrationExpiry", v)} type="date" />
+        <Field label="Insurance Expiry" value={form.insuranceExpiry ?? ""} onChange={(v) => set("insuranceExpiry", v)} type="date" />
         <SelectField label="Lifecycle Status" value={form.lifecycleStatus} options={LIFECYCLE_STAGES} onChange={(v) => set("lifecycleStatus", v)} />
       </div>
 

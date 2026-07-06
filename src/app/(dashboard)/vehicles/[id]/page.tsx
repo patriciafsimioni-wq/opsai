@@ -313,6 +313,8 @@ export default async function VehicleDetailPage({
             leasingCompany: v.leasingCompany,
             leaseEndDate: v.leaseEndDate?.toISOString().slice(0, 10) ?? null,
             registrationMonth: v.registrationMonth,
+            registrationExpiry: v.registrationExpiry?.toISOString().slice(0, 10) ?? null,
+            insuranceExpiry: v.insuranceExpiry?.toISOString().slice(0, 10) ?? null,
             lifecycleStatus: v.lifecycleStatus ?? "ACTIVE",
             purchasePrice: v.purchasePrice,
             taxesAndFees: v.taxesAndFees,
