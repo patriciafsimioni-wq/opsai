@@ -96,9 +96,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   // Fleet plan vs actual — active vehicles per station across the whole fleet
   // (independent of the station filter), compared to DHL contracted targets.
+  const activeStationFilter = {
+    OR: [
+      { offboardStatus: null },
+      { offboardStatus: { notIn: ["IN_PROGRESS", "COMPLETED"] } },
+    ],
+  };
   const activeByStation = await prisma.vehicle.groupBy({
     by: ["station"],
-    where: { NOT: { offboardStatus: { in: ["IN_PROGRESS", "COMPLETED"] } } },
+    where: activeStationFilter,
     _count: true,
   });
   const stationActual: Record<string, number> = {};
@@ -116,10 +122,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   // Live on Samsara — vehicles currently running (engine on) per station.
   const liveByStationRaw = await prisma.vehicle.groupBy({
     by: ["station"],
-    where: {
-      engineOn: true,
-      NOT: { offboardStatus: { in: ["IN_PROGRESS", "COMPLETED"] } },
-    },
+    where: { engineOn: true, ...activeStationFilter },
     _count: true,
   });
   const liveByStation: Record<string, number> = {};
