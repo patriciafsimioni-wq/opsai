@@ -23,6 +23,7 @@ import {
   VEHICLE_TYPES,
   FUEL_TYPES,
   STATION_LABEL,
+  STATIONS,
   titleCase,
 } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
@@ -48,6 +49,8 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
   const { data: drivers } = useData<DriverDTO[]>("/api/drivers");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [stationFilter, setStationFilter] = useState("");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<VehicleDTO | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -57,22 +60,38 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [checkingCameras, setCheckingCameras] = useState(false);
 
+  // Active fleet excludes vehicles that are off-boarded or in the off-boarding
+  // process — those are managed on the Off-boarding page and must not inflate
+  // the fleet total or status distribution.
+  const activeVehicles = useMemo(
+    () =>
+      (vehicles ?? []).filter(
+        (v) => v.offboardStatus !== "IN_PROGRESS" && v.offboardStatus !== "COMPLETED",
+      ),
+    [vehicles],
+  );
+
   const filtered = useMemo(() => {
-    if (!vehicles) return [];
-    return vehicles.filter((v) => {
-      const q = search.toLowerCase();
-      const matchSearch =
-        !q ||
-        v.name.toLowerCase().includes(q) ||
-        v.make.toLowerCase().includes(q) ||
-        v.model.toLowerCase().includes(q) ||
-        v.licensePlate.toLowerCase().includes(q) ||
-        v.vin.toLowerCase().includes(q) ||
-        (v.dxNumber ?? "").toLowerCase().includes(q);
-      const matchStatus = !statusFilter || v.status === statusFilter;
-      return matchSearch && matchStatus;
-    });
-  }, [vehicles, search, statusFilter]);
+    const q = search.toLowerCase();
+    return activeVehicles
+      .filter((v) => {
+        const matchSearch =
+          !q ||
+          v.name.toLowerCase().includes(q) ||
+          v.make.toLowerCase().includes(q) ||
+          v.model.toLowerCase().includes(q) ||
+          v.licensePlate.toLowerCase().includes(q) ||
+          v.vin.toLowerCase().includes(q) ||
+          (v.dxNumber ?? "").toLowerCase().includes(q);
+        const matchStatus = !statusFilter || v.status === statusFilter;
+        const matchStation = !stationFilter || v.station === stationFilter;
+        return matchSearch && matchStatus && matchStation;
+      })
+      .sort((a, b) => {
+        const cmp = a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
+        return sortDir === "asc" ? cmp : -cmp;
+      });
+  }, [activeVehicles, search, statusFilter, stationFilter, sortDir]);
 
   async function syncSamsara() {
     setSyncing(true);
@@ -167,12 +186,11 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
   }
 
   const statusCounts = useMemo(() => {
-    if (!vehicles) return {} as Record<string, number>;
     const counts: Record<string, number> = {};
     for (const s of VEHICLE_STATUSES) counts[s] = 0;
-    for (const v of vehicles) counts[v.status] = (counts[v.status] || 0) + 1;
+    for (const v of activeVehicles) counts[v.status] = (counts[v.status] || 0) + 1;
     return counts;
-  }, [vehicles]);
+  }, [activeVehicles]);
 
   const donutData = useMemo(() => {
     return VEHICLE_STATUSES.map((s) => ({
@@ -184,13 +202,13 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
 
   return (
     <>
-    {vehicles && vehicles.length > 0 && (
+    {activeVehicles.length > 0 && (
       <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <div className="p-4">
             <p className="text-xs font-medium uppercase text-slate-400">Fleet Overview</p>
-            <p className="mt-1 text-3xl font-bold">{vehicles.length}</p>
-            <p className="text-sm text-slate-500">Total Vehicles</p>
+            <p className="mt-1 text-3xl font-bold">{activeVehicles.length}</p>
+            <p className="text-sm text-slate-500">Total Vehicles (excludes off-boarding)</p>
             <div className="mt-3 grid grid-cols-2 gap-2">
               {VEHICLE_STATUSES.map((s) => (
                 <div key={s} className="flex items-center gap-2 text-xs">
@@ -225,6 +243,18 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
           />
         </div>
         <select
+          value={stationFilter}
+          onChange={(e) => setStationFilter(e.target.value)}
+          className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm"
+        >
+          <option value="">All stations</option>
+          {STATIONS.map((s) => (
+            <option key={s} value={s}>
+              {STATION_LABEL[s]?.split(" — ")[0] ?? s}
+            </option>
+          ))}
+        </select>
+        <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm"
@@ -235,6 +265,14 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
               {VEHICLE_STATUS[s].label}
             </option>
           ))}
+        </select>
+        <select
+          value={sortDir}
+          onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
+          className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm"
+        >
+          <option value="asc">Sort: A → Z</option>
+          <option value="desc">Sort: Z → A</option>
         </select>
         {canManage && (
           <>
