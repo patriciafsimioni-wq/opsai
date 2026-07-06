@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { BRAND } from "@/lib/brand";
 import { ClipboardCheck, CheckCircle2, Truck, Camera } from "lucide-react";
 
 type Vehicle = { id: string; name: string; dxNumber: string | null };
@@ -132,7 +133,7 @@ export default function DriverDvirPage() {
           </div>
           <div>
             <h1 className="text-lg font-bold">DVIR — Vehicle Inspection</h1>
-            <p className="text-xs text-blue-200">SYNCTX &middot; Pre/Post-Trip Inspection</p>
+            <p className="text-xs text-blue-200">{BRAND} &middot; Pre/Post-Trip Inspection</p>
           </div>
         </div>
       </div>
@@ -324,7 +325,7 @@ export default function DriverDvirPage() {
         </button>
 
         <p className="text-center text-xs text-slate-400">
-          SYNCTX &middot; Driver Vehicle Inspection Report
+          {BRAND} &middot; Driver Vehicle Inspection Report
         </p>
       </div>
     </div>

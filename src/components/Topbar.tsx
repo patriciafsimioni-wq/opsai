@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Bell, LogOut, ChevronDown, Eye } from "lucide-react";
 import { MobileMenuButton } from "@/components/Sidebar";
 import { Avatar } from "@/components/ui";
+import { BRAND } from "@/lib/brand";
 import type { Role } from "@prisma/client";
 
 const ALL_ROLES: { value: Role; label: string }[] = [
@@ -64,7 +65,7 @@ export function Topbar({
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)]/80 px-5 backdrop-blur">
       <div className="flex items-center gap-2 lg:hidden">
         <MobileMenuButton />
-        <span className="text-lg font-bold">SYNCTX</span>
+        <span className="text-lg font-bold">{BRAND}</span>
       </div>
       <div className="hidden lg:block">
         <p className="text-sm text-[var(--color-muted)]">

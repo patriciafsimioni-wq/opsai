@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Truck, ShieldCheck, MapPin, Wrench } from "lucide-react";
 import { Button } from "@/components/ui";
 import { Input } from "@/components/form";
+import { BRAND } from "@/lib/brand";
 
 const DEMO = [
   { role: "Admin", email: "admin@livefleet.ai", password: "admin123" },
@@ -46,7 +47,7 @@ export default function LoginPage() {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
             <Truck size={22} />
           </div>
-          SYNCTX
+          {BRAND}
         </div>
         <div className="space-y-6">
           <h1 className="text-4xl font-bold leading-tight">
@@ -70,14 +71,14 @@ export default function LoginPage() {
             ))}
           </div>
         </div>
-        <p className="text-xs text-blue-200">© {new Date().getFullYear()} SYNCTX. Built with Next.js.</p>
+        <p className="text-xs text-blue-200">© {new Date().getFullYear()} {BRAND}. Built with Next.js.</p>
       </div>
 
       {/* Form panel */}
       <div className="flex items-center justify-center bg-[var(--color-bg)] p-6">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-2 text-lg font-bold lg:hidden">
-            <Truck size={22} className="text-blue-600" /> SYNCTX
+            <Truck size={22} className="text-blue-600" /> {BRAND}
           </div>
           <h2 className="text-2xl font-bold">Sign in</h2>
           <p className="mt-1 text-sm text-[var(--color-muted)]">

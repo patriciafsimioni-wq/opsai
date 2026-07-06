@@ -1,10 +1,11 @@
 import { Resend } from "resend";
+import { BRAND } from "@/lib/brand";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-const FROM_EMAIL = process.env.EMAIL_FROM || "SYNCTX <onboarding@resend.dev>";
+const FROM_EMAIL = process.env.EMAIL_FROM || `${BRAND} <onboarding@resend.dev>`;
 
 export interface EmailPayload {
   to: string;
@@ -60,7 +61,7 @@ export function buildInviteEmail(params: {
   };
   const roleLabel = roleLabels[role] || role;
 
-  const subject = `You've been invited to SYNCTX`;
+  const subject = `You've been invited to ${BRAND}`;
 
   const html = `
 <!DOCTYPE html>
@@ -68,7 +69,7 @@ export function buildInviteEmail(params: {
 <head><meta charset="utf-8"/></head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1e293b;">
   <div style="border-bottom: 3px solid #2563eb; padding-bottom: 16px; margin-bottom: 24px;">
-    <h1 style="margin: 0; font-size: 20px; color: #0f172a;">SYNCTX</h1>
+    <h1 style="margin: 0; font-size: 20px; color: #0f172a;">${BRAND}</h1>
     <p style="margin: 4px 0 0; font-size: 13px; color: #64748b;">Account Invitation</p>
   </div>
 
@@ -80,7 +81,7 @@ export function buildInviteEmail(params: {
 
   <p style="font-size: 14px; line-height: 1.6;">Hi ${name},</p>
   <p style="font-size: 14px; line-height: 1.6;">
-    You've been invited to <strong>SYNCTX</strong> — our fleet management platform. Here are your login credentials:
+    You've been invited to <strong>${BRAND}</strong> — our fleet management platform. Here are your login credentials:
   </p>
 
   <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
@@ -107,11 +108,11 @@ export function buildInviteEmail(params: {
   </table>
 
   <div style="text-align: center; margin: 24px 0;">
-    <a href="${appUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Log In to SYNCTX</a>
+    <a href="${appUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Log In to ${BRAND}</a>
   </div>
 
   <p style="font-size: 13px; color: #64748b; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
-    This is an automated invitation from SYNCTX. Please keep your credentials secure.
+    This is an automated invitation from ${BRAND}. Please keep your credentials secure.
   </p>
 </body>
 </html>`;
@@ -142,7 +143,7 @@ export function buildApprovalEmail(params: {
 <head><meta charset="utf-8"/></head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1e293b;">
   <div style="border-bottom: 3px solid ${statusColor}; padding-bottom: 16px; margin-bottom: 24px;">
-    <h1 style="margin: 0; font-size: 20px; color: #0f172a;">SYNCTX</h1>
+    <h1 style="margin: 0; font-size: 20px; color: #0f172a;">${BRAND}</h1>
     <p style="margin: 4px 0 0; font-size: 13px; color: #64748b;">Work Order Request Notification</p>
   </div>
 
@@ -185,7 +186,7 @@ export function buildApprovalEmail(params: {
   </table>
 
   <p style="font-size: 13px; color: #64748b; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
-    This is an automated notification from SYNCTX. Do not reply to this email.
+    This is an automated notification from ${BRAND}. Do not reply to this email.
   </p>
 </body>
 </html>`;

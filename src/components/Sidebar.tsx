@@ -32,6 +32,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BrandSwitcher } from "@/components/BrandSwitcher";
 
 const SidebarContext = createContext<{ open: boolean; toggle: () => void }>({ open: false, toggle: () => {} });
 export function useSidebar() { return useContext(SidebarContext); }
@@ -139,7 +140,7 @@ export function Sidebar({ alertCount, userRole }: { alertCount: number; userRole
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white">
             <TruckLogo size={18} />
           </div>
-          <span className="text-lg font-bold tracking-tight">SYNCTX</span>
+          <BrandSwitcher />
         </div>
         <button onClick={toggle} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 lg:hidden">
           <X size={20} />

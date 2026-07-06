@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { BRAND } from "@/lib/brand";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,14 +22,14 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "SYNCTX — Fleet Management",
+  title: `${BRAND} — Fleet Management`,
   description:
     "Complete fleet management platform: live GPS tracking, maintenance, drivers, trips, fuel and analytics.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "SYNCTX",
+    title: BRAND,
   },
   other: {
     "mobile-web-app-capable": "yes",

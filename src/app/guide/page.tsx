@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { BRAND } from "@/lib/brand";
 
 export const metadata = {
-  title: "SYNCTX — User Guide",
-  description: "Complete user guide for SYNCTX fleet management platform",
+  title: `${BRAND} — User Guide`,
+  description: `Complete user guide for ${BRAND} fleet management platform`,
 };
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
@@ -97,7 +98,7 @@ export default function GuidePage() {
       <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div>
-            <h1 className="text-lg font-bold text-slate-800">SYNCTX</h1>
+            <h1 className="text-lg font-bold text-slate-800">{BRAND}</h1>
             <p className="text-xs text-slate-500">User Guide</p>
           </div>
           <Link href="/login" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
@@ -123,14 +124,14 @@ export default function GuidePage() {
         <main className="min-w-0 flex-1 space-y-10">
           {/* Hero */}
           <div className="rounded-xl bg-blue-600 p-8 text-white">
-            <h1 className="text-2xl font-bold">Welcome to SYNCTX</h1>
+            <h1 className="text-2xl font-bold">Welcome to {BRAND}</h1>
             <p className="mt-2 text-blue-100">Your complete fleet management platform &mdash; covering vehicle lifecycle, maintenance, fuel, routing, safety, and financial decision-making all in one place.</p>
           </div>
 
           <Section id="getting-started" title="Getting Started">
             <SubSection title="Logging In">
               <ol className="ml-4 list-decimal space-y-1">
-                <li>Open your browser and navigate to the SYNCTX URL</li>
+                <li>Open your browser and navigate to the {BRAND} URL</li>
                 <li>Log in with your assigned email and password</li>
                 <li>You&apos;ll land on the <strong>Dashboard</strong> (Fleet Overview)</li>
               </ol>
@@ -433,12 +434,12 @@ export default function GuidePage() {
           </Section>
 
           <Section id="pwa" title="Mobile App (PWA)">
-            <p>SYNCTX works as a Progressive Web App:</p>
+            <p>{BRAND} works as a Progressive Web App:</p>
             <ul>
               <Bullet><strong>iPhone</strong>: Open in Safari &rarr; Share button &rarr; &quot;Add to Home Screen&quot;</Bullet>
               <Bullet><strong>Android</strong>: Open in Chrome &rarr; 3-dot menu &rarr; &quot;Add to Home Screen&quot; or &quot;Install app&quot;</Bullet>
             </ul>
-            <p>It appears as &quot;SYNCTX&quot; on your home screen and opens full-screen. Mobile hamburger menu available for navigation.</p>
+            <p>It appears as &quot;{BRAND}&quot; on your home screen and opens full-screen. Mobile hamburger menu available for navigation.</p>
           </Section>
 
           <Section id="tips" title="Tips & Best Practices">
