@@ -64,7 +64,7 @@ export function Topbar({
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)]/80 px-5 backdrop-blur">
       <div className="flex items-center gap-2 lg:hidden">
         <MobileMenuButton />
-        <span className="text-lg font-bold">Live Fleet AI</span>
+        <span className="text-lg font-bold">SYNCTX</span>
       </div>
       <div className="hidden lg:block">
         <p className="text-sm text-[var(--color-muted)]">

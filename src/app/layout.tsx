@@ -21,14 +21,14 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Live Fleet AI — Fleet Management",
+  title: "SYNCTX — Fleet Management",
   description:
     "Complete fleet management platform: live GPS tracking, maintenance, drivers, trips, fuel and analytics.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Live Fleet AI",
+    title: "SYNCTX",
   },
   other: {
     "mobile-web-app-capable": "yes",

@@ -132,7 +132,7 @@ export default function DriverDvirPage() {
           </div>
           <div>
             <h1 className="text-lg font-bold">DVIR — Vehicle Inspection</h1>
-            <p className="text-xs text-blue-200">Live Fleet AI &middot; Pre/Post-Trip Inspection</p>
+            <p className="text-xs text-blue-200">SYNCTX &middot; Pre/Post-Trip Inspection</p>
           </div>
         </div>
       </div>
@@ -324,7 +324,7 @@ export default function DriverDvirPage() {
         </button>
 
         <p className="text-center text-xs text-slate-400">
-          LiveFleet AI &middot; Driver Vehicle Inspection Report
+          SYNCTX &middot; Driver Vehicle Inspection Report
         </p>
       </div>
     </div>
