@@ -174,6 +174,35 @@ function parseMiles(val: unknown): number {
   return parseNum(s);
 }
 
+// FareEye exports sometimes store clock times as an Excel day-fraction
+// (e.g. 0.46944 = 11:16). Normalize any such value to an "HH:MM" string.
+function parseClock(val: unknown): string | null {
+  if (val === null || val === undefined) return null;
+  const s = String(val).trim();
+  if (!s) return null;
+  // Already a clock string ("13:01" or "13:01:00"): keep HH:MM.
+  const clock = s.match(/^(\d{1,2}):(\d{2})/);
+  if (clock) return `${clock[1].padStart(2, "0")}:${clock[2]}`;
+  // Numeric day-fraction (0 <= n < 1) => time of day.
+  const n = Number(s);
+  if (Number.isFinite(n) && n >= 0 && n < 1) {
+    let totalMin = Math.round(n * 24 * 60);
+    if (totalMin >= 1440) totalMin = 1439;
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  }
+  return s;
+}
+
+// Utilization columns arrive either as whole percents (75.83) or as
+// fractions of 1 (0.9333). Normalize everything to a percent (0-100).
+function parsePct(val: unknown): number {
+  const n = parseNum(val);
+  if (n > 0 && n <= 1) return Math.round(n * 100 * 100) / 100;
+  return n;
+}
+
 async function importFareyeRoutes(rows: Record<string, unknown>[]) {
   const existing = await prisma.fareyeRoute.findMany({
     select: { routeId: true, date: true },
@@ -194,21 +223,21 @@ async function importFareyeRoutes(rows: Record<string, unknown>[]) {
     const miles = parseMiles(row["Miles"] ?? row["Miles*"] ?? row["Travel Distance"] ?? 0);
     const travelMinutes = parseMinutes(row["Travel Time"] ?? 0);
     const routeDurationMinutes = parseMinutes(row["Route Duration"] ?? 0);
-    const leaveByTime = String(row["Vehicle Leave By Time"] ?? row["Leave By"] ?? "").trim() || null;
-    const plannedEndTime = String(row["Vehicle Planned End Time"] ?? row["Planned End Time"] ?? "").trim() || null;
+    const leaveByTime = parseClock(row["Vehicle Leave By Time"] ?? row["Leave By"] ?? "");
+    const plannedEndTime = parseClock(row["Vehicle Planned End Time"] ?? row["Planned End Time"] ?? "");
     const stops = Math.round(parseNum(row["Stop Count"] ?? row["Stops"] ?? 0));
     const jobs = Math.round(parseNum(row["No. of jobs"] ?? row["Jobs"] ?? 0));
     const totalWeight = parseNum(row["Total weight"] ?? row["Total Weight"] ?? 0);
     const totalPallets = Math.round(parseNum(row["Total Pallets"] ?? row["Pallets"] ?? 0));
     const totalVolume = parseNum(row["Total Volume"] ?? 0);
     const vehicleCapacity = parseNum(row["Vehicle Capacity"] ?? 0);
-    const weightCapacityUtil = parseNum(row["Weight Capacity Utilization"] ?? 0);
-    const palletsCapacityUtil = parseNum(row["Pallets Capacity Utilization"] ?? 0);
-    const volumetricCapacityUtil = parseNum(row["VolumetricCapacityUtilization"] ?? row["Volumetric Capacity Utilization"] ?? 0);
+    const weightCapacityUtil = parsePct(row["Weight Capacity Utilization"] ?? 0);
+    const palletsCapacityUtil = parsePct(row["Pallets Capacity Utilization"] ?? 0);
+    const volumetricCapacityUtil = parsePct(row["VolumetricCapacityUtilization"] ?? row["Volumetric Capacity Utilization"] ?? 0);
     const vehicleType = String(row["Vehicle Type"] ?? "VAN").trim();
     const vehicleTag = String(row["Vehicle Tag"] ?? "").trim() || null;
-    const vehicleUtilization = parseNum(row["Vehicle Utilization"] ?? row["Vehicle U%"] ?? 0);
-    const shiftUtilization = parseNum(row["Shift Utilization"] ?? 0);
+    const vehicleUtilization = parsePct(row["Vehicle Utilization"] ?? row["Vehicle U%"] ?? 0);
+    const shiftUtilization = parsePct(row["Shift Utilization"] ?? 0);
     const sporh = parseNum(row["SPORH"] ?? 0);
     const plannedHours = parseNum(row["FE Planned Hrs"] ?? row["Planned Hrs"] ?? row["Planned Hours"] ?? 0);
     const breakDuration = parseMinutes(row["Break duration (Mins)"] ?? row["Break Duration"] ?? 0);
