@@ -90,7 +90,27 @@ export async function GET(req: NextRequest) {
     if (lower.includes("engine") || lower.includes("def system") || lower.includes("turbo") || lower.includes("actuator")) return "Engine Services";
     if (lower.includes("electric") || lower.includes("wiring") || lower.includes("fuse")) return "Electrical Repairs";
     if (lower.includes("ac ") || lower.includes("a/c") || lower.includes("heating") || lower.includes("hvac")) return "A/C & Heating";
-    if (lower.includes("body") || lower.includes("cosmetic") || lower.includes("paint") || lower.includes("dent") || lower.includes("registration")) return "Cosmetic / Utility";
+    if (
+      lower.includes("body") ||
+      lower.includes("cosmetic") ||
+      lower.includes("paint") ||
+      lower.includes("dent") ||
+      lower.includes("registration") ||
+      lower.includes("wash") ||
+      lower.includes("detail") ||
+      lower.includes("decal") ||
+      lower.includes("sticker") ||
+      lower.includes("samsara") ||
+      lower.includes("key replacement") ||
+      lower.includes("key programming") ||
+      lower.includes("door") ||
+      lower.includes("latch") ||
+      lower.includes("roller") ||
+      lower.includes("windshield") ||
+      lower.includes("bumper") ||
+      lower.includes("headlight") ||
+      lower.includes("trim")
+    ) return "Cosmetic / Utility";
     return "Mechanical Repairs";
   }
 
