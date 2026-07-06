@@ -48,6 +48,7 @@ export function MapView() {
   const [live, setLive] = useState(true);
   const liveRef = useRef(true);
   const [search, setSearch] = useState("");
+  const [stationFilter, setStationFilter] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState("");
@@ -124,13 +125,17 @@ export function MapView() {
     };
   }, []);
 
+  const matchesFilters = (p: PositionDTO) =>
+    (!search || p.name.toLowerCase().includes(search.toLowerCase())) &&
+    (stationFilter.size === 0 || (p.station != null && stationFilter.has(p.station)));
+
   // render / update markers
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
     const seen = new Set<string>();
-    for (const p of positions) {
+    for (const p of positions.filter(matchesFilters)) {
       seen.add(p.id);
       let marker = markersRef.current[p.id];
       if (!marker) {
@@ -155,12 +160,21 @@ export function MapView() {
         delete markersRef.current[id];
       }
     }
-  }, [positions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [positions, search, stationFilter]);
 
-  const filtered = positions.filter(
-    (p) => !search || p.name.toLowerCase().includes(search.toLowerCase()),
-  );
-  const movingCount = positions.filter((p) => p.status === "ACTIVE").length;
+  const stations = [...new Set(positions.map((p) => p.station).filter((s): s is string => !!s))].sort();
+  const filtered = positions.filter(matchesFilters);
+  const movingCount = filtered.filter((p) => p.status === "ACTIVE").length;
+
+  function toggleStation(s: string) {
+    setStationFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      return next;
+    });
+  }
 
   function focus(p: PositionDTO) {
     setSelected(p.id);
@@ -215,6 +229,35 @@ export function MapView() {
               className="h-8 w-full rounded-lg border border-[var(--color-border)] pl-8 pr-2 text-sm outline-none focus:border-blue-500"
             />
           </div>
+          {stations.length > 0 && (
+            <div className="mt-2">
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-[11px] font-medium text-slate-500">Stations</span>
+                {stationFilter.size > 0 && (
+                  <button onClick={() => setStationFilter(new Set())} className="text-[11px] text-blue-600 hover:underline">
+                    All
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {stations.map((s) => {
+                  const on = stationFilter.has(s);
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => toggleStation(s)}
+                      className={
+                        "rounded-full px-2.5 py-1 text-[11px] font-medium transition " +
+                        (on ? "bg-[var(--color-primary)] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200")
+                      }
+                    >
+                      {s}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
         <div className="flex-1 divide-y divide-[var(--color-border)] overflow-y-auto">
           {filtered.map((p) => (

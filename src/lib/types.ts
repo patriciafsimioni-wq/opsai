@@ -76,5 +76,6 @@ export type PositionDTO = {
   type: string;
   make: string;
   model: string;
+  station: string | null;
   assignedDriver: { firstName: string; lastName: string } | null;
 };
