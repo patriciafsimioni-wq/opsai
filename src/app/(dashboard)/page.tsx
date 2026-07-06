@@ -153,6 +153,30 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       ? Math.round((statusCounts.ACTIVE / vehicles.length) * 100)
       : 0;
 
+  // maintenance spend — monthly, last 6 months (completed work orders)
+  const nowForTrend = new Date();
+  const maintMonthly: { label: string; value: number }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const start = new Date(nowForTrend.getFullYear(), nowForTrend.getMonth() - i, 1);
+    const end = new Date(nowForTrend.getFullYear(), nowForTrend.getMonth() - i + 1, 1);
+    const cost = workOrders
+      .filter(
+        (w) =>
+          w.status === "COMPLETED" &&
+          w.completedAt &&
+          new Date(w.completedAt) >= start &&
+          new Date(w.completedAt) < end,
+      )
+      .reduce((s, w) => s + w.cost, 0);
+    maintMonthly.push({ label: start.toLocaleDateString("en-US", { month: "short" }), value: Math.round(cost) });
+  }
+
+  // greeting header
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const firstName = (user?.name ?? "").split(" ")[0] || "there";
+  const todayLong = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+
   // This week stats
   const weekStart = now - 7 * 86400000;
   const prevWeekStart = now - 14 * 86400000;
@@ -231,14 +255,47 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Fleet Overview</h1>
-          <p className="mt-1 text-sm text-[var(--color-muted)]">
-            Real-time snapshot of your {station ? `${station} station` : "entire operation"}.
-          </p>
+      <div className="mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-700 p-6 text-white shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-blue-100">{todayLong}</p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight">
+              {greeting}, {firstName}
+            </h1>
+            <p className="mt-1 text-sm text-blue-100">
+              Real-time snapshot of your {station ? `${station} station` : "entire operation"}.
+            </p>
+          </div>
+          <StationFilter />
         </div>
-        <StationFilter />
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/15">
+            <p className="text-xs font-medium text-blue-100">Fleet Utilization</p>
+            <div className="mt-1 flex items-end gap-2">
+              <span className="text-2xl font-bold">{utilization}%</span>
+            </div>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/20">
+              <div className="h-full rounded-full bg-white" style={{ width: `${utilization}%` }} />
+            </div>
+          </div>
+          <div className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/15">
+            <p className="text-xs font-medium text-blue-100">Active / Total</p>
+            <p className="mt-1 text-2xl font-bold">{statusCounts.ACTIVE}<span className="text-lg font-medium text-blue-200">/{vehicles.length}</span></p>
+            <p className="mt-1 text-xs text-blue-100">vehicles on the road</p>
+          </div>
+          {canSeeAlerts && (
+            <div className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/15">
+              <p className="text-xs font-medium text-blue-100">Open Alerts</p>
+              <p className="mt-1 text-2xl font-bold">{unreadAlerts}</p>
+              <p className="mt-1 text-xs text-blue-100">need attention</p>
+            </div>
+          )}
+          <div className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/15">
+            <p className="text-xs font-medium text-blue-100">Open Work Orders</p>
+            <p className="mt-1 text-2xl font-bold">{openWO}</p>
+            <p className="mt-1 text-xs text-blue-100">{todayRoutes} routes today</p>
+          </div>
+        </div>
       </div>
 
       {/* Issue Tracker */}
@@ -420,6 +477,25 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             />
             <div className="p-4">
               <AreaChartCard data={fuelTrend} color="#0891b2" prefix="$" />
+            </div>
+          </Card>
+          </Link>
+        )}
+
+        {canSeeFinance && (
+          <Link href="/maintenance">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer">
+            <CardHeader
+              title="Maintenance Spend"
+              subtitle="Monthly · last 6 months"
+              action={
+                <span className="flex items-center gap-1 text-xs font-medium text-amber-600">
+                  <Wrench size={14} /> Completed
+                </span>
+              }
+            />
+            <div className="p-4">
+              <BarChartCard data={maintMonthly} color="#d97706" />
             </div>
           </Card>
           </Link>
