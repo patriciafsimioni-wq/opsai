@@ -289,7 +289,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const noCamera = vehicles.filter((v) => (v.status === "ACTIVE" || v.status === "IDLE") && !v.hasSamsaraCamera);
   const notTransmitting = vehicles.filter((v) => (v.status === "ACTIVE" || v.status === "IDLE") && v.samsaraId && v.lastSeen && now - new Date(v.lastSeen).getTime() > 24 * 3600000);
 
-  const topDrivers = drivers.slice(0, 5);
+  // Drivers are already ordered by safety score (desc) from the query; only
+  // rank those that actually have a Samsara safety score (>0).
+  const topDrivers = drivers.filter((d) => d.safetyScore > 0).slice(0, 5);
   const upcomingMaint = workOrders
     .filter((w) => w.scheduledFor && (w.status === "OPEN" || w.status === "SCHEDULED"))
     .sort(
@@ -697,7 +699,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   <p className="truncate text-sm font-medium">
                     {d.firstName} {d.lastName}
                   </p>
-                  <p className="text-xs text-slate-400">★ {d.rating.toFixed(1)}</p>
+                  <p className="text-xs text-slate-400">{d.station ?? "—"}</p>
                 </div>
                 <span
                   className="text-sm font-bold"
