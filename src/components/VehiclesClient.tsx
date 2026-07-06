@@ -37,6 +37,7 @@ const emptyForm = {
   licensePlate: "",
   type: "TRUCK",
   status: "ACTIVE",
+  station: "IAH",
   fuelType: "DIESEL",
   odometer: "0",
   fuelLevel: "100",
@@ -184,6 +185,7 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
       licensePlate: v.licensePlate,
       type: v.type,
       status: v.status,
+      station: v.station ?? "IAH",
       fuelType: v.fuelType,
       odometer: String(v.odometer),
       fuelLevel: String(v.fuelLevel),
@@ -500,6 +502,16 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
               options={VEHICLE_STATUSES.map((s) => ({
                 value: s,
                 label: VEHICLE_STATUS[s].label,
+              }))}
+            />
+          </Field>
+          <Field label="Station">
+            <Select
+              value={form.station}
+              onChange={(e) => setForm({ ...form, station: e.target.value })}
+              options={STATIONS.map((s) => ({
+                value: s,
+                label: STATION_LABEL[s as keyof typeof STATION_LABEL] ?? s,
               }))}
             />
           </Field>
