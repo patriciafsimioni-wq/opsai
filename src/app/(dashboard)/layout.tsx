@@ -4,6 +4,7 @@ import { getSession, getUserStationFilter } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Sidebar, SidebarProvider } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
+import { GuidedTour } from "@/components/GuidedTour";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,7 @@ export default async function DashboardLayout({
           <main className="flex-1 overflow-y-auto p-5 lg:p-7">{children}</main>
         </div>
       </div>
+      <GuidedTour />
     </SidebarProvider>
   );
 }

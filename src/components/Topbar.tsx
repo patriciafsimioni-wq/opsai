@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { Bell, LogOut, ChevronDown, Eye } from "lucide-react";
+import { Bell, LogOut, ChevronDown, Eye, GraduationCap } from "lucide-react";
 import { MobileMenuButton } from "@/components/Sidebar";
 import { Avatar } from "@/components/ui";
 import { BRAND } from "@/lib/brand";
@@ -95,6 +95,13 @@ export function Topbar({
             </select>
           </div>
         )}
+        <button
+          onClick={() => window.dispatchEvent(new Event("synctx:start-tour"))}
+          className="hidden items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 sm:inline-flex"
+          title="Take a guided tour of the portal"
+        >
+          <GraduationCap size={15} /> Tour
+        </button>
         <Link
           href="/alerts"
           className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
