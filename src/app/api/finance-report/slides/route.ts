@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiUser } from "@/lib/api";
-import { PM_CATEGORIES, WO_TITLE_TO_PM_CATEGORY, CR_CATEGORIES, WO_TITLE_TO_CR_CATEGORY, STATIONS } from "@/lib/constants";
+import { PM_CATEGORIES, WO_TITLE_TO_PM_CATEGORY, CR_CATEGORIES, WO_TITLE_TO_CR_CATEGORY, STATIONS, REGION_LABEL } from "@/lib/constants";
+import { BRAND } from "@/lib/brand";
 
 const ALL_STATIONS = STATIONS as readonly string[];
 const MONTHS_FULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 const STATION_LABELS: Record<string, string> = {
-  ALL: "All Stations - Consolidated TX",
+  ALL: `All Stations - Consolidated ${REGION_LABEL}`,
   IAH: "IAH - Houston",
   AUS: "AUS - Austin",
   HRL: "HRL - Harlingen",
@@ -205,10 +206,10 @@ export async function GET(req: NextRequest) {
   // Slide 1: Cover
   const coverSlide = {
     type: "cover" as const,
-    title: `${prevYear}-${year} SYNCTX ${reportLabel} Expenses`,
+    title: `${prevYear}-${year} ${BRAND} ${reportLabel} Expenses`,
     subtitle: `${year} ${monthName.toUpperCase()} Actual to Budget Variance Analysis`,
     bullets: [
-      "Texas Operations",
+      `${REGION_LABEL} Operations`,
       ...ALL_STATIONS.filter((s) => {
         const d = stationData[s];
         return d.ytdActual > 0 || d.annualBudget > 0;
@@ -225,7 +226,7 @@ export async function GET(req: NextRequest) {
   const budgetUtilPct = consolidated.annualBudget > 0 ? Math.round((consolidated.ytdActual / consolidated.annualBudget) * 100) : 0;
   const remainderAmt = consolidated.annualBudget - consolidated.ytdActual;
 
-  const ytdNarrative = `At the end of ${monthName} ${year}, consolidated Texas operations had utilized approximately ${budgetUtilPct}% of the annual ${reportLabel.toLowerCase()} budget, leaving ${fmtDollar(remainderAmt)} available for the remainder of the year.`;
+  const ytdNarrative = `At the end of ${monthName} ${year}, consolidated ${REGION_LABEL} operations had utilized approximately ${budgetUtilPct}% of the annual ${reportLabel.toLowerCase()} budget, leaving ${fmtDollar(remainderAmt)} available for the remainder of the year.`;
 
   const monthNarrative = `Total ${monthName} ${year} ${reportLabelShort} spend closed at ${fmtDollar(consolidated.monthActual)} compared to a monthly budget of ${fmtDollar(consolidated.monthBudget)}, resulting in a ${Math.abs(monthVariancePct)}% ${favorableUnfavorable(monthVarianceAmt)} variance (${monthVarianceAmt <= 0 ? "-" : "+"}${fmtDollar(Math.abs(monthVarianceAmt))}).`;
 
@@ -495,8 +496,8 @@ export async function GET(req: NextRequest) {
 
   const dataTableSlide = {
     type: "data_table" as const,
-    title: `SYNCTX / Fleet ${reportLabel} Expenses — ${year}`,
-    heading: `Year to Date Results — ${monthName} ${year} — All Stations Consolidated TX`,
+    title: `${BRAND} / Fleet ${reportLabel} Expenses — ${year}`,
+    heading: `Year to Date Results — ${monthName} ${year} — All Stations Consolidated ${REGION_LABEL}`,
     stationRows,
     categoryRows,
     totals: {
@@ -539,7 +540,7 @@ function generateObservations(
   const budgetUtilPct = consolidated.annualBudget > 0 ? Math.round((consolidated.ytdActual / consolidated.annualBudget) * 100) : 0;
 
   if (yoyPct > 0) {
-    observations.push(`${reportLabelShort} expenses increased ${yoyPct}% year-over-year through ${monthName}, reflecting higher fleet utilization and continued investment in maintenance activities across Texas operations.`);
+    observations.push(`${reportLabelShort} expenses increased ${yoyPct}% year-over-year through ${monthName}, reflecting higher fleet utilization and continued investment in maintenance activities across ${REGION_LABEL} operations.`);
   } else if (yoyPct < 0) {
     observations.push(`${reportLabelShort} expenses decreased ${Math.abs(yoyPct)}% year-over-year through ${monthName}, demonstrating improved maintenance cost control.`);
   }

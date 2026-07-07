@@ -87,6 +87,9 @@ export async function GET(req: NextRequest) {
   function classifyCR(title: string): string | null {
     if (WO_TITLE_TO_CR_CATEGORY[title]) return WO_TITLE_TO_CR_CATEGORY[title];
     const lower = title.toLowerCase();
+    // Corrective categories are matched first so genuinely corrective work
+    // (engine/electrical/AC/body) is captured even if it shares a keyword with
+    // a preventive service.
     if (lower.includes("engine") || lower.includes("def system") || lower.includes("turbo") || lower.includes("actuator")) return "Engine Services";
     if (lower.includes("electric") || lower.includes("wiring") || lower.includes("fuse")) return "Electrical Repairs";
     if (lower.includes("ac ") || lower.includes("a/c") || lower.includes("heating") || lower.includes("hvac")) return "A/C & Heating";
@@ -111,6 +114,21 @@ export async function GET(req: NextRequest) {
       lower.includes("headlight") ||
       lower.includes("trim")
     ) return "Cosmetic / Utility";
+    // Explicitly corrective mechanical repairs (these share keywords with PM
+    // services like "transmission fluid" / "radiator coolant", so keep them here).
+    if (
+      lower.includes("transmission") ||
+      lower.includes("radiator") ||
+      lower.includes("cooling system") ||
+      lower.includes("suspension") ||
+      lower.includes("exhaust") ||
+      lower.includes("drivetrain overhaul") ||
+      lower.includes("spark plug") ||
+      lower.includes("repair") ||
+      lower.includes("replace part")
+    ) return "Mechanical Repairs";
+    // Anything the preventive classifier recognizes is PM — never corrective.
+    if (classifyPM(title) !== null) return null;
     return "Mechanical Repairs";
   }
 

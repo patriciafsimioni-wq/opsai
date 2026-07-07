@@ -6,7 +6,7 @@ import { Card, CardHeader, Badge, EmptyState, Button } from "@/components/ui";
 import { Flag, MessageCircle, Plus, ChevronRight, User, Clock, AlertTriangle, CheckCircle2, XCircle, Loader2, Send } from "lucide-react";
 import { useData, apiSend } from "@/lib/use-data";
 import { formatDate } from "@/lib/utils";
-import { STATION_LABEL } from "@/lib/constants";
+import { STATION_LABEL, STATIONS } from "@/lib/constants";
 
 type UserRef = { id: string; name: string; role: string; station?: string };
 
@@ -116,7 +116,7 @@ export default function IssuesPage() {
       <div className="flex items-center gap-2">
         <select value={stationFilter} onChange={(e) => setStationFilter(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm">
           <option value="">All stations</option>
-          {Object.entries(STATION_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          {STATIONS.map((k) => <option key={k} value={k}>{STATION_LABEL[k] ?? k}</option>)}
         </select>
       </div>
 
@@ -214,7 +214,7 @@ function CreateIssueModal({ prefill, onClose, onCreated }: { prefill?: Record<st
               <label className="block text-sm font-medium text-slate-700 mb-1">Station</label>
               <select value={station} onChange={(e) => setStation(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
                 <option value="">— Select —</option>
-                {Object.entries(STATION_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                {STATIONS.map((k) => <option key={k} value={k}>{STATION_LABEL[k] ?? k}</option>)}
               </select>
             </div>
           </div>

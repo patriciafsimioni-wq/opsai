@@ -2,6 +2,8 @@
 
 import { useState, useRef } from "react";
 import { useData } from "@/lib/use-data";
+import { BRAND } from "@/lib/brand";
+import { REGION_LABEL } from "@/lib/constants";
 import {
   ResponsiveContainer,
   Bar,
@@ -187,7 +189,7 @@ function CoverSlideView({ slide }: { slide: CoverSlide }) {
   return (
     <div className="flex h-full flex-col justify-between bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 p-12 text-white">
       <div>
-        <div className="mb-2 text-sm font-medium uppercase tracking-widest text-blue-200">SYNCTX Fleet Operations</div>
+        <div className="mb-2 text-sm font-medium uppercase tracking-widest text-blue-200">{BRAND} {REGION_LABEL} Operations</div>
         <h1 className="text-3xl font-bold leading-tight">{slide.title}</h1>
         <p className="mt-3 text-xl font-medium text-blue-100">{slide.subtitle}</p>
       </div>
@@ -516,7 +518,7 @@ function DataTableSlideView({ slide, year }: { slide: DataTableSlide; year: numb
         </table>
 
         {/* Category table */}
-        <p className="mb-1 text-[9px] font-bold text-slate-600">Services - Consolidated TX</p>
+        <p className="mb-1 text-[9px] font-bold text-slate-600">Services - Consolidated {REGION_LABEL}</p>
         <table className="w-full border-collapse text-[8px]">
           <thead>
             <tr className="bg-emerald-700">

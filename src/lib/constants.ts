@@ -64,6 +64,9 @@ export const STATIONS: readonly string[] = IS_TROVA
   ? ["ORF", "RNH"]
   : ["AUS", "ACT", "IAH", "CLL", "BPT", "HRL", "LRD"];
 
+// Region the brand operates in — used for slide headers / consolidated labels.
+export const REGION_LABEL = IS_TROVA ? "Virginia" : "Texas";
+
 export const STATION_LABEL: Record<string, string> = {
   AUS: "AUS — Austin",
   ACT: "ACT — Waco",
