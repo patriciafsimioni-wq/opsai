@@ -257,7 +257,10 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
         </button>
         {rulesOpen && (
           <div className="grid gap-4 border-t border-[var(--color-border)] p-4 lg:grid-cols-2">
-            {[{ title: "Federal FMCSA (49 CFR)", rows: DOT_FEDERAL_RULES }, { title: `${DOT_STATE.name} state requirements`, rows: DOT_STATE_RULES }].map((grp) => (
+            {[
+              { title: "Federal FMCSA (49 CFR)", rows: DOT_FEDERAL_RULES.filter((r) => r.scope === "company") },
+              { title: `${DOT_STATE.name} state requirements`, rows: DOT_STATE_RULES.filter((r) => r.scope === "company") },
+            ].filter((grp) => grp.rows.length > 0).map((grp) => (
               <div key={grp.title}>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{grp.title}</p>
                 <div className="space-y-2">
