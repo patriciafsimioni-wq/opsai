@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { STATIONS as BRAND_STATIONS } from "@/lib/constants";
 
-const STATIONS = ["", "IAH", "AUS", "HRL", "LRD", "CLL", "BPT", "ACT"] as const;
+const STATIONS = ["", ...BRAND_STATIONS];
 
 export function FleetFinanceStationFilter({ current }: { current: string }) {
   const router = useRouter();

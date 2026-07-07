@@ -3,6 +3,7 @@ import { requireManager, badRequest } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import * as XLSX from "xlsx";
 import { Station } from "@prisma/client";
+import { STATIONS } from "@/lib/constants";
 
 const MAX_BYTES = 20 * 1024 * 1024;
 
@@ -25,7 +26,8 @@ function parseNum(val: unknown): number {
   return isNaN(n) ? 0 : n;
 }
 
-const VALID_STATIONS = new Set(["IAH", "ACT", "AUS", "HRL", "LRD", "CLL", "BPT"]);
+const VALID_STATIONS = new Set(Object.values(Station) as string[]);
+const DEFAULT_STATION = STATIONS[0] as Station;
 
 export async function POST(req: Request) {
   const auth = await requireManager();
@@ -263,7 +265,7 @@ async function importFareyeRoutes(rows: Record<string, unknown>[]) {
     if (dupeSet.has(dupeKey)) { skipped++; continue; }
     dupeSet.add(dupeKey);
 
-    const station = (VALID_STATIONS.has(stationRaw) ? stationRaw : "IAH") as Station;
+    const station = (VALID_STATIONS.has(stationRaw) ? stationRaw : DEFAULT_STATION) as Station;
 
     await prisma.fareyeRoute.create({
       data: {

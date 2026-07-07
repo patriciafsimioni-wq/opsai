@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useData } from "@/lib/use-data";
 import { SlidePresentation } from "./SlidePresentation";
+import { STATIONS as BRAND_STATIONS } from "@/lib/constants";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const STATION_ORDER = ["ALL", "IAH", "AUS", "HRL", "LRD", "ACT", "CLL", "BPT"];
+const STATION_ORDER = ["ALL", ...BRAND_STATIONS];
 
 type CategoryRow = {
   category: string;

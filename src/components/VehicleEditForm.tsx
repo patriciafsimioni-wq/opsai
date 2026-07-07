@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Pencil, X, Save } from "lucide-react";
 import { apiSend } from "@/lib/use-data";
+import { STATIONS } from "@/lib/constants";
 
 type VehicleData = {
   id: string;
@@ -33,7 +34,6 @@ type VehicleData = {
   initialInsurance: number | null;
 };
 
-const STATIONS = ["IAH", "AUS", "HRL", "LRD", "ACT", "CLL", "BPT"];
 const TYPES = ["VAN", "TRUCK", "CAR", "BUS", "PICKUP", "TRAILER"];
 const FUEL_TYPES = ["DIESEL", "GASOLINE", "ELECTRIC", "HYBRID", "CNG"];
 const LIFECYCLE_STAGES = ["PLANNING", "ACQUISITION_APPROVED", "ORDERED", "IN_TRANSIT", "RECEIVED", "UPFITTING", "REGISTERED", "ASSIGNED", "ACTIVE", "TEMP_OUT", "LONG_TERM_REPAIR", "READY_DISPOSAL", "SOLD_RETURNED", "ARCHIVED"];
@@ -113,7 +113,7 @@ export function VehicleEditForm({ vehicle }: { vehicle: VehicleData }) {
         <Field label="VIN" value={form.vin} onChange={(v) => set("vin", v)} />
         <Field label="License Plate" value={form.licensePlate ?? ""} onChange={(v) => set("licensePlate", v)} />
         <SelectField label="Type" value={form.type} options={TYPES} onChange={(v) => set("type", v)} />
-        <SelectField label="Station" value={form.station} options={STATIONS} onChange={(v) => set("station", v)} />
+        <SelectField label="Station" value={form.station} options={[...STATIONS]} onChange={(v) => set("station", v)} />
         <SelectField label="Fuel Type" value={form.fuelType} options={FUEL_TYPES} onChange={(v) => set("fuelType", v)} />
         <Field label="Odometer (mi)" value={String(form.odometer)} onChange={(v) => set("odometer", v)} type="number" />
         <Field label="Tank Capacity (L)" value={String(form.tankCapacity)} onChange={(v) => set("tankCapacity", v)} type="number" />

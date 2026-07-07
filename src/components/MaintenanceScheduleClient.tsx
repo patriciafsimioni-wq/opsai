@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useData, apiSend } from "@/lib/use-data";
 import { AlertTriangle, Check, SkipForward, Undo2, UserPlus } from "lucide-react";
+import { STATIONS as BRAND_STATIONS } from "@/lib/constants";
 
-const STATIONS = ["ALL", "IAH", "AUS", "HRL", "LRD", "ACT", "CLL", "BPT"];
+const STATIONS = ["ALL", ...BRAND_STATIONS];
 
 type ServiceStatus = {
   service: string;

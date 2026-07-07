@@ -1,3 +1,5 @@
+import { BRAND } from "@/lib/brand";
+
 export const VEHICLE_STATUS = {
   ACTIVE: { label: "Active", color: "#16a34a", bg: "#dcfce7", fg: "#166534" },
   IDLE: { label: "Idle", color: "#d97706", bg: "#fef3c7", fg: "#92400e" },
@@ -54,7 +56,14 @@ export const WO_STATUS = {
 export const WO_STATUSES = ["OPEN", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as const;
 export const WO_TYPES = ["SCHEDULED_SERVICE", "REPAIR", "INSPECTION", "TIRE", "OIL_CHANGE", "RECALL"] as const;
 
-export const STATIONS = ["AUS", "ACT", "IAH", "CLL", "BPT", "HRL", "LRD"] as const;
+// Station config is brand-aware so the same codebase serves SYNCTX (Texas/DHL
+// stations) and TROVA (Virginia — ORF / RNH), each pointed at its own database.
+const IS_TROVA = BRAND.toUpperCase() === "TROVA";
+
+export const STATIONS: readonly string[] = IS_TROVA
+  ? ["ORF", "RNH"]
+  : ["AUS", "ACT", "IAH", "CLL", "BPT", "HRL", "LRD"];
+
 export const STATION_LABEL: Record<string, string> = {
   AUS: "AUS — Austin",
   ACT: "ACT — Waco",
@@ -63,18 +72,22 @@ export const STATION_LABEL: Record<string, string> = {
   BPT: "BPT — Beaumont",
   HRL: "HRL — Harlingen",
   LRD: "LRD — Laredo",
+  ORF: "ORF — Norfolk",
+  RNH: "RNH — Richmond",
 };
 
-// DHL contracted fleet plan — target vehicles per station.
-export const STATION_TARGETS: Record<string, number> = {
-  IAH: 48,
-  AUS: 34,
-  HRL: 12,
-  ACT: 5,
-  LRD: 4,
-  CLL: 4,
-  BPT: 3,
-};
+// Contracted fleet plan — target vehicles per station.
+export const STATION_TARGETS: Record<string, number> = IS_TROVA
+  ? { RNH: 22, ORF: 14 }
+  : {
+      IAH: 48,
+      AUS: 34,
+      HRL: 12,
+      ACT: 5,
+      LRD: 4,
+      CLL: 4,
+      BPT: 3,
+    };
 
 export const SERVICE_CATEGORY = {
   PREVENTIVE: { label: "Preventive", bg: "#dcfce7", fg: "#166534" },
@@ -83,7 +96,9 @@ export const SERVICE_CATEGORY = {
 export const SERVICE_CATEGORIES = ["PREVENTIVE", "CORRECTIVE"] as const;
 
 // Station order as it appears in the maintenance service-order form.
-export const FORM_STATIONS = ["IAH", "AUS", "HRL", "LRD", "CLL", "BPT", "ACT"] as const;
+export const FORM_STATIONS: readonly string[] = IS_TROVA
+  ? ["ORF", "RNH"]
+  : ["IAH", "AUS", "HRL", "LRD", "CLL", "BPT", "ACT"];
 
 // Preset service providers from the maintenance service-order form ("Other" allows free text).
 export const SERVICE_PROVIDERS = [
@@ -203,8 +218,10 @@ export const WO_TITLE_TO_CR_CATEGORY: Record<string, string> = {
   "Fluids Check": "Mechanical Repairs",
 };
 
-/** Stations shown in the finance report (original 4 TX stations). */
-export const FINANCE_STATIONS = ["IAH", "AUS", "HRL", "LRD"] as const;
+/** Stations shown in the finance report. */
+export const FINANCE_STATIONS: readonly string[] = IS_TROVA
+  ? ["ORF", "RNH"]
+  : ["IAH", "AUS", "HRL", "LRD"];
 
 /** Station → 2-letter PO prefix and starting sequence number. */
 export const PO_PREFIX: Record<string, string> = {
@@ -215,6 +232,8 @@ export const PO_PREFIX: Record<string, string> = {
   LRD: "LR",
   CLL: "CL",
   BPT: "BP",
+  ORF: "OR",
+  RNH: "RN",
 };
 
 /** First PO number to use per station (inclusive). Earlier numbers are assumed taken. */
@@ -226,6 +245,8 @@ export const PO_START: Record<string, number> = {
   LRD: 15,
   CLL: 35,
   BPT: 11,
+  ORF: 1,
+  RNH: 1,
 };
 
 export const WO_REQUEST_STATUS = {

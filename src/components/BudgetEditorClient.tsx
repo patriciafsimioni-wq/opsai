@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { PM_CATEGORIES, STATION_LABEL } from "@/lib/constants";
+import { PM_CATEGORIES, STATION_LABEL, STATIONS } from "@/lib/constants";
 import { useData } from "@/lib/use-data";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const BUDGET_STATIONS = ["IAH", "AUS", "HRL", "LRD", "ACT", "CLL", "BPT"] as const;
+const BUDGET_STATIONS = STATIONS;
 
 type BudgetRecord = {
   id: string;

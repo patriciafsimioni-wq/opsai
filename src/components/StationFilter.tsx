@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { STATIONS as BRAND_STATIONS } from "@/lib/constants";
 
-const STATIONS = ["All", "IAH", "AUS", "HRL", "LRD", "ACT", "CLL", "BPT"];
+const STATIONS = ["All", ...BRAND_STATIONS];
 
 export function StationFilter() {
   const router = useRouter();

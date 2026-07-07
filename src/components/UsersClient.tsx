@@ -6,6 +6,7 @@ import { Card, Button, Table, Th, Td, Badge } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { apiSend } from "@/lib/use-data";
 import { formatDate } from "@/lib/utils";
+import { STATIONS } from "@/lib/constants";
 
 const ROLES = [
   { value: "GENERAL_MANAGER", label: "General Manager" },
@@ -37,8 +38,6 @@ const ROLE_LABELS: Record<string, string> = {
   MANAGER: "Manager",
   DRIVER: "Driver",
 };
-
-const STATIONS = ["IAH", "AUS", "HRL", "LRD", "ACT", "CLL", "BPT"];
 
 type UserRow = {
   id: string;

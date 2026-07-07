@@ -22,6 +22,7 @@ import {
 } from "@/lib/constants";
 import { formatCurrency, relativeTime, formatDate } from "@/lib/utils";
 import { StationFilter } from "@/components/StationFilter";
+import { SyncSamsaraButton } from "@/components/SyncSamsaraButton";
 import { getSession } from "@/lib/auth";
 import { cookies } from "next/headers";
 import type { Station } from "@prisma/client";
@@ -354,7 +355,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               </span>
               Live on Samsara · running now
             </p>
-            <span className="text-xs font-semibold">{liveTotal} vans</span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold">{liveTotal} vans</span>
+              <SyncSamsaraButton />
+            </div>
           </div>
           <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
             {liveStationRows.map((r) => (

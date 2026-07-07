@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import { Truck, Pause, Play, Search, RefreshCw } from "lucide-react";
 import type { PositionDTO } from "@/lib/types";
 import { VEHICLE_STATUS } from "@/lib/constants";
+import { BRAND } from "@/lib/brand";
 
 function statusColor(status: string) {
   return (
@@ -86,7 +87,7 @@ export function MapView() {
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
     const map = L.map(mapContainer.current, {
-      center: [29.76, -95.37], // Houston TX
+      center: BRAND.toUpperCase() === "TROVA" ? [37.43, -77.55] : [29.76, -95.37], // TROVA: Richmond VA · SYNCTX: Houston TX
       zoom: 10,
       zoomControl: true,
     });

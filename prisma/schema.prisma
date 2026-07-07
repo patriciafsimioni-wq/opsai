@@ -90,6 +90,8 @@ enum Station {
   BPT
   HRL
   LRD
+  ORF
+  RNH
 }
 
 enum ServiceCategory {
