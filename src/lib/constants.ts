@@ -66,6 +66,8 @@ export const STATIONS: readonly string[] = IS_TROVA
 
 // Region the brand operates in — used for slide headers / consolidated labels.
 export const REGION_LABEL = IS_TROVA ? "Virginia" : "Texas";
+// Region abbreviation — used for compact "Consolidated VA/TX" labels.
+export const REGION_ABBR = IS_TROVA ? "VA" : "TX";
 
 export const STATION_LABEL: Record<string, string> = {
   AUS: "AUS — Austin",

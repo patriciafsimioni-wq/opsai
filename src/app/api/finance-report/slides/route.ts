@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiUser } from "@/lib/api";
-import { PM_CATEGORIES, WO_TITLE_TO_PM_CATEGORY, CR_CATEGORIES, WO_TITLE_TO_CR_CATEGORY, STATIONS, REGION_LABEL } from "@/lib/constants";
+import { PM_CATEGORIES, WO_TITLE_TO_PM_CATEGORY, CR_CATEGORIES, WO_TITLE_TO_CR_CATEGORY, STATIONS, REGION_LABEL, REGION_ABBR } from "@/lib/constants";
 import { BRAND } from "@/lib/brand";
 
 const ALL_STATIONS = STATIONS as readonly string[];
 const MONTHS_FULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 const STATION_LABELS: Record<string, string> = {
-  ALL: `All Stations - Consolidated ${REGION_LABEL}`,
+  ALL: `All Stations - Consolidated ${REGION_ABBR}`,
   IAH: "IAH - Houston",
   AUS: "AUS - Austin",
   HRL: "HRL - Harlingen",
@@ -66,6 +66,19 @@ function classifyCR(title: string): string | null {
     lower.includes("headlight") ||
     lower.includes("trim")
   ) return "Cosmetic / Utility";
+  // Explicitly corrective mechanical work.
+  if (
+    lower.includes("transmission") ||
+    lower.includes("radiator") ||
+    lower.includes("cooling system") ||
+    lower.includes("suspension") ||
+    lower.includes("exhaust") ||
+    lower.includes("drivetrain overhaul") ||
+    lower.includes("repair") ||
+    lower.includes("replace part")
+  ) return "Mechanical Repairs";
+  // Anything the preventive classifier recognizes is scheduled PM — never corrective.
+  if (classifyPM(title) !== null) return null;
   return "Mechanical Repairs";
 }
 
@@ -137,7 +150,7 @@ export async function GET(req: NextRequest) {
     }
 
     for (const wo of woFullYear) {
-      const woStation = wo.vehicle?.station ?? "IAH";
+      const woStation = wo.station ?? wo.vehicle?.station ?? "IAH";
       if (station !== "ALL" && woStation !== station) continue;
       const cat = classify(wo.title);
       if (!cat || !(CATEGORIES as readonly string[]).includes(cat)) continue;
@@ -148,7 +161,7 @@ export async function GET(req: NextRequest) {
     }
 
     for (const wo of woFullPrev) {
-      const woStation = wo.vehicle?.station ?? "IAH";
+      const woStation = wo.station ?? wo.vehicle?.station ?? "IAH";
       if (station !== "ALL" && woStation !== station) continue;
       const cat = classify(wo.title);
       if (!cat || !(CATEGORIES as readonly string[]).includes(cat)) continue;
@@ -432,7 +445,7 @@ export async function GET(req: NextRequest) {
   const trendsSlide = {
     type: "trends_charts" as const,
     title: `${prevYear}-${year} ${reportLabel} Expenses Trends`,
-    heading: "TEXAS - Consolidated",
+    heading: `${REGION_ABBR} - Consolidated`,
     months: MONTHS_SHORT,
     prevYear,
     charts: {
@@ -497,7 +510,7 @@ export async function GET(req: NextRequest) {
   const dataTableSlide = {
     type: "data_table" as const,
     title: `${BRAND} / Fleet ${reportLabel} Expenses — ${year}`,
-    heading: `Year to Date Results — ${monthName} ${year} — All Stations Consolidated ${REGION_LABEL}`,
+    heading: `Year to Date Results — ${monthName} ${year} — All Stations Consolidated ${REGION_ABBR}`,
     stationRows,
     categoryRows,
     totals: {
