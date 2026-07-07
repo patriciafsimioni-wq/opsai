@@ -18,7 +18,9 @@ interface SamsaraVehicleStat {
   name: string;
   obdOdometerMeters?: { time: string; value: number };
   gpsOdometerMeters?: { time: string; value: number };
-  engineStates?: { time: string; value: string };
+  // NOTE: the Samsara stats endpoint is requested with `types=engineStates`
+  // (plural) but returns the reading under the singular key `engineState`.
+  engineState?: { time: string; value: string };
   gps?: { time: string; latitude: number; longitude: number; headingDegrees: number; speedMilesPerHour: number };
 }
 

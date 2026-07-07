@@ -77,9 +77,9 @@ export async function POST() {
     // Update engine state. Record when the reading was taken so the dashboard
     // can ignore stale "On" states (a van that went offline stops reporting, so
     // the last "On" would otherwise stay true forever).
-    if (s.engineStates?.value) {
-      updateData.engineOn = s.engineStates.value === "On";
-      updateData.engineOnAt = s.engineStates.time ? new Date(s.engineStates.time) : new Date();
+    if (s.engineState?.value) {
+      updateData.engineOn = s.engineState.value === "On";
+      updateData.engineOnAt = s.engineState.time ? new Date(s.engineState.time) : new Date();
     } else {
       // No engine telemetry in this sample — treat as not running.
       updateData.engineOn = false;

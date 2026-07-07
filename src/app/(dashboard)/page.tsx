@@ -122,7 +122,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   // Live on Samsara — vehicles currently running (engine on) per station.
   // Gate on data freshness (lastSeen, refreshed to now on every sync) rather
-  // than the engine-state timestamp: Samsara's engineStates.time is when the
+  // than the engine-state timestamp: Samsara's engineState.time is when the
   // engine last *changed* state, so a van running steadily for >30 min would
   // otherwise look stale and drop off. A van that goes offline stops syncing,
   // so its lastSeen ages out and it correctly leaves the "running now" count.

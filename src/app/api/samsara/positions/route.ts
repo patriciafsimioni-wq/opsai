@@ -59,7 +59,7 @@ export async function GET() {
     const existing = byVehicle.get(vehicle.id);
     if (existing && existing.timestamp >= s.gps.time) continue;
 
-    const engineOn = s.engineStates?.value === "On";
+    const engineOn = s.engineState?.value === "On";
     byVehicle.set(vehicle.id, {
       timestamp: s.gps.time,
       pos: {
