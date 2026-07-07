@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Shield, Pencil, Trash2 } from "lucide-react";
-import { Card, Button, Table, Th, Td, Badge } from "@/components/ui";
+import { useMemo, useState } from "react";
+import { Plus, Shield, Pencil, Trash2, Search } from "lucide-react";
+import { Card, Button, Table, Th, Td, SortTh, Badge } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { apiSend } from "@/lib/use-data";
+import { useTableSort } from "@/lib/use-sort";
 import { formatDate } from "@/lib/utils";
 import { STATIONS } from "@/lib/constants";
 
@@ -65,6 +66,29 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+
+  const sort = useTableSort<UserRow, "name" | "email" | "role" | "station" | "created">(
+    {
+      name: (u) => u.name.toLowerCase(),
+      email: (u) => u.email.toLowerCase(),
+      role: (u) => ROLE_LABELS[u.role] ?? u.role,
+      station: (u) => (u.station ?? "").toLowerCase(),
+      created: (u) => new Date(u.createdAt).getTime(),
+    },
+    "name",
+  );
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    const result = users.filter((u) => {
+      if (q && !u.name.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false;
+      if (roleFilter !== "all" && u.role !== roleFilter) return false;
+      return true;
+    });
+    return sort.sortRows(result);
+  }, [users, search, roleFilter, sort]);
 
   function getStationValue(): string | null {
     if (!["STATION_MANAGER", "MECHANIC", "DRIVER"].includes(form.role)) return null;
@@ -163,19 +187,38 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
       </div>
 
       <Card>
+        <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] p-4">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search name or email…"
+              className="h-9 w-full rounded-lg border border-[var(--color-border)] bg-white pl-9 pr-3 text-sm outline-none focus:border-blue-500"
+            />
+          </div>
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm outline-none focus:border-blue-500"
+          >
+            <option value="all">All Roles</option>
+            {Object.entries(ROLE_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+          </select>
+        </div>
         <Table>
           <thead>
             <tr>
-              <Th>Name</Th>
-              <Th>Email</Th>
-              <Th>Role</Th>
-              <Th>Station</Th>
-              <Th>Created</Th>
+              <SortTh label="Name" col="name" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+              <SortTh label="Email" col="email" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+              <SortTh label="Role" col="role" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+              <SortTh label="Station" col="station" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+              <SortTh label="Created" col="created" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
               {canCreate && <Th>Actions</Th>}
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => (
+            {filtered.map((u) => (
               <tr key={u.id} className="hover:bg-slate-50">
                 <Td className="font-medium">{u.name}</Td>
                 <Td className="text-slate-600">{u.email}</Td>

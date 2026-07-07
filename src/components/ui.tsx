@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function Card({
@@ -279,6 +280,45 @@ export function Th({
     >
       {children}
     </th>
+  );
+}
+
+// Sortable table header cell. Renders inside a <Th> and shows an
+// asc/desc/neutral indicator; call the shared useTableSort hook to drive it.
+export function SortTh<K extends string>({
+  label,
+  col,
+  sortKey,
+  sortDir,
+  onSort,
+  className,
+}: {
+  label: React.ReactNode;
+  col: K;
+  sortKey: K;
+  sortDir: "asc" | "desc";
+  onSort: (col: K) => void;
+  className?: string;
+}) {
+  const active = sortKey === col;
+  return (
+    <Th className={className}>
+      <button
+        type="button"
+        onClick={() => onSort(col)}
+        className={cn(
+          "inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide hover:text-[var(--color-fg)]",
+          active ? "text-[var(--color-fg)]" : "text-[var(--color-muted)]",
+        )}
+      >
+        {label}
+        {active ? (
+          sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />
+        ) : (
+          <ChevronsUpDown size={13} className="opacity-40" />
+        )}
+      </button>
+    </Th>
   );
 }
 

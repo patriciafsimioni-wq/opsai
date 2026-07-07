@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ClipboardCheck, Lock, Upload, Pencil, X } from "lucide-react";
-import { Card, CardHeader, Button, Badge, Table, Th, Td, EmptyState } from "@/components/ui";
+import { Card, CardHeader, Button, Badge, Table, Th, Td, SortTh, EmptyState } from "@/components/ui";
 import { Field, Input, Select, Textarea } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
+import { useTableSort } from "@/lib/use-sort";
 import type { WorkOrderDTO, VehicleDTO, ServiceDTO } from "@/lib/types";
 import { FORM_STATIONS, STATION_LABEL } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -95,9 +96,23 @@ export function LogServiceClient({
 
   const total = Number(form.materialCost || 0) + Number(form.serviceCost || 0);
 
+  const sort = useTableSort<WorkOrderDTO, "service" | "vehicle" | "station" | "odometer" | "po" | "date" | "total">(
+    {
+      service: (o) => (o.title ?? "").toLowerCase(),
+      vehicle: (o) => (o.vehicle?.name ?? o.vehicleOther ?? "").toLowerCase(),
+      station: (o) => o.station ?? "",
+      odometer: (o) => o.odometerAt ?? null,
+      po: (o) => (o.poNumber ?? "").toLowerCase(),
+      date: (o) => (o.completedAt ? new Date(o.completedAt).getTime() : null),
+      total: (o) => o.cost,
+    },
+    "date",
+    "desc",
+  );
+
   const recent = useMemo(
-    () => (orders ?? []).filter((o) => o.status === "COMPLETED").slice(0, 12),
-    [orders],
+    () => sort.sortRows((orders ?? []).filter((o) => o.status === "COMPLETED")).slice(0, 12),
+    [orders, sort],
   );
 
   const catServices = useMemo(
@@ -437,13 +452,13 @@ export function LogServiceClient({
             <Table>
               <thead>
                 <tr>
-                  <Th>Service</Th>
-                  <Th>Vehicle</Th>
-                  <Th>Station</Th>
-                  <Th>Odometer</Th>
-                  <Th>PO</Th>
-                  <Th>Date</Th>
-                  <Th>Total</Th>
+                  <SortTh label="Service" col="service" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                  <SortTh label="Vehicle" col="vehicle" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                  <SortTh label="Station" col="station" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                  <SortTh label="Odometer" col="odometer" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                  <SortTh label="PO" col="po" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                  <SortTh label="Date" col="date" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                  <SortTh label="Total" col="total" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
                   <Th></Th>
                 </tr>
               </thead>

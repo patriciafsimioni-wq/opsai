@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Trash2, Hexagon } from "lucide-react";
-import { Card, Button, Badge, Table, Th, Td, EmptyState } from "@/components/ui";
+import { useMemo, useState } from "react";
+import { Plus, Pencil, Trash2, Hexagon, Search } from "lucide-react";
+import { Card, Button, Badge, Table, Th, Td, SortTh, EmptyState } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
+import { useTableSort } from "@/lib/use-sort";
 import type { GeofenceDTO } from "@/lib/types";
 import { GEOFENCE_TYPE, GEOFENCE_TYPES } from "@/lib/constants";
 
@@ -20,17 +21,54 @@ const emptyForm = {
 export function GeofencesClient({ canManage }: { canManage: boolean }) {
   const { data: fences, loading, reload } = useData<GeofenceDTO[]>("/api/geofences");
   const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<GeofenceDTO | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+
+  const sort = useTableSort<GeofenceDTO, "name" | "type" | "radius">(
+    {
+      name: (f) => f.name.toLowerCase(),
+      type: (f) => GEOFENCE_TYPE[f.type as keyof typeof GEOFENCE_TYPE].label,
+      radius: (f) => f.radiusM,
+    },
+    "name",
+  );
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    const result = (fences ?? []).filter((f) => {
+      if (q && !f.name.toLowerCase().includes(q)) return false;
+      if (typeFilter !== "all" && f.type !== typeFilter) return false;
+      return true;
+    });
+    return sort.sortRows(result);
+  }, [fences, search, typeFilter, sort]);
+
+  function openCreate() { setEditing(null); setForm(emptyForm); setError(""); setModalOpen(true); }
+  function openEdit(f: GeofenceDTO) {
+    setEditing(f);
+    setForm({
+      name: f.name,
+      type: f.type,
+      centerLat: String(f.centerLat),
+      centerLng: String(f.centerLng),
+      radiusM: String(Math.round(f.radiusM)),
+      color: f.color,
+    });
+    setError("");
+    setModalOpen(true);
+  }
 
   async function save() {
     setSaving(true);
     setError("");
-    const res = await apiSend("/api/geofences", "POST", {
-      ...form,
-      color: GEOFENCE_TYPE[form.type as keyof typeof GEOFENCE_TYPE].color,
-    });
+    const payload = { ...form, color: GEOFENCE_TYPE[form.type as keyof typeof GEOFENCE_TYPE].color };
+    const res = editing
+      ? await apiSend(`/api/geofences/${editing.id}`, "PATCH", payload)
+      : await apiSend("/api/geofences", "POST", payload);
     setSaving(false);
     if (res.ok) {
       setModalOpen(false);
@@ -46,12 +84,26 @@ export function GeofencesClient({ canManage }: { canManage: boolean }) {
 
   return (
     <Card>
-      <div className="flex items-center justify-between border-b border-[var(--color-border)] p-4">
-        <p className="text-sm text-slate-500">
-          {(fences ?? []).length} zones defined
-        </p>
+      <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] p-4">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search geofences…"
+            className="h-9 w-full rounded-lg border border-[var(--color-border)] bg-white pl-9 pr-3 text-sm outline-none focus:border-blue-500"
+          />
+        </div>
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm outline-none focus:border-blue-500"
+        >
+          <option value="all">All Types</option>
+          {GEOFENCE_TYPES.map((t) => <option key={t} value={t}>{GEOFENCE_TYPE[t].label}</option>)}
+        </select>
         {canManage && (
-          <Button onClick={() => { setForm(emptyForm); setError(""); setModalOpen(true); }}>
+          <Button onClick={openCreate}>
             <Plus size={16} /> Add Geofence
           </Button>
         )}
@@ -59,21 +111,21 @@ export function GeofencesClient({ canManage }: { canManage: boolean }) {
 
       {loading ? (
         <p className="p-8 text-center text-sm text-slate-400">Loading…</p>
-      ) : (fences ?? []).length === 0 ? (
+      ) : filtered.length === 0 ? (
         <EmptyState icon={<Hexagon size={40} />} title="No geofences" />
       ) : (
         <Table>
           <thead>
             <tr>
-              <Th>Name</Th>
-              <Th>Type</Th>
+              <SortTh label="Name" col="name" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+              <SortTh label="Type" col="type" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
               <Th>Center</Th>
-              <Th>Radius</Th>
+              <SortTh label="Radius" col="radius" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
               <Th />
             </tr>
           </thead>
           <tbody>
-            {(fences ?? []).map((f) => (
+            {filtered.map((f) => (
               <tr key={f.id} className="hover:bg-slate-50">
                 <Td>
                   <span className="inline-flex items-center gap-2 font-medium">
@@ -90,12 +142,20 @@ export function GeofencesClient({ canManage }: { canManage: boolean }) {
                 <Td className="text-slate-600">{Math.round(f.radiusM)} m</Td>
                 <Td>
                   {canManage && (
-                    <button
-                      onClick={() => remove(f)}
-                      className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                    <div className="flex justify-end gap-1">
+                      <button
+                        onClick={() => openEdit(f)}
+                        className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button
+                        onClick={() => remove(f)}
+                        className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   )}
                 </Td>
               </tr>
@@ -107,11 +167,11 @@ export function GeofencesClient({ canManage }: { canManage: boolean }) {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="Add Geofence"
+        title={editing ? "Edit Geofence" : "Add Geofence"}
         footer={
           <>
             <Button variant="secondary" onClick={() => setModalOpen(false)}>Cancel</Button>
-            <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Create"}</Button>
+            <Button onClick={save} disabled={saving}>{saving ? "Saving…" : editing ? "Save" : "Create"}</Button>
           </>
         }
       >
