@@ -29,7 +29,15 @@ const schema = z.object({
   status: z.enum(["ACTIVE", "ON_TRIP", "OFF_DUTY", "INACTIVE"]).optional(),
   rating: z.coerce.number().min(0).max(5).optional(),
   safetyScore: z.coerce.number().min(0).max(100).optional(),
+  vehicleType: z.enum(["CARGO_VAN", "BOX_TRUCK", "TRACTOR_TRUCK"]).optional().nullable(),
+  medicalCardExpiry: z.string().optional().nullable(),
+  mvrCheckedAt: z.string().optional().nullable(),
+  drugTestStatus: z.enum(["PASS", "PENDING", "FAIL"]).optional().nullable(),
+  annualReviewAt: z.string().optional().nullable(),
 });
+
+const toDateOrUndef = (v: string | null | undefined) =>
+  v === undefined ? undefined : v ? new Date(v) : null;
 
 export async function PATCH(
   req: Request,
@@ -50,6 +58,10 @@ export async function PATCH(
       phone: d.phone === undefined ? undefined : d.phone || null,
       licenseClass: d.licenseClass === undefined ? undefined : d.licenseClass || null,
       licenseExpiry: d.licenseExpiry ? new Date(d.licenseExpiry) : undefined,
+      medicalCardExpiry: toDateOrUndef(d.medicalCardExpiry),
+      mvrCheckedAt: toDateOrUndef(d.mvrCheckedAt),
+      annualReviewAt: toDateOrUndef(d.annualReviewAt),
+      drugTestStatus: d.drugTestStatus === undefined ? undefined : d.drugTestStatus || null,
     },
   });
   return NextResponse.json(driver);

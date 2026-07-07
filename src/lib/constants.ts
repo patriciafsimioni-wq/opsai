@@ -81,7 +81,7 @@ export const STATION_LABEL: Record<string, string> = {
 
 // Contracted fleet plan — target vehicles per station.
 export const STATION_TARGETS: Record<string, number> = IS_TROVA
-  ? { RNH: 22, ORF: 14 }
+  ? { RNH: 18, ORF: 14 } // RNH 17 + 1 spare, ORF 13 + 1 spare
   : {
       IAH: 48,
       AUS: 34,

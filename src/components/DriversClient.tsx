@@ -10,6 +10,12 @@ import type { DriverDTO } from "@/lib/types";
 import { DRIVER_STATUS, DRIVER_STATUSES } from "@/lib/constants";
 import { formatDate, daysUntil } from "@/lib/utils";
 
+const VEHICLE_TYPE_LABEL: Record<string, string> = {
+  CARGO_VAN: "Cargo Van",
+  BOX_TRUCK: "Box Truck",
+  TRACTOR_TRUCK: "Tractor Truck",
+};
+
 const emptyForm = {
   firstName: "",
   lastName: "",
@@ -20,6 +26,11 @@ const emptyForm = {
   licenseExpiry: "",
   status: "ACTIVE",
   safetyScore: "85",
+  vehicleType: "CARGO_VAN",
+  medicalCardExpiry: "",
+  mvrCheckedAt: "",
+  drugTestStatus: "",
+  annualReviewAt: "",
 };
 
 export function DriversClient({ canManage }: { canManage: boolean }) {
@@ -123,6 +134,11 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
       licenseExpiry: d.licenseExpiry ? d.licenseExpiry.slice(0, 10) : "",
       status: d.status,
       safetyScore: String(d.safetyScore),
+      vehicleType: d.vehicleType ?? "CARGO_VAN",
+      medicalCardExpiry: d.medicalCardExpiry ? d.medicalCardExpiry.slice(0, 10) : "",
+      mvrCheckedAt: d.mvrCheckedAt ? d.mvrCheckedAt.slice(0, 10) : "",
+      drugTestStatus: d.drugTestStatus ?? "",
+      annualReviewAt: d.annualReviewAt ? d.annualReviewAt.slice(0, 10) : "",
     });
     setError("");
     setModalOpen(true);
@@ -230,6 +246,7 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
             <tr>
               <Th>Driver</Th>
               <Th>Station</Th>
+              <Th>Vehicle Type</Th>
               <Th>Status</Th>
               <Th>License</Th>
               <Th>Expiry</Th>
@@ -254,6 +271,7 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
                     </Link>
                   </Td>
                   <Td className="text-xs font-medium text-slate-600">{d.station || "—"}</Td>
+                  <Td className="text-xs font-medium text-slate-600">{VEHICLE_TYPE_LABEL[d.vehicleType ?? ""] ?? "—"}</Td>
                   <Td>
                     <Badge
                       bg={DRIVER_STATUS[d.status as keyof typeof DRIVER_STATUS].bg}
@@ -361,7 +379,38 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
           <Field label="Safety Score (0-100)">
             <Input type="number" value={form.safetyScore} onChange={(e) => setForm({ ...form, safetyScore: e.target.value })} />
           </Field>
+          <Field label="Vehicle Type">
+            <Select
+              value={form.vehicleType}
+              onChange={(e) => setForm({ ...form, vehicleType: e.target.value })}
+              options={Object.entries(VEHICLE_TYPE_LABEL).map(([value, label]) => ({ value, label }))}
+            />
+          </Field>
         </div>
+
+        {(form.vehicleType === "BOX_TRUCK" || form.vehicleType === "TRACTOR_TRUCK") && (
+          <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <p className="mb-3 text-sm font-semibold text-slate-700">DOT Compliance</p>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Medical Card Expiry">
+                <Input type="date" value={form.medicalCardExpiry} onChange={(e) => setForm({ ...form, medicalCardExpiry: e.target.value })} />
+              </Field>
+              <Field label="MVR Last Checked">
+                <Input type="date" value={form.mvrCheckedAt} onChange={(e) => setForm({ ...form, mvrCheckedAt: e.target.value })} />
+              </Field>
+              <Field label="Drug & Alcohol Status">
+                <Select
+                  value={form.drugTestStatus}
+                  onChange={(e) => setForm({ ...form, drugTestStatus: e.target.value })}
+                  options={[{ value: "", label: "— Not set —" }, { value: "PASS", label: "Pass" }, { value: "PENDING", label: "Pending" }, { value: "FAIL", label: "Fail" }]}
+                />
+              </Field>
+              <Field label="Annual Review Date">
+                <Input type="date" value={form.annualReviewAt} onChange={(e) => setForm({ ...form, annualReviewAt: e.target.value })} />
+              </Field>
+            </div>
+          </div>
+        )}
         {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
       </Modal>
     </Card>

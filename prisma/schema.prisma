@@ -227,6 +227,12 @@ model Driver {
   alerts        Alert[]
   samsaraId     String?
   station       String?
+  vehicleType   String?      // CARGO_VAN | BOX_TRUCK | TRACTOR_TRUCK
+  // DOT driver-file compliance (relevant for Box Truck / Tractor Truck drivers)
+  medicalCardExpiry DateTime?
+  mvrCheckedAt      DateTime?
+  drugTestStatus    String?  // PASS | PENDING | FAIL
+  annualReviewAt    DateTime?
   createdAt     DateTime     @default(now())
 }
 

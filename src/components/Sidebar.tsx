@@ -58,6 +58,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/vehicles", label: "Vehicles", icon: Truck },
       { href: "/drivers", label: "Drivers", icon: Users, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER"] },
+      { href: "/dot-compliance", label: "DOT Compliance", icon: ShieldCheck, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER"] },
       { href: "/fuel", label: "Fuel", icon: Fuel, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER"] },
       { href: "/fareye-routes", label: "FareEye Routes", icon: Navigation, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER"] },
       { href: "/offboarding", label: "Offboarding", icon: LogOut, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"] },
