@@ -6,9 +6,10 @@ import { Search, ShieldCheck, Truck, Pencil, FileDown, BellRing, BookOpen, Chevr
 import { Card, Table, Th, Td, Badge, EmptyState, Avatar, Button } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
-import type { DriverDTO } from "@/lib/types";
+import type { DriverDTO, DotDocumentDTO, DotAuditDTO } from "@/lib/types";
 import { formatDate, daysUntil } from "@/lib/utils";
-import { DOT_STATE, DOT_FEDERAL_RULES, DOT_STATE_RULES } from "@/lib/constants";
+import { DOT_STATE, DOT_FEDERAL_RULES, DOT_STATE_RULES, type DotRule } from "@/lib/constants";
+import { compressImage } from "@/lib/image";
 
 const VEHICLE_TYPE_LABEL: Record<string, string> = {
   BOX_TRUCK: "Box Truck",
@@ -79,6 +80,32 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [uploadingField, setUploadingField] = useState<DocField | null>(null);
+  const { data: companyDocs, reload: reloadDocs } = useData<DotDocumentDTO[]>("/api/dot-documents");
+  const [reqUploading, setReqUploading] = useState<string | null>(null);
+
+  async function uploadFile(rawFile: File): Promise<string | null> {
+    const file = await compressImage(rawFile).catch(() => rawFile);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/uploads", { method: "POST", body: fd });
+    const data = await res.json().catch(() => ({}));
+    return res.ok ? ((data as { url?: string }).url ?? null) : null;
+  }
+
+  async function uploadRequirementDoc(req: DotRule, rawFile: File) {
+    setReqUploading(req.key);
+    const url = await uploadFile(rawFile);
+    if (url) {
+      await apiSend("/api/dot-documents", "POST", { requirement: req.key, title: rawFile.name, docUrl: url });
+      reloadDocs();
+    }
+    setReqUploading(null);
+  }
+
+  async function deleteRequirementDoc(id: string) {
+    await apiSend(`/api/dot-documents/${id}`, "DELETE");
+    reloadDocs();
+  }
 
   async function refreshAlerts() {
     setScanning(true);
@@ -110,8 +137,9 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
     setUploadingField(null);
   }
 
-  async function uploadDoc(field: DocField, file: File) {
+  async function uploadDoc(field: DocField, rawFile: File) {
     setUploadingField(field);
+    const file = await compressImage(rawFile).catch(() => rawFile);
     const fd = new FormData();
     fd.append("file", file);
     const res = await fetch("/api/uploads", { method: "POST", body: fd });
@@ -218,21 +246,43 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
               <div key={grp.title}>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{grp.title}</p>
                 <div className="space-y-2">
-                  {grp.rows.map((r) => (
-                    <div key={r.item} className="rounded-lg border border-slate-200 p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-slate-800">{r.item}</p>
-                        <span className="whitespace-nowrap rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{r.cadence}</span>
+                  {grp.rows.map((r) => {
+                    const docs = (companyDocs ?? []).filter((d) => d.requirement === r.key);
+                    return (
+                      <div key={r.item} className="rounded-lg border border-slate-200 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-slate-800">{r.item}</p>
+                          <span className="whitespace-nowrap rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{r.cadence}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-500">{r.rule}</p>
+                        {docs.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {docs.map((d) => (
+                              <div key={d.id} className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1 text-xs">
+                                <a href={d.docUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 truncate font-medium text-blue-700 hover:underline"><Paperclip size={12} /> {d.title}</a>
+                                {canManage && <button onClick={() => deleteRequirementDoc(d.id)} className="shrink-0 text-red-600 hover:underline">Remove</button>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {canManage && (
+                          <label className="mt-2 inline-flex cursor-pointer items-center gap-1 rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                            <Upload size={12} /> {reqUploading === r.key ? "Uploading…" : "Upload document"}
+                            <input type="file" accept="image/*,application/pdf" className="hidden" disabled={reqUploading !== null}
+                              onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadRequirementDoc(r, f); e.target.value = ""; }} />
+                          </label>
+                        )}
                       </div>
-                      <p className="mt-1 text-xs text-slate-500">{r.rule}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}
           </div>
         )}
       </Card>
+
+      <DotAuditsSection canManage={canManage} uploadFile={uploadFile} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {tiles.map((t) => (
@@ -421,5 +471,126 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
         {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
       </Modal>
     </div>
+  );
+}
+
+const AUDIT_RESULT: Record<string, { label: string; bg: string; fg: string }> = {
+  SATISFACTORY: { label: "Satisfactory", bg: "#dcfce7", fg: "#166534" },
+  CONDITIONAL: { label: "Conditional", bg: "#fef9c3", fg: "#854d0e" },
+  UNSATISFACTORY: { label: "Unsatisfactory", bg: "#fee2e2", fg: "#991b1b" },
+  NOT_RATED: { label: "Not rated", bg: "#f1f5f9", fg: "#475569" },
+};
+
+const emptyAudit = { auditDate: "", officerName: "", agency: "", result: "", notes: "", docUrl: "" };
+
+function DotAuditsSection({ canManage, uploadFile }: { canManage: boolean; uploadFile: (f: File) => Promise<string | null> }) {
+  const { data: audits, reload } = useData<DotAuditDTO[]>("/api/dot-audits");
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState(emptyAudit);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+
+  const last = (audits ?? [])[0];
+
+  async function save() {
+    if (!form.auditDate) { setError("Audit date is required"); return; }
+    setSaving(true);
+    setError("");
+    const res = await apiSend("/api/dot-audits", "POST", {
+      auditDate: form.auditDate,
+      officerName: form.officerName || null,
+      agency: form.agency || null,
+      result: form.result || null,
+      notes: form.notes || null,
+      docUrl: form.docUrl || null,
+    });
+    setSaving(false);
+    if (res.ok) { setOpen(false); setForm(emptyAudit); reload(); }
+    else setError(res.error ?? "Failed to save");
+  }
+  async function remove(id: string) { await apiSend(`/api/dot-audits/${id}`, "DELETE"); reload(); }
+
+  return (
+    <Card>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] p-4">
+        <div>
+          <p className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700"><ShieldCheck size={16} /> DOT Audits</p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            {last ? <>Last audit: <span className="font-medium text-slate-700">{formatDate(last.auditDate)}</span>{last.officerName ? ` · ${last.officerName}` : ""}{last.agency ? ` (${last.agency})` : ""}</> : "No DOT audit logged yet"}
+          </p>
+        </div>
+        {canManage && <Button onClick={() => { setForm(emptyAudit); setError(""); setOpen(true); }}>Log DOT audit</Button>}
+      </div>
+
+      {(audits ?? []).length === 0 ? (
+        <p className="p-6 text-center text-sm text-slate-400">No audits logged. Record when an officer last performed a DOT audit.</p>
+      ) : (
+        <Table>
+          <thead>
+            <tr><Th>Date</Th><Th>Officer</Th><Th>Agency</Th><Th>Result</Th><Th>Notes</Th><Th>Report</Th>{canManage && <Th />}</tr>
+          </thead>
+          <tbody>
+            {(audits ?? []).map((a) => (
+              <tr key={a.id} className="hover:bg-slate-50">
+                <Td className="font-medium text-slate-700">{formatDate(a.auditDate)}</Td>
+                <Td className="text-sm text-slate-600">{a.officerName || "—"}</Td>
+                <Td className="text-sm text-slate-600">{a.agency || "—"}</Td>
+                <Td>{a.result ? <Badge bg={AUDIT_RESULT[a.result].bg} fg={AUDIT_RESULT[a.result].fg}>{AUDIT_RESULT[a.result].label}</Badge> : <span className="text-slate-400">—</span>}</Td>
+                <Td className="text-sm text-slate-600"><span className="block max-w-[240px] truncate" title={a.notes ?? ""}>{a.notes || "—"}</span></Td>
+                <Td>{a.docUrl ? <a href={a.docUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 hover:underline"><Paperclip size={13} /> View</a> : <span className="text-slate-400">—</span>}</Td>
+                {canManage && <Td><button onClick={() => remove(a.id)} className="text-xs text-red-600 hover:underline">Delete</button></Td>}
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      )}
+
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Log DOT audit"
+        footer={<><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button></>}
+      >
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Audit date">
+            <Input type="date" value={form.auditDate} onChange={(e) => setForm({ ...form, auditDate: e.target.value })} />
+          </Field>
+          <Field label="Result">
+            <Select value={form.result} onChange={(e) => setForm({ ...form, result: e.target.value })}
+              options={[{ value: "", label: "Not set" }, ...Object.entries(AUDIT_RESULT).map(([value, m]) => ({ value, label: m.label }))]} />
+          </Field>
+          <Field label="Officer name">
+            <Input value={form.officerName} onChange={(e) => setForm({ ...form, officerName: e.target.value })} placeholder="e.g. Officer J. Smith" />
+          </Field>
+          <Field label="Agency">
+            <Input value={form.agency} onChange={(e) => setForm({ ...form, agency: e.target.value })} placeholder="e.g. FMCSA / State Police" />
+          </Field>
+        </div>
+        <div className="mt-4">
+          <Field label="Notes">
+            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3}
+              className="w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="Findings, violations, follow-ups…" />
+          </Field>
+        </div>
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-2.5">
+          <span className="text-sm font-medium text-slate-700">Audit report (image or PDF)</span>
+          <div className="flex items-center gap-2">
+            {form.docUrl ? (
+              <>
+                <a href={form.docUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 hover:underline"><Paperclip size={13} /> View</a>
+                <button onClick={() => setForm((f) => ({ ...f, docUrl: "" }))} className="text-xs text-red-600 hover:underline">Remove</button>
+              </>
+            ) : <span className="text-xs text-slate-400">No file</span>}
+            <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+              <Upload size={13} /> {uploading ? "Uploading…" : form.docUrl ? "Replace" : "Upload"}
+              <input type="file" accept="image/*,application/pdf" className="hidden" disabled={uploading}
+                onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; setUploading(true); const url = await uploadFile(f); setUploading(false); if (url) setForm((s) => ({ ...s, docUrl: url })); else setError("Upload failed"); }} />
+            </label>
+          </div>
+        </div>
+        {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      </Modal>
+    </Card>
   );
 }

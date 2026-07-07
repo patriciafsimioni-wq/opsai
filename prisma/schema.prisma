@@ -242,6 +242,33 @@ model Driver {
   createdAt     DateTime     @default(now())
 }
 
+// Company/fleet-level DOT compliance documents, one requirement can have many
+// (e.g. HOS/ELD program, VA Intrastate Registration, Vehicle Safety Inspection).
+model DotDocument {
+  id          String    @id @default(cuid())
+  requirement String    // requirement key (slug) from the DOT rules reference
+  title       String
+  docUrl      String
+  issuedAt    DateTime?
+  expiresAt   DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+
+  @@index([requirement])
+}
+
+// On-site DOT audit / safety review performed by an officer.
+model DotAudit {
+  id          String    @id @default(cuid())
+  auditDate   DateTime
+  officerName String?
+  agency      String?
+  result      String?   // SATISFACTORY | CONDITIONAL | UNSATISFACTORY | NOT_RATED
+  notes       String?
+  docUrl      String?
+  createdAt   DateTime  @default(now())
+}
+
 model Vehicle {
   id                 String         @id @default(cuid())
   name               String

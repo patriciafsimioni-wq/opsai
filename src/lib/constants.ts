@@ -122,7 +122,7 @@ export function stationFromRouteId(routeId: string | null | undefined): string |
 // The core items are federal (49 CFR Parts 391/382/395) and apply in every
 // state; the state block calls out the jurisdiction-specific rule (Texas for
 // SYNCTX, Virginia for TROVA) an auditor would check.
-export type DotRule = { item: string; rule: string; cadence: string };
+export type DotRule = { key: string; item: string; rule: string; cadence: string; scope: "driver" | "company" };
 
 export const DOT_STATE = IS_TROVA
   ? { code: "VA", name: "Virginia", agency: "Virginia DMV / Virginia State Police (Motor Carrier)" }
@@ -130,25 +130,25 @@ export const DOT_STATE = IS_TROVA
 
 // Federal FMCSA driver-qualification file items (same in TX and VA).
 export const DOT_FEDERAL_RULES: DotRule[] = [
-  { item: "Commercial Driver's License (CDL)", rule: "Valid CDL of the proper class (A for tractor-trailer, B for straight/box truck) with required endorsements.", cadence: "Renew before expiry" },
-  { item: "DOT Medical Card", rule: "Valid DOT medical examiner's certificate from the FMCSA National Registry; kept in the driver file.", cadence: "Up to 24 months (shorter if noted)" },
-  { item: "Motor Vehicle Record (MVR)", rule: "Annual review of the driving record (49 CFR 391.25) plus the driver's annual list of violations.", cadence: "Every 12 months" },
-  { item: "Drug & Alcohol Program", rule: "Pre-employment test + enrollment in a random testing pool; Clearinghouse query on file (49 CFR Part 382).", cadence: "Pre-employment + annual query" },
-  { item: "Annual Review / Certificate of Violations", rule: "Annual review of the driver's qualification and safety performance (49 CFR 391.25/391.27).", cadence: "Every 12 months" },
-  { item: "Hours of Service / ELD", rule: "Compliant HOS logs via an FMCSA-registered ELD (49 CFR Part 395).", cadence: "Ongoing" },
+  { key: "cdl", item: "Commercial Driver's License (CDL)", rule: "Valid CDL of the proper class (A for tractor-trailer, B for straight/box truck) with required endorsements.", cadence: "Renew before expiry", scope: "driver" },
+  { key: "medical_card", item: "DOT Medical Card", rule: "Valid DOT medical examiner's certificate from the FMCSA National Registry; kept in the driver file.", cadence: "Up to 24 months (shorter if noted)", scope: "driver" },
+  { key: "mvr", item: "Motor Vehicle Record (MVR)", rule: "Annual review of the driving record (49 CFR 391.25) plus the driver's annual list of violations.", cadence: "Every 12 months", scope: "driver" },
+  { key: "drug_alcohol", item: "Drug & Alcohol Program", rule: "Pre-employment test + enrollment in a random testing pool; Clearinghouse query on file (49 CFR Part 382).", cadence: "Pre-employment + annual query", scope: "driver" },
+  { key: "annual_review", item: "Annual Review / Certificate of Violations", rule: "Annual review of the driver's qualification and safety performance (49 CFR 391.25/391.27).", cadence: "Every 12 months", scope: "driver" },
+  { key: "hos_eld", item: "Hours of Service / ELD", rule: "Compliant HOS logs via an FMCSA-registered ELD (49 CFR Part 395).", cadence: "Ongoing", scope: "company" },
 ];
 
 // State-specific items an auditor in this jurisdiction will additionally check.
 export const DOT_STATE_RULES: DotRule[] = IS_TROVA
   ? [
-      { item: "VA Intrastate Registration", rule: "Motor carrier operating solely in Virginia must register with the VA DMV and display a VA DOT / USDOT number.", cadence: "Annual" },
-      { item: "VA Medical Waiver (intrastate)", rule: "Virginia recognizes intrastate medical waivers (e.g., vision) issued by VA DMV for drivers not meeting federal standards.", cadence: "Per waiver term" },
-      { item: "VA Vehicle Safety Inspection", rule: "Virginia requires an annual state safety inspection sticker in addition to the federal annual DOT inspection.", cadence: "Every 12 months" },
+      { key: "va_intrastate_registration", item: "VA Intrastate Registration", rule: "Motor carrier operating solely in Virginia must register with the VA DMV and display a VA DOT / USDOT number.", cadence: "Annual", scope: "company" },
+      { key: "va_medical_waiver", item: "VA Medical Waiver (intrastate)", rule: "Virginia recognizes intrastate medical waivers (e.g., vision) issued by VA DMV for drivers not meeting federal standards.", cadence: "Per waiver term", scope: "company" },
+      { key: "va_vehicle_safety_inspection", item: "VA Vehicle Safety Inspection", rule: "Virginia requires an annual state safety inspection sticker in addition to the federal annual DOT inspection.", cadence: "Every 12 months", scope: "company" },
     ]
   : [
-      { item: "TX DOT (TxDMV) Number", rule: "Intrastate motor carriers must hold a TxDMV motor carrier registration and display the TxDMV number.", cadence: "Annual" },
-      { item: "TX Intrastate Medical (MER)", rule: "Texas allows intrastate CDL holders to operate under a Texas medical waiver / MER when not federally certified.", cadence: "Per waiver term" },
-      { item: "TX Annual Vehicle Inspection", rule: "Texas requires the FMCSA annual inspection; commercial safety inspection records kept per TX DPS.", cadence: "Every 12 months" },
+      { key: "tx_dot_number", item: "TX DOT (TxDMV) Number", rule: "Intrastate motor carriers must hold a TxDMV motor carrier registration and display the TxDMV number.", cadence: "Annual", scope: "company" },
+      { key: "tx_intrastate_medical", item: "TX Intrastate Medical (MER)", rule: "Texas allows intrastate CDL holders to operate under a Texas medical waiver / MER when not federally certified.", cadence: "Per waiver term", scope: "company" },
+      { key: "tx_annual_vehicle_inspection", item: "TX Annual Vehicle Inspection", rule: "Texas requires the FMCSA annual inspection; commercial safety inspection records kept per TX DPS.", cadence: "Every 12 months", scope: "company" },
     ];
 
 export const SERVICE_CATEGORY = {

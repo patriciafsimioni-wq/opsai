@@ -8,6 +8,8 @@ import {
   STATION_LABEL,
 } from "@/lib/constants";
 
+const ALL_RULES = [...DOT_FEDERAL_RULES, ...DOT_STATE_RULES];
+
 const DAY = 24 * 60 * 60 * 1000;
 
 function esc(s: unknown): string {
@@ -33,11 +35,15 @@ export async function GET() {
   const auth = await requireApiUser();
   if ("error" in auth) return auth.error;
 
-  const drivers = await prisma.driver.findMany({
-    where: { vehicleType: { in: ["BOX_TRUCK", "TRACTOR_TRUCK"] } },
-    orderBy: [{ station: "asc" }, { firstName: "asc" }],
-    include: { vehicles: { select: { name: true, dxNumber: true, licensePlate: true, vin: true } } },
-  });
+  const [drivers, companyDocs, audits] = await Promise.all([
+    prisma.driver.findMany({
+      where: { vehicleType: { in: ["BOX_TRUCK", "TRACTOR_TRUCK"] } },
+      orderBy: [{ station: "asc" }, { firstName: "asc" }],
+      include: { vehicles: { select: { name: true, dxNumber: true, licensePlate: true, vin: true } } },
+    }),
+    prisma.dotDocument.findMany({ orderBy: { createdAt: "desc" } }),
+    prisma.dotAudit.findMany({ orderBy: { auditDate: "desc" } }),
+  ]);
 
   const generated = new Date().toLocaleString("en-US", { dateStyle: "full", timeStyle: "short" });
 
@@ -157,6 +163,25 @@ export async function GET() {
 
   ${rulesRows("Federal FMCSA Requirements (49 CFR)", DOT_FEDERAL_RULES)}
   ${rulesRows(`${DOT_STATE.name} State Requirements`, DOT_STATE_RULES)}
+
+  <h3>DOT Audit History</h3>
+  <table class="rules">
+    <thead><tr><th>Date</th><th>Officer</th><th>Agency</th><th>Result</th><th>Report</th></tr></thead>
+    <tbody>
+      ${audits.length ? audits.map((a) => `<tr><td class="item">${fmt(a.auditDate)}</td><td>${esc(a.officerName ?? "—")}</td><td>${esc(a.agency ?? "—")}</td><td>${esc(a.result ?? "—")}</td><td>${a.docUrl ? '<span class="badge valid">ON FILE</span>' : "—"}</td></tr>`).join("") : '<tr><td colspan="5">No DOT audit logged.</td></tr>'}
+    </tbody>
+  </table>
+
+  <h3>Company / Fleet Documents on File</h3>
+  <table class="rules">
+    <thead><tr><th>Requirement</th><th>Documents</th></tr></thead>
+    <tbody>
+      ${ALL_RULES.map((r) => {
+        const docs = companyDocs.filter((d) => d.requirement === r.key);
+        return `<tr><td class="item">${esc(r.item)}</td><td>${docs.length ? docs.map((d) => `${esc(d.title)} <span class="badge valid">ON FILE</span>`).join("<br/>") : '<span class="badge missing">NOT ON FILE</span>'}</td></tr>`;
+      }).join("")}
+    </tbody>
+  </table>
 
   <div class="page-break"></div>
   <h3>Driver Qualification Files (${drivers.length})</h3>

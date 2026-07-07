@@ -9,6 +9,8 @@ import type {
   Alert,
   Service,
   User,
+  DotDocument,
+  DotAudit,
 } from "@prisma/client";
 
 // JSON-serialized variants (Dates become strings over the wire).
@@ -23,6 +25,9 @@ type Json<T> = {
 export type VehicleDTO = Json<Vehicle> & {
   assignedDriver?: Json<Driver> | null;
 };
+
+export type DotDocumentDTO = Json<DotDocument>;
+export type DotAuditDTO = Json<DotAudit>;
 
 export type DriverDTO = Json<Driver> & {
   vehicles?: Json<Vehicle>[];
