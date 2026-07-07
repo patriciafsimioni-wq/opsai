@@ -23,6 +23,14 @@ function fmt(d: Date | null | undefined): string {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+// Render an uploaded document (data URL): embed images inline so they print in
+// the packet; link PDFs/others so they can be opened from the browser.
+function docCell(url: string | null | undefined): string {
+  if (!url) return '<span class="badge missing">NOT ON FILE</span>';
+  if (url.startsWith("data:image/")) return `<a href="${esc(url)}" target="_blank"><img class="doc" src="${esc(url)}" alt="document"/></a>`;
+  return `<a class="doclink" href="${esc(url)}" target="_blank">Open document</a> <span class="badge valid">ON FILE</span>`;
+}
+
 function status(d: Date | null | undefined): { label: string; cls: string } {
   if (!d) return { label: "MISSING", cls: "missing" };
   const days = Math.ceil((new Date(d).getTime() - Date.now()) / DAY);
@@ -100,7 +108,7 @@ export async function GET() {
           </tbody>
         </table>
         <table class="items">
-          <thead><tr><th>Document on File</th><th>Status</th></tr></thead>
+          <thead><tr><th>Document on File</th><th>Attachment</th></tr></thead>
           <tbody>
             ${([
               ["DOT Medical Card", d.medicalCardDocUrl],
@@ -108,7 +116,7 @@ export async function GET() {
               ["MVR", d.mvrDocUrl],
               ["Drug & Alcohol", d.drugTestDocUrl],
               ["Annual Review", d.annualReviewDocUrl],
-            ] as [string, string | null][]).map(([label, url]) => `<tr><td>${esc(label)}</td><td>${url ? '<span class="badge valid">UPLOADED</span>' : '<span class="badge missing">NOT ON FILE</span>'}</td></tr>`).join("")}
+            ] as [string, string | null][]).map(([label, url]) => `<tr><td>${esc(label)}</td><td>${docCell(url)}</td></tr>`).join("")}
           </tbody>
         </table>
         <div class="sign">
@@ -148,6 +156,9 @@ export async function GET() {
   .badge.expiring { background: #fef9c3; color: #854d0e; }
   .badge.expired { background: #fee2e2; color: #991b1b; }
   .badge.missing { background: #f1f5f9; color: #475569; }
+  .doc { max-height: 220px; max-width: 320px; border: 1px solid #cbd5e1; border-radius: 6px; margin: 4px 0; display: block; }
+  .doclink { color: #2563eb; font-weight: 600; text-decoration: none; }
+  .docrow { display: flex; align-items: center; gap: 8px; margin: 3px 0; flex-wrap: wrap; }
   .sign { display: flex; justify-content: space-between; font-size: 12px; color: #334155; margin-top: 8px; }
   .page-break { page-break-before: always; }
   @media print { .toolbar { display: none; } body { padding: 0; } }
@@ -168,7 +179,7 @@ export async function GET() {
   <table class="rules">
     <thead><tr><th>Date</th><th>Officer</th><th>Agency</th><th>Result</th><th>Report</th></tr></thead>
     <tbody>
-      ${audits.length ? audits.map((a) => `<tr><td class="item">${fmt(a.auditDate)}</td><td>${esc(a.officerName ?? "—")}</td><td>${esc(a.agency ?? "—")}</td><td>${esc(a.result ?? "—")}</td><td>${a.docUrl ? '<span class="badge valid">ON FILE</span>' : "—"}</td></tr>`).join("") : '<tr><td colspan="5">No DOT audit logged.</td></tr>'}
+      ${audits.length ? audits.map((a) => `<tr><td class="item">${fmt(a.auditDate)}</td><td>${esc(a.officerName ?? "—")}</td><td>${esc(a.agency ?? "—")}</td><td>${esc(a.result ?? "—")}</td><td>${docCell(a.docUrl)}</td></tr>`).join("") : '<tr><td colspan="5">No DOT audit logged.</td></tr>'}
     </tbody>
   </table>
 
@@ -178,7 +189,7 @@ export async function GET() {
     <tbody>
       ${ALL_RULES.map((r) => {
         const docs = companyDocs.filter((d) => d.requirement === r.key);
-        return `<tr><td class="item">${esc(r.item)}</td><td>${docs.length ? docs.map((d) => `${esc(d.title)} <span class="badge valid">ON FILE</span>`).join("<br/>") : '<span class="badge missing">NOT ON FILE</span>'}</td></tr>`;
+        return `<tr><td class="item">${esc(r.item)}</td><td>${docs.length ? docs.map((d) => `<div class="docrow">${esc(d.title)}${docCell(d.docUrl)}</div>`).join("") : '<span class="badge missing">NOT ON FILE</span>'}</td></tr>`;
       }).join("")}
     </tbody>
   </table>
