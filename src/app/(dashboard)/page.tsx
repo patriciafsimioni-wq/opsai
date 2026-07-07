@@ -121,9 +121,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const planActualTotal = planRows.reduce((s, r) => s + r.actual, 0);
 
   // Live on Samsara — vehicles currently running (engine on) per station.
+  // Only count vehicles whose engine-on reading is recent; a van that goes
+  // offline stops reporting, so an old "On" state must not linger as "running".
+  const LIVE_WINDOW_MIN = 30;
+  const liveSince = new Date(new Date().getTime() - LIVE_WINDOW_MIN * 60 * 1000);
   const liveByStationRaw = await prisma.vehicle.groupBy({
     by: ["station"],
-    where: { engineOn: true, ...activeStationFilter },
+    where: { engineOn: true, engineOnAt: { gte: liveSince }, ...activeStationFilter },
     _count: true,
   });
   const liveByStation: Record<string, number> = {};

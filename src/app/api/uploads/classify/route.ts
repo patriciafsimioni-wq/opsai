@@ -57,8 +57,25 @@ const RULES: { category: string; keywords: string[]; minMatches: number }[] = [
   },
 ];
 
+// Columns that only appear on a fuel export. When present these are a decisive
+// signal for Fuel Log even though a fuel sheet also carries generic columns
+// (odometer, cost, station) that overlap with Service History.
+const FUEL_STRONG = ["gallons", "gal", "liters", "litres", "price/gal", "price per gal", "$/gal", "ppg", "fuel type", "product", "unleaded", "diesel", "pump", "gross cost", "fuel card", "wex", "merchant"];
+
 function classifyByHeaders(headers: string[]): { category: string; confidence: "high" | "medium" | "low"; reason: string } {
   const lower = headers.map((h) => h.toLowerCase().trim());
+
+  // Decisive fuel detection: a sheet with clear fuel columns is fuel, even if
+  // its generic columns would otherwise match Service History more loosely.
+  const fuelHits = FUEL_STRONG.filter((kw) => lower.some((h) => h.includes(kw)));
+  if (fuelHits.length >= 2) {
+    return {
+      category: "Fuel Log",
+      confidence: fuelHits.length >= 3 ? "high" : "medium",
+      reason: `Matched ${fuelHits.length} fuel-specific columns: ${fuelHits.join(", ")}`,
+    };
+  }
+
   let best: { category: string; matches: number; keywords: string[] } | null = null;
 
   for (const rule of RULES) {

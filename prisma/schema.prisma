@@ -305,6 +305,7 @@ model Vehicle {
   heading            Float          @default(0)
   speed              Float          @default(0)
   engineOn           Boolean        @default(false)
+  engineOnAt         DateTime?
   lastSeen           DateTime?
   assignedDriver     Driver?        @relation(fields: [assignedDriverId], references: [id])
   assignedDriverId   String?

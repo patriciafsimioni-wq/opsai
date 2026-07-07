@@ -74,9 +74,16 @@ export async function POST() {
       updateData.speed = s.gps.speedMilesPerHour;
     }
 
-    // Update engine state
+    // Update engine state. Record when the reading was taken so the dashboard
+    // can ignore stale "On" states (a van that went offline stops reporting, so
+    // the last "On" would otherwise stay true forever).
     if (s.engineStates?.value) {
       updateData.engineOn = s.engineStates.value === "On";
+      updateData.engineOnAt = s.engineStates.time ? new Date(s.engineStates.time) : new Date();
+    } else {
+      // No engine telemetry in this sample — treat as not running.
+      updateData.engineOn = false;
+      updateData.engineOnAt = null;
     }
 
     await prisma.vehicle.update({ where: { id: vehicle.id }, data: updateData });
