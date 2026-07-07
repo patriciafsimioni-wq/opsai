@@ -505,6 +505,7 @@ function DotAuditsSection({ canManage, uploadFile }: { canManage: boolean; uploa
   const { data: audits, reload } = useData<DotAuditDTO[]>("/api/dot-audits");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [originalDocUrl, setOriginalDocUrl] = useState("");
   const [form, setForm] = useState(emptyAudit);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -514,12 +515,14 @@ function DotAuditsSection({ canManage, uploadFile }: { canManage: boolean; uploa
 
   function openNew() {
     setEditingId(null);
+    setOriginalDocUrl("");
     setForm(emptyAudit);
     setError("");
     setOpen(true);
   }
   function openEdit(a: DotAuditDTO) {
     setEditingId(a.id);
+    setOriginalDocUrl(a.docUrl ?? "");
     setForm({
       auditDate: a.auditDate ? a.auditDate.slice(0, 10) : "",
       officerName: a.officerName ?? "",
@@ -536,14 +539,16 @@ function DotAuditsSection({ canManage, uploadFile }: { canManage: boolean; uploa
     if (!form.auditDate) { setError("Audit date is required"); return; }
     setSaving(true);
     setError("");
-    const payload = {
+    const payload: Record<string, unknown> = {
       auditDate: form.auditDate,
       officerName: form.officerName || null,
       agency: form.agency || null,
       result: form.result || null,
       notes: form.notes || null,
-      docUrl: form.docUrl || null,
     };
+    // Only send the (potentially large, base64) document when it actually
+    // changed — re-sending an unchanged file can blow the request-size limit.
+    if (!editingId || form.docUrl !== originalDocUrl) payload.docUrl = form.docUrl || null;
     const res = editingId
       ? await apiSend(`/api/dot-audits/${editingId}`, "PATCH", payload)
       : await apiSend("/api/dot-audits", "POST", payload);
