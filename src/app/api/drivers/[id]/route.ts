@@ -35,6 +35,11 @@ const schema = z.object({
   mvrCheckedAt: z.string().optional().nullable(),
   drugTestStatus: z.enum(["PASS", "PENDING", "FAIL"]).optional().nullable(),
   annualReviewAt: z.string().optional().nullable(),
+  medicalCardDocUrl: z.string().optional().nullable(),
+  licenseDocUrl: z.string().optional().nullable(),
+  mvrDocUrl: z.string().optional().nullable(),
+  drugTestDocUrl: z.string().optional().nullable(),
+  annualReviewDocUrl: z.string().optional().nullable(),
 });
 
 const toDateOrUndef = (v: string | null | undefined) =>
@@ -64,6 +69,11 @@ export async function PATCH(
       mvrCheckedAt: toDateOrUndef(d.mvrCheckedAt),
       annualReviewAt: toDateOrUndef(d.annualReviewAt),
       drugTestStatus: d.drugTestStatus === undefined ? undefined : d.drugTestStatus || null,
+      medicalCardDocUrl: d.medicalCardDocUrl === undefined ? undefined : d.medicalCardDocUrl || null,
+      licenseDocUrl: d.licenseDocUrl === undefined ? undefined : d.licenseDocUrl || null,
+      mvrDocUrl: d.mvrDocUrl === undefined ? undefined : d.mvrDocUrl || null,
+      drugTestDocUrl: d.drugTestDocUrl === undefined ? undefined : d.drugTestDocUrl || null,
+      annualReviewDocUrl: d.annualReviewDocUrl === undefined ? undefined : d.annualReviewDocUrl || null,
     },
   });
   return NextResponse.json(driver);

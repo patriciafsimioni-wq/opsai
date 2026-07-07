@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, ShieldCheck, Truck, Pencil, FileDown, BellRing, BookOpen, ChevronDown } from "lucide-react";
+import { Search, ShieldCheck, Truck, Pencil, FileDown, BellRing, BookOpen, ChevronDown, Upload, Paperclip } from "lucide-react";
 import { Card, Table, Th, Td, Badge, EmptyState, Avatar, Button } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
@@ -51,7 +51,20 @@ const emptyForm = {
   mvrCheckedAt: "",
   drugTestStatus: "",
   annualReviewAt: "",
+  medicalCardDocUrl: "",
+  licenseDocUrl: "",
+  mvrDocUrl: "",
+  drugTestDocUrl: "",
+  annualReviewDocUrl: "",
 };
+
+type DocField = "medicalCardDocUrl" | "licenseDocUrl" | "mvrDocUrl" | "drugTestDocUrl" | "annualReviewDocUrl";
+
+const DOC_FIELDS: DocField[] = ["medicalCardDocUrl", "licenseDocUrl", "mvrDocUrl", "drugTestDocUrl", "annualReviewDocUrl"];
+
+function docsUploaded(d: DriverDTO): number {
+  return DOC_FIELDS.filter((f) => !!(d[f] as string | null | undefined)).length;
+}
 
 export function DotComplianceClient({ canManage = false }: { canManage?: boolean }) {
   const { data: drivers, loading, reload } = useData<DriverDTO[]>("/api/drivers");
@@ -65,6 +78,7 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
   const [rulesOpen, setRulesOpen] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState<string | null>(null);
+  const [uploadingField, setUploadingField] = useState<DocField | null>(null);
 
   async function refreshAlerts() {
     setScanning(true);
@@ -86,8 +100,28 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
       mvrCheckedAt: d.mvrCheckedAt ? d.mvrCheckedAt.slice(0, 10) : "",
       drugTestStatus: d.drugTestStatus ?? "",
       annualReviewAt: d.annualReviewAt ? d.annualReviewAt.slice(0, 10) : "",
+      medicalCardDocUrl: d.medicalCardDocUrl ?? "",
+      licenseDocUrl: d.licenseDocUrl ?? "",
+      mvrDocUrl: d.mvrDocUrl ?? "",
+      drugTestDocUrl: d.drugTestDocUrl ?? "",
+      annualReviewDocUrl: d.annualReviewDocUrl ?? "",
     });
     setError("");
+    setUploadingField(null);
+  }
+
+  async function uploadDoc(field: DocField, file: File) {
+    setUploadingField(field);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/uploads", { method: "POST", body: fd });
+    const data = await res.json().catch(() => ({}));
+    setUploadingField(null);
+    if (res.ok && (data as { url?: string }).url) {
+      setForm((f) => ({ ...f, [field]: (data as { url: string }).url }));
+    } else {
+      setError((data as { error?: string }).error ?? "Upload failed");
+    }
   }
   async function save() {
     if (!editing) return;
@@ -100,6 +134,11 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
       mvrCheckedAt: form.mvrCheckedAt || null,
       drugTestStatus: form.drugTestStatus || null,
       annualReviewAt: form.annualReviewAt || null,
+      medicalCardDocUrl: form.medicalCardDocUrl || null,
+      licenseDocUrl: form.licenseDocUrl || null,
+      mvrDocUrl: form.mvrDocUrl || null,
+      drugTestDocUrl: form.drugTestDocUrl || null,
+      annualReviewDocUrl: form.annualReviewDocUrl || null,
     });
     setSaving(false);
     if (res.ok) {
@@ -119,7 +158,7 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
       const statuses = [dateStatus(d.medicalCardExpiry), dateStatus(d.licenseExpiry), dateStatus(d.annualReviewAt)];
       if (statuses.includes("expired")) expired++;
       else if (statuses.includes("expiring")) expiring++;
-      else if (statuses.includes("missing") || !d.drugTestStatus) missing++;
+      else if (statuses.includes("missing") || !d.drugTestStatus || docsUploaded(d) < 5) missing++;
     }
     return { expired, expiring, missing, total: dotDrivers.length };
   }, [dotDrivers]);
@@ -133,7 +172,7 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
         const statuses = [dateStatus(d.medicalCardExpiry), dateStatus(d.licenseExpiry), dateStatus(d.annualReviewAt)];
         if (statusFilter === "expired" && !statuses.includes("expired")) return false;
         if (statusFilter === "expiring" && !statuses.includes("expiring")) return false;
-        if (statusFilter === "missing" && !statuses.includes("missing") && !!d.drugTestStatus) return false;
+        if (statusFilter === "missing" && !statuses.includes("missing") && !!d.drugTestStatus && docsUploaded(d) === 5) return false;
       }
       return true;
     });
@@ -247,6 +286,7 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
                 <Th>MVR Checked</Th>
                 <Th>Drug & Alcohol</Th>
                 <Th>Annual Review</Th>
+                <Th>Documents</Th>
                 {canManage && <Th />}
               </tr>
             </thead>
@@ -280,6 +320,14 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
                     )}
                   </Td>
                   <Td><StatusCell value={d.annualReviewAt} /></Td>
+                  <Td>
+                    {(() => {
+                      const n = docsUploaded(d);
+                      const bg = n === 5 ? "#dcfce7" : n === 0 ? "#fee2e2" : "#fef9c3";
+                      const fg = n === 5 ? "#166534" : n === 0 ? "#991b1b" : "#854d0e";
+                      return <Badge bg={bg} fg={fg}>{n}/5 uploaded</Badge>;
+                    })()}
+                  </Td>
                   {canManage && (
                     <Td>
                       <div className="flex justify-end">
@@ -329,6 +377,46 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
           <Field label="Annual Review">
             <Input type="date" value={form.annualReviewAt} onChange={(e) => setForm({ ...form, annualReviewAt: e.target.value })} />
           </Field>
+        </div>
+
+        <div className="mt-5">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Uploaded documents (image or PDF, max 5&nbsp;MB)</p>
+          <div className="space-y-2">
+            {([
+              ["medicalCardDocUrl", "DOT Medical Card"],
+              ["licenseDocUrl", "CDL / License"],
+              ["mvrDocUrl", "MVR"],
+              ["drugTestDocUrl", "Drug & Alcohol"],
+              ["annualReviewDocUrl", "Annual Review"],
+            ] as [DocField, string][]).map(([field, label]) => {
+              const url = form[field];
+              return (
+                <div key={field} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-2.5">
+                  <span className="text-sm font-medium text-slate-700">{label}</span>
+                  <div className="flex items-center gap-2">
+                    {url ? (
+                      <>
+                        <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 hover:underline"><Paperclip size={13} /> View</a>
+                        <button onClick={() => setForm((f) => ({ ...f, [field]: "" }))} className="text-xs text-red-600 hover:underline">Remove</button>
+                      </>
+                    ) : (
+                      <span className="text-xs text-slate-400">No file</span>
+                    )}
+                    <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                      <Upload size={13} /> {uploadingField === field ? "Uploading…" : url ? "Replace" : "Upload"}
+                      <input
+                        type="file"
+                        accept="image/*,application/pdf"
+                        className="hidden"
+                        disabled={uploadingField !== null}
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadDoc(field, f); e.target.value = ""; }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
         {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
       </Modal>

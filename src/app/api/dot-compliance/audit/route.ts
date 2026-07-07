@@ -93,6 +93,18 @@ export async function GET() {
             <tr><td>Drug &amp; Alcohol Status</td><td>${esc(d.drugTestStatus ?? "—")}</td><td><span class="badge ${drugSt.cls}">${drugSt.label}</span></td></tr>
           </tbody>
         </table>
+        <table class="items">
+          <thead><tr><th>Document on File</th><th>Status</th></tr></thead>
+          <tbody>
+            ${([
+              ["DOT Medical Card", d.medicalCardDocUrl],
+              ["CDL / License", d.licenseDocUrl],
+              ["MVR", d.mvrDocUrl],
+              ["Drug & Alcohol", d.drugTestDocUrl],
+              ["Annual Review", d.annualReviewDocUrl],
+            ] as [string, string | null][]).map(([label, url]) => `<tr><td>${esc(label)}</td><td>${url ? '<span class="badge valid">UPLOADED</span>' : '<span class="badge missing">NOT ON FILE</span>'}</td></tr>`).join("")}
+          </tbody>
+        </table>
         <div class="sign">
           <div>Reviewed by: ______________________________</div>
           <div>Date: ______________</div>

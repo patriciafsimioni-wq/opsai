@@ -233,6 +233,12 @@ model Driver {
   mvrCheckedAt      DateTime?
   drugTestStatus    String?  // PASS | PENDING | FAIL
   annualReviewAt    DateTime?
+  // Uploaded DOT document files (image/PDF URLs from /api/uploads)
+  medicalCardDocUrl String?
+  licenseDocUrl     String?
+  mvrDocUrl         String?
+  drugTestDocUrl    String?
+  annualReviewDocUrl String?
   createdAt     DateTime     @default(now())
 }
 

@@ -84,6 +84,8 @@ async function generateDotAlerts(now: Date, cutoff: Date) {
       id: true, firstName: true, lastName: true,
       medicalCardExpiry: true, licenseExpiry: true, annualReviewAt: true,
       mvrCheckedAt: true, drugTestStatus: true,
+      medicalCardDocUrl: true, licenseDocUrl: true, mvrDocUrl: true,
+      drugTestDocUrl: true, annualReviewDocUrl: true,
     },
   });
 
@@ -106,17 +108,28 @@ async function generateDotAlerts(now: Date, cutoff: Date) {
     if (!d.mvrCheckedAt) items.push({ driverId: d.id, label: "MVR", message: `MVR not on file for ${who}`, critical: true });
     else if (now.getTime() - d.mvrCheckedAt.getTime() > YEAR) items.push({ driverId: d.id, label: "MVR", message: `MVR review overdue (last ${dateStr(d.mvrCheckedAt)}) for ${who}`, critical: true });
     if (d.drugTestStatus !== "PASS") items.push({ driverId: d.id, label: "Drug & alcohol", message: `Drug & alcohol status ${d.drugTestStatus ?? "missing"} for ${who}`, critical: d.drugTestStatus === "FAIL" });
+    const missingDocs: [string, string | null][] = [
+      ["Medical card document", d.medicalCardDocUrl],
+      ["CDL / license document", d.licenseDocUrl],
+      ["MVR document", d.mvrDocUrl],
+      ["Drug & alcohol document", d.drugTestDocUrl],
+      ["Annual review document", d.annualReviewDocUrl],
+    ];
+    for (const [label, url] of missingDocs) {
+      if (!url) items.push({ driverId: d.id, label, message: `${label} not uploaded for ${who}`, critical: false });
+    }
   }
 
   const existing = await prisma.alert.findMany({
     where: { type: "DOCUMENT_EXPIRY", resolvedAt: null, driverId: { not: null } },
     select: { driverId: true, message: true },
   });
-  const existingKey = new Set(existing.map((a) => `${a.driverId}|${a.message.split(" ")[0]}`));
+  const key4 = (m: string) => m.split(" ").slice(0, 4).join(" ");
+  const existingKey = new Set(existing.map((a) => `${a.driverId}|${key4(a.message)}`));
 
   let created = 0;
   for (const it of items) {
-    const key = `${it.driverId}|${it.message.split(" ")[0]}`;
+    const key = `${it.driverId}|${key4(it.message)}`;
     if (existingKey.has(key)) continue;
     await prisma.alert.create({
       data: {
