@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireApiUser, badRequest } from "@/lib/api";
 
-const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+// Serverless request bodies are capped (~4.5 MB on Vercel); keep uploads under
+// that so the multipart POST isn't rejected before it reaches this handler.
+const MAX_BYTES = 4 * 1024 * 1024; // 4 MB
 const ALLOWED = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif", "application/pdf"];
 
 export async function POST(req: Request) {

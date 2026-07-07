@@ -11,6 +11,12 @@ import { formatDate, daysUntil } from "@/lib/utils";
 import { DOT_STATE, DOT_FEDERAL_RULES, DOT_STATE_RULES, type DotRule } from "@/lib/constants";
 import { compressImage } from "@/lib/image";
 
+type UploadResult = { url: string } | { error: string };
+// Serverless request bodies are capped (~4.5 MB); base64-persisting the file
+// on save inflates it ~1.33×, so keep the raw file comfortably under that.
+const MAX_UPLOAD_BYTES = 3.5 * 1024 * 1024;
+const MAX_UPLOAD_LABEL = "about 3.5 MB";
+
 const VEHICLE_TYPE_LABEL: Record<string, string> = {
   BOX_TRUCK: "Box Truck",
   TRACTOR_TRUCK: "Tractor Truck",
@@ -83,21 +89,34 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
   const { data: companyDocs, reload: reloadDocs } = useData<DotDocumentDTO[]>("/api/dot-documents");
   const [reqUploading, setReqUploading] = useState<string | null>(null);
 
-  async function uploadFile(rawFile: File): Promise<string | null> {
+  async function uploadFile(rawFile: File): Promise<UploadResult> {
     const file = await compressImage(rawFile).catch(() => rawFile);
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return { error: `File is ${(file.size / 1024 / 1024).toFixed(1)} MB — the maximum is ${MAX_UPLOAD_LABEL}. Please compress the PDF or scan at a lower resolution.` };
+    }
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch("/api/uploads", { method: "POST", body: fd });
+    let res: Response;
+    try {
+      res = await fetch("/api/uploads", { method: "POST", body: fd });
+    } catch {
+      return { error: "Upload failed — check your connection and try again." };
+    }
+    if (res.status === 413) return { error: `File is too large — the maximum is ${MAX_UPLOAD_LABEL}. Please compress the PDF and try again.` };
     const data = await res.json().catch(() => ({}));
-    return res.ok ? ((data as { url?: string }).url ?? null) : null;
+    if (!res.ok) return { error: (data as { error?: string }).error ?? "Upload failed." };
+    const url = (data as { url?: string }).url;
+    return url ? { url } : { error: "Upload failed." };
   }
 
   async function uploadRequirementDoc(req: DotRule, rawFile: File) {
     setReqUploading(req.key);
-    const url = await uploadFile(rawFile);
-    if (url) {
-      await apiSend("/api/dot-documents", "POST", { requirement: req.key, title: rawFile.name, docUrl: url });
+    const result = await uploadFile(rawFile);
+    if ("url" in result) {
+      await apiSend("/api/dot-documents", "POST", { requirement: req.key, title: rawFile.name, docUrl: result.url });
       reloadDocs();
+    } else {
+      setError(result.error);
     }
     setReqUploading(null);
   }
@@ -139,16 +158,12 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
 
   async function uploadDoc(field: DocField, rawFile: File) {
     setUploadingField(field);
-    const file = await compressImage(rawFile).catch(() => rawFile);
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await fetch("/api/uploads", { method: "POST", body: fd });
-    const data = await res.json().catch(() => ({}));
+    const result = await uploadFile(rawFile);
     setUploadingField(null);
-    if (res.ok && (data as { url?: string }).url) {
-      setForm((f) => ({ ...f, [field]: (data as { url: string }).url }));
+    if ("url" in result) {
+      setForm((f) => ({ ...f, [field]: result.url }));
     } else {
-      setError((data as { error?: string }).error ?? "Upload failed");
+      setError(result.error);
     }
   }
   async function save() {
@@ -483,9 +498,10 @@ const AUDIT_RESULT: Record<string, { label: string; bg: string; fg: string }> = 
 
 const emptyAudit = { auditDate: "", officerName: "", agency: "", result: "", notes: "", docUrl: "" };
 
-function DotAuditsSection({ canManage, uploadFile }: { canManage: boolean; uploadFile: (f: File) => Promise<string | null> }) {
+function DotAuditsSection({ canManage, uploadFile }: { canManage: boolean; uploadFile: (f: File) => Promise<UploadResult> }) {
   const { data: audits, reload } = useData<DotAuditDTO[]>("/api/dot-audits");
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyAudit);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -493,20 +509,43 @@ function DotAuditsSection({ canManage, uploadFile }: { canManage: boolean; uploa
 
   const last = (audits ?? [])[0];
 
+  function openNew() {
+    setEditingId(null);
+    setForm(emptyAudit);
+    setError("");
+    setOpen(true);
+  }
+  function openEdit(a: DotAuditDTO) {
+    setEditingId(a.id);
+    setForm({
+      auditDate: a.auditDate ? a.auditDate.slice(0, 10) : "",
+      officerName: a.officerName ?? "",
+      agency: a.agency ?? "",
+      result: a.result ?? "",
+      notes: a.notes ?? "",
+      docUrl: a.docUrl ?? "",
+    });
+    setError("");
+    setOpen(true);
+  }
+
   async function save() {
     if (!form.auditDate) { setError("Audit date is required"); return; }
     setSaving(true);
     setError("");
-    const res = await apiSend("/api/dot-audits", "POST", {
+    const payload = {
       auditDate: form.auditDate,
       officerName: form.officerName || null,
       agency: form.agency || null,
       result: form.result || null,
       notes: form.notes || null,
       docUrl: form.docUrl || null,
-    });
+    };
+    const res = editingId
+      ? await apiSend(`/api/dot-audits/${editingId}`, "PATCH", payload)
+      : await apiSend("/api/dot-audits", "POST", payload);
     setSaving(false);
-    if (res.ok) { setOpen(false); setForm(emptyAudit); reload(); }
+    if (res.ok) { setOpen(false); setEditingId(null); setForm(emptyAudit); reload(); }
     else setError(res.error ?? "Failed to save");
   }
   async function remove(id: string) { await apiSend(`/api/dot-audits/${id}`, "DELETE"); reload(); }
@@ -520,7 +559,7 @@ function DotAuditsSection({ canManage, uploadFile }: { canManage: boolean; uploa
             {last ? <>Last audit: <span className="font-medium text-slate-700">{formatDate(last.auditDate)}</span>{last.officerName ? ` · ${last.officerName}` : ""}{last.agency ? ` (${last.agency})` : ""}</> : "No DOT audit logged yet"}
           </p>
         </div>
-        {canManage && <Button onClick={() => { setForm(emptyAudit); setError(""); setOpen(true); }}>Log DOT audit</Button>}
+        {canManage && <Button onClick={openNew}>Log DOT audit</Button>}
       </div>
 
       {(audits ?? []).length === 0 ? (
@@ -539,7 +578,7 @@ function DotAuditsSection({ canManage, uploadFile }: { canManage: boolean; uploa
                 <Td>{a.result ? <Badge bg={AUDIT_RESULT[a.result].bg} fg={AUDIT_RESULT[a.result].fg}>{AUDIT_RESULT[a.result].label}</Badge> : <span className="text-slate-400">—</span>}</Td>
                 <Td className="text-sm text-slate-600"><span className="block max-w-[240px] truncate" title={a.notes ?? ""}>{a.notes || "—"}</span></Td>
                 <Td>{a.docUrl ? <a href={a.docUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 hover:underline"><Paperclip size={13} /> View</a> : <span className="text-slate-400">—</span>}</Td>
-                {canManage && <Td><button onClick={() => remove(a.id)} className="text-xs text-red-600 hover:underline">Delete</button></Td>}
+                {canManage && <Td><div className="flex gap-3"><button onClick={() => openEdit(a)} className="text-xs font-medium text-blue-700 hover:underline">Edit</button><button onClick={() => remove(a.id)} className="text-xs text-red-600 hover:underline">Delete</button></div></Td>}
               </tr>
             ))}
           </tbody>
@@ -549,7 +588,7 @@ function DotAuditsSection({ canManage, uploadFile }: { canManage: boolean; uploa
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="Log DOT audit"
+        title={editingId ? "Edit DOT audit" : "Log DOT audit"}
         footer={<><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button></>}
       >
         <div className="grid grid-cols-2 gap-4">
@@ -585,7 +624,7 @@ function DotAuditsSection({ canManage, uploadFile }: { canManage: boolean; uploa
             <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
               <Upload size={13} /> {uploading ? "Uploading…" : form.docUrl ? "Replace" : "Upload"}
               <input type="file" accept="image/*,application/pdf" className="hidden" disabled={uploading}
-                onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; setUploading(true); const url = await uploadFile(f); setUploading(false); if (url) setForm((s) => ({ ...s, docUrl: url })); else setError("Upload failed"); }} />
+                onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; setError(""); setUploading(true); const result = await uploadFile(f); setUploading(false); if ("url" in result) setForm((s) => ({ ...s, docUrl: result.url })); else setError(result.error); }} />
             </label>
           </div>
         </div>
