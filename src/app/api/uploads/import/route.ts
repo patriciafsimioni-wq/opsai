@@ -91,13 +91,33 @@ async function importServiceHistory(rows: Record<string, unknown>[]) {
     // Flexible column name matching
     const dxRaw = String(row["DX NUMBER OR License Plate"] ?? row["DX#"] ?? row["DX Number"] ?? row["Vehicle"] ?? "").trim().toUpperCase();
     const vinRaw = String(row["VIN NUMBER - Mandatory"] ?? row["VIN"] ?? row["VIN NUMBER"] ?? "").trim().toUpperCase();
-    const title = String(row["Service Category"] ?? row["Description"] ?? row["Service"] ?? row["Title"] ?? "").trim();
+    // Prefer the specific service named in one of the category columns
+    // (e.g. "PM B – Oil Change", "Tire Replacement", "Engine Repair") — these
+    // are readable and classify correctly. The generic "Service Category"
+    // column often holds an opaque code (e.g. "CAT001"), so fall back to the
+    // readable description before the code.
+    const CATEGORY_COLUMNS = [
+      "Preventive Maintenance",
+      "Safety Compliance ",
+      "Safety Compliance",
+      "Mechanical Repair",
+      "Engine Services",
+      "Electrical Repairs",
+      "A/C & Heating",
+      "Cosmetic & Utility",
+      "Admin / Accidents / Insurance Claims",
+    ];
+    const categoryTitle = CATEGORY_COLUMNS.map((c) => String(row[c] ?? "").trim()).find((v) => v !== "");
+    const codeTitle = String(row["Service Category"] ?? row["Service"] ?? row["Title"] ?? "").trim();
+    const descTitle = String(row["Service Description"] ?? row["Description"] ?? "").trim();
+    const isCode = /^cat\d+$/i.test(codeTitle);
+    const title = (categoryTitle || (isCode ? descTitle || codeTitle : codeTitle || descTitle)).trim();
     const costVal = parseNum(row["Total Cost"] ?? row["Cost"] ?? row["Amount"] ?? row["Total"] ?? 0);
     const odom = parseNum(row["Odometer - MANDATORY"] ?? row["Odometer"] ?? row["Mileage"] ?? 0);
     const vendor = String(row["Service Provider"] ?? row["Vendor"] ?? row["Provider"] ?? "").trim();
-    const dateVal = parseDate(row["Date"] ?? row["Completed Date"] ?? row["Timestamp"] ?? row["Completed"]);
+    const dateVal = parseDate(row["Date (service)"] ?? row["Date"] ?? row["Completed Date"] ?? row["Timestamp"] ?? row["Completed"]);
     const invoice = String(row["Invoice #"] ?? row["Invoice"] ?? row["InvoiceNumber"] ?? "").trim();
-    const stationRaw = String(row["Station"] ?? "").trim().toUpperCase();
+    const stationRaw = String(row["STATION"] ?? row["Station"] ?? row["station"] ?? "").trim().toUpperCase();
 
     if (!title) { skipped++; continue; }
 
@@ -253,7 +273,7 @@ async function importFareyeRoutes(rows: Record<string, unknown>[]) {
     const serviceProvider = String(row["Service Provider"] ?? "").trim() || null;
     const lat = parseNum(row["Vehicle Start Location (Latitude)"] ?? 0) || null;
     const lng = parseNum(row["Vehicle Start Location (Longitude)"] ?? 0) || null;
-    const stationRaw = String(row["Station"] ?? "").trim().toUpperCase();
+    const stationRaw = String(row["STATION"] ?? row["Station"] ?? row["station"] ?? "").trim().toUpperCase();
 
     if (!routeId || !dateVal) { skipped++; continue; }
 

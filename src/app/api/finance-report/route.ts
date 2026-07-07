@@ -65,8 +65,8 @@ export async function GET(req: NextRequest) {
   function classifyPM(title: string): string | null {
     if (WO_TITLE_TO_PM_CATEGORY[title]) return WO_TITLE_TO_PM_CATEGORY[title];
     const lower = title.toLowerCase();
-    if (lower.includes("brake pad") || lower.includes("brake rotor") || lower.includes("air brake") || lower.includes("rotor sku") || lower.includes("dlg rotor") || lower.includes("brake wear") || lower.includes("duralast gold br") || lower.includes("brake service") || lower.includes("slack adjust") || lower.includes("slack replace")) return "Brakes";
-    if (lower.includes("tire") || lower.includes("tires")) return "Tires Replacement";
+    if (lower.includes("brake pad") || lower.includes("brake rotor") || lower.includes("air brake") || lower.includes("rotor sku") || lower.includes("dlg rotor") || lower.includes("brake wear") || lower.includes("duralast gold br") || lower.includes("brake service") || lower.includes("slack adjust") || lower.includes("slack replace") || lower.includes("freno")) return "Brakes";
+    if (lower.includes("tire") || lower.includes("tires") || lower.includes("llanta") || lower.includes("neumatic")) return "Tires Replacement";
     if (lower.includes("oil change") || lower.includes("pm a") || lower.includes("pm b") || lower.includes("pm c") || lower.includes("tune up") || lower.includes("tune-up")) return "Oil Change";
     if (lower.includes("caliper")) return "Brake Calipers";
     if (lower.includes("drivetrain")) return "Drivetrain Overhaul";
@@ -74,12 +74,12 @@ export async function GET(req: NextRequest) {
     if (lower.includes("coolant") || lower.includes("spark plug") || lower.includes("radiator")) return "Coolant + Spark plugs";
     if (lower.includes("timing") || lower.includes("time belt")) return "Time Belt";
     if (lower.includes("diesel filter")) return "Diesel Filter Cleaning";
-    if (lower.includes("engine filter") || lower.includes("engine air filter") || lower.includes("air filter")) return "Engine Filter";
-    if (lower.includes("battery") || lower.includes("parking brake actuator")) return "Battery Replacement";
-    if (lower.includes("fluid")) return "Fluids";
+    if (lower.includes("engine filter") || lower.includes("engine air filter") || lower.includes("air filter") || lower.includes("filtro de aire") || lower.includes("filtro aire")) return "Engine Filter";
+    if (lower.includes("battery") || lower.includes("bateria") || lower.includes("batería") || lower.includes("parking brake actuator")) return "Battery Replacement";
+    if (lower.includes("fluid") || lower.includes("fluido") || lower.includes("engrasado") || lower.includes("aceite")) return "Fluids";
     if (lower.includes("wiper")) return "Wiper Replacement";
     if (lower.includes("turbo")) return "Turbo Charger Inspection";
-    if (lower.includes("dot") || lower.includes("inspection")) return "Brakes";
+    if (lower.includes("dot") || lower.includes("inspection") || lower.includes("inspec")) return "Brakes";
     if (lower.includes("bulb") || lower.includes("light") || lower.includes("h11")) return "Wiper Replacement";
     return null;
   }
@@ -133,9 +133,11 @@ export async function GET(req: NextRequest) {
       const cat = classify(wo.title);
       if (!cat || !(CATEGORIES as readonly string[]).includes(cat)) continue;
 
-      // A service whose vehicle has no (or a non-brand) station still counts in
-      // the consolidated "ALL" total — only skip it from a per-station bucket.
-      const rawStation = wo.vehicle?.station ?? "";
+      // A service carries its own station (set from the upload's STATION column);
+      // fall back to the vehicle's station. A service whose station is unknown /
+      // non-brand still counts in the consolidated "ALL" total — only skip it
+      // from a per-station bucket.
+      const rawStation = (wo.station ?? wo.vehicle?.station ?? "") as string;
       const station = ALL_STATIONS.includes(rawStation) ? rawStation : null;
 
       const woMonth = wo.completedAt ? new Date(wo.completedAt).getMonth() + 1 : month;
@@ -236,7 +238,7 @@ export async function GET(req: NextRequest) {
 
       for (const wo of woFullYear) {
         const woMonth = wo.completedAt ? new Date(wo.completedAt).getMonth() + 1 : 0;
-        const woStation = wo.vehicle?.station ?? "";
+        const woStation = (wo.station ?? wo.vehicle?.station ?? "") as string;
         if (woMonth === m && (station === "ALL" || woStation === station)) {
           const cat = classify(wo.title);
           if (cat) actual += wo.cost ?? 0;
@@ -245,7 +247,7 @@ export async function GET(req: NextRequest) {
 
       for (const wo of woFullPrev) {
         const woMonth = wo.completedAt ? new Date(wo.completedAt).getMonth() + 1 : 0;
-        const woStation = wo.vehicle?.station ?? "";
+        const woStation = (wo.station ?? wo.vehicle?.station ?? "") as string;
         if (woMonth === m && (station === "ALL" || woStation === station)) {
           const cat = classify(wo.title);
           if (cat) prev += wo.cost ?? 0;
@@ -361,7 +363,7 @@ export async function GET(req: NextRequest) {
           title: wo.title,
           cost: wo.cost ?? 0,
           vehicle: v?.dxNumber ?? v?.name ?? "Unknown",
-          station: v?.station ?? "—",
+          station: (wo.station ?? v?.station ?? "—") as string,
           vendor: (wo.performedBy ?? wo.vendor ?? "") as string,
           date: wo.completedAt ? new Date(wo.completedAt).toISOString().slice(0, 10) : "",
           category: cat,
