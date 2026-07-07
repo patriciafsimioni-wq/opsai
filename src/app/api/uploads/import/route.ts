@@ -3,7 +3,7 @@ import { requireManager, badRequest } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import * as XLSX from "xlsx";
 import { Station } from "@prisma/client";
-import { STATIONS } from "@/lib/constants";
+import { STATIONS, stationFromRouteId } from "@/lib/constants";
 
 const MAX_BYTES = 20 * 1024 * 1024;
 
@@ -285,7 +285,10 @@ async function importFareyeRoutes(rows: Record<string, unknown>[]) {
     if (dupeSet.has(dupeKey)) { skipped++; continue; }
     dupeSet.add(dupeKey);
 
-    const station = (VALID_STATIONS.has(stationRaw) ? stationRaw : DEFAULT_STATION) as Station;
+    // The route ID prefix is authoritative for the origin station; fall back to
+    // the STATION column, then the default only if neither resolves.
+    const routeStation = stationFromRouteId(routeId);
+    const station = (routeStation ?? (VALID_STATIONS.has(stationRaw) ? stationRaw : DEFAULT_STATION)) as Station;
 
     await prisma.fareyeRoute.create({
       data: {

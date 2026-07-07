@@ -94,6 +94,30 @@ export const STATION_TARGETS: Record<string, number> = IS_TROVA
       BPT: 3,
     };
 
+// FareEye route IDs encode their origin station in the leading letters, so the
+// station is derived from the route ID rather than any (often wrong) STATION
+// column. Order matters — longer/more-specific prefixes are checked first.
+const ROUTE_PREFIX_STATIONS: readonly [string, string][] = IS_TROVA
+  ? [["ORF", "ORF"], ["RNH", "RNH"], ["OR", "ORF"], ["RN", "RNH"], ["RH", "RNH"]]
+  : [
+      ["AU", "AUS"],
+      ["IA", "IAH"],
+      ["BP", "IAH"],
+      ["CE", "IAH"],
+      ["HR", "HRL"],
+      ["LR", "LRD"],
+    ];
+
+/** Derive a FareEye route's station from its route ID prefix, or null. */
+export function stationFromRouteId(routeId: string | null | undefined): string | null {
+  const id = (routeId ?? "").trim().toUpperCase();
+  if (!id) return null;
+  for (const [prefix, station] of ROUTE_PREFIX_STATIONS) {
+    if (id.startsWith(prefix)) return station;
+  }
+  return null;
+}
+
 export const SERVICE_CATEGORY = {
   PREVENTIVE: { label: "Preventive", bg: "#dcfce7", fg: "#166534" },
   CORRECTIVE: { label: "Corrective", bg: "#fee2e2", fg: "#991b1b" },
