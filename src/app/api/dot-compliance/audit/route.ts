@@ -27,8 +27,11 @@ function fmt(d: Date | null | undefined): string {
 // the packet; link PDFs/others so they can be opened from the browser.
 function docCell(url: string | null | undefined): string {
   if (!url) return '<span class="badge missing">NOT ON FILE</span>';
-  if (url.startsWith("data:image/")) return `<a href="${esc(url)}" target="_blank"><img class="doc" src="${esc(url)}" alt="document"/></a>`;
-  return `<a class="doclink" href="${esc(url)}" target="_blank">Open document</a> <span class="badge valid">ON FILE</span>`;
+  // Browsers block top-level navigation to data: URLs, so a plain link opens a
+  // blank tab. Carry the data URL in data-doc; a click handler (see script at
+  // the end of the doc) turns it into a Blob URL and opens that instead.
+  if (url.startsWith("data:image/")) return `<a href="#" class="doclink" data-doc="${esc(url)}"><img class="doc" src="${esc(url)}" alt="document"/></a>`;
+  return `<a class="doclink" href="#" data-doc="${esc(url)}">Open document</a> <span class="badge valid">ON FILE</span>`;
 }
 
 function status(d: Date | null | undefined): { label: string; cls: string } {
@@ -216,6 +219,19 @@ export async function GET() {
   <div class="page-break"></div>
   <h3>Driver Qualification Files (${drivers.length})</h3>
   ${driverPages || '<p class="sub">No Box Truck or Tractor Truck drivers on file.</p>'}
+  <script>
+    document.addEventListener("click", function (e) {
+      var a = e.target.closest && e.target.closest("a[data-doc]");
+      if (!a) return;
+      e.preventDefault();
+      var url = a.getAttribute("data-doc");
+      if (!url) return;
+      fetch(url)
+        .then(function (r) { return r.blob(); })
+        .then(function (b) { window.open(URL.createObjectURL(b), "_blank"); })
+        .catch(function () { window.open(url, "_blank"); });
+    });
+  </script>
 </body></html>`;
 
   return new Response(html, {

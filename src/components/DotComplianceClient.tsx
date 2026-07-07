@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, ShieldCheck, Truck, Pencil, FileDown, BellRing, BookOpen, ChevronDown, Upload, Paperclip } from "lucide-react";
+import { Search, ShieldCheck, Truck, Pencil, FileDown, BellRing, BookOpen, ChevronDown, ChevronUp, ChevronsUpDown, Upload, Paperclip } from "lucide-react";
 import { Card, Table, Th, Td, Badge, EmptyState, Avatar, Button } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
@@ -302,7 +302,7 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
 
       <DotAuditsSection canManage={canManage} uploadFile={uploadFile} />
 
-      <TruckInspectionsSection />
+      <TruckInspectionsSection canManage={canManage} uploadFile={uploadFile} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {tiles.map((t) => (
@@ -503,6 +503,27 @@ const AUDIT_RESULT: Record<string, { label: string; bg: string; fg: string }> = 
 
 const emptyAudit = { auditDate: "", officerName: "", agency: "", result: "", notes: "", docUrl: "" };
 
+type AuditSortKey = "date" | "officer" | "agency" | "result";
+
+function auditSortValue(a: DotAuditDTO, key: AuditSortKey): string | number {
+  switch (key) {
+    case "date": return a.auditDate ? new Date(a.auditDate).getTime() : 0;
+    case "officer": return (a.officerName ?? "").toLowerCase();
+    case "agency": return (a.agency ?? "").toLowerCase();
+    case "result": return (a.result ?? "").toLowerCase();
+  }
+}
+
+function AuditSortHeader({ label, col, sortKey, sortDir, onClick }: { label: string; col: AuditSortKey; sortKey: AuditSortKey; sortDir: "asc" | "desc"; onClick: (c: AuditSortKey) => void }) {
+  const active = sortKey === col;
+  return (
+    <button onClick={() => onClick(col)} className={`inline-flex items-center gap-1 hover:text-slate-900 ${active ? "text-slate-900" : "text-slate-500"}`}>
+      {label}
+      {active ? (sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />) : <ChevronsUpDown size={13} className="text-slate-300" />}
+    </button>
+  );
+}
+
 function DotAuditsSection({ canManage, uploadFile }: { canManage: boolean; uploadFile: (f: File) => Promise<UploadResult> }) {
   const { data: audits, reload } = useData<DotAuditDTO[]>("/api/dot-audits");
   const [open, setOpen] = useState(false);
@@ -512,8 +533,23 @@ function DotAuditsSection({ canManage, uploadFile }: { canManage: boolean; uploa
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [sortKey, setSortKey] = useState<AuditSortKey>("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  function toggleSort(k: AuditSortKey) {
+    if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(k); setSortDir(k === "date" ? "desc" : "asc"); }
+  }
 
   const last = (audits ?? [])[0];
+
+  const sortedAudits = useMemo(() => {
+    return [...(audits ?? [])].sort((a, b) => {
+      const av = auditSortValue(a, sortKey), bv = auditSortValue(b, sortKey);
+      const cmp = typeof av === "number" && typeof bv === "number" ? av - bv : String(av).localeCompare(String(bv), undefined, { numeric: true });
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [audits, sortKey, sortDir]);
 
   function openNew() {
     setEditingId(null);
@@ -577,10 +613,16 @@ function DotAuditsSection({ canManage, uploadFile }: { canManage: boolean; uploa
       ) : (
         <Table>
           <thead>
-            <tr><Th>Date</Th><Th>Officer</Th><Th>Agency</Th><Th>Result</Th><Th>Notes</Th><Th>Report</Th>{canManage && <Th />}</tr>
+            <tr>
+              <Th><AuditSortHeader label="Date" col="date" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+              <Th><AuditSortHeader label="Officer" col="officer" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+              <Th><AuditSortHeader label="Agency" col="agency" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+              <Th><AuditSortHeader label="Result" col="result" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+              <Th>Notes</Th><Th>Report</Th>{canManage && <Th />}
+            </tr>
           </thead>
           <tbody>
-            {(audits ?? []).map((a) => (
+            {sortedAudits.map((a) => (
               <tr key={a.id} className="hover:bg-slate-50">
                 <Td className="font-medium text-slate-700">{formatDate(a.auditDate)}</Td>
                 <Td className="text-sm text-slate-600">{a.officerName || "—"}</Td>
@@ -656,27 +698,120 @@ type TruckRow = {
   dotInspectionDocUrl: string | null;
 };
 
-function TruckInspectionsSection() {
-  const { data: vehicles } = useData<TruckRow[]>("/api/vehicles?fleet=1");
-  const trucks = useMemo(
-    () => (vehicles ?? []).filter((v) => v.type === "TRUCK"),
-    [vehicles],
-  );
+type TruckSortKey = "truck" | "station" | "inspection" | "expiry";
+
+function truckSortValue(t: TruckRow, key: TruckSortKey): string | number {
+  switch (key) {
+    case "truck": return (t.name || t.dxNumber || t.licensePlate || "").toLowerCase();
+    case "station": return (t.station ?? "").toLowerCase();
+    case "inspection": return t.dotInspectionDate ? new Date(t.dotInspectionDate).getTime() : Number.POSITIVE_INFINITY;
+    case "expiry": return t.dotInspectionExpiry ? new Date(t.dotInspectionExpiry).getTime() : Number.POSITIVE_INFINITY;
+  }
+}
+
+const emptyTruckForm = { dotInspectionDate: "", dotInspectionExpiry: "", dotInspectionDocUrl: "" };
+
+function TruckInspectionsSection({ canManage, uploadFile }: { canManage: boolean; uploadFile: (f: File) => Promise<UploadResult> }) {
+  const { data: vehicles, reload } = useData<TruckRow[]>("/api/vehicles?fleet=1");
+  const [search, setSearch] = useState("");
+  const [station, setStation] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | DateStatus>("");
+  const [sortKey, setSortKey] = useState<TruckSortKey>("expiry");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [editing, setEditing] = useState<TruckRow | null>(null);
+  const [form, setForm] = useState(emptyTruckForm);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+
+  function toggleSort(k: TruckSortKey) {
+    if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(k); setSortDir("asc"); }
+  }
+
+  const allTrucks = useMemo(() => (vehicles ?? []).filter((v) => v.type === "TRUCK"), [vehicles]);
+  const stations = useMemo(() => [...new Set(allTrucks.map((t) => t.station).filter(Boolean))].sort() as string[], [allTrucks]);
+
+  const trucks = useMemo(() => {
+    const q = search.toLowerCase();
+    return allTrucks
+      .filter((t) => {
+        const matchSearch = !q || (t.name ?? "").toLowerCase().includes(q) || (t.dxNumber ?? "").toLowerCase().includes(q) || (t.licensePlate ?? "").toLowerCase().includes(q);
+        const matchStation = !station || t.station === station;
+        const matchStatus = !statusFilter || dateStatus(t.dotInspectionExpiry) === statusFilter;
+        return matchSearch && matchStation && matchStatus;
+      })
+      .sort((a, b) => {
+        const av = truckSortValue(a, sortKey), bv = truckSortValue(b, sortKey);
+        const cmp = typeof av === "number" && typeof bv === "number" ? av - bv : String(av).localeCompare(String(bv), undefined, { numeric: true });
+        return sortDir === "asc" ? cmp : -cmp;
+      });
+  }, [allTrucks, search, station, statusFilter, sortKey, sortDir]);
+
+  function openEdit(t: TruckRow) {
+    setEditing(t);
+    setForm({
+      dotInspectionDate: t.dotInspectionDate ? t.dotInspectionDate.slice(0, 10) : "",
+      dotInspectionExpiry: t.dotInspectionExpiry ? t.dotInspectionExpiry.slice(0, 10) : "",
+      dotInspectionDocUrl: t.dotInspectionDocUrl ?? "",
+    });
+    setError("");
+  }
+
+  async function save() {
+    if (!editing) return;
+    setSaving(true);
+    setError("");
+    const payload: Record<string, unknown> = {
+      dotInspectionDate: form.dotInspectionDate || null,
+      dotInspectionExpiry: form.dotInspectionExpiry || null,
+    };
+    if (form.dotInspectionDocUrl !== (editing.dotInspectionDocUrl ?? "")) payload.dotInspectionDocUrl = form.dotInspectionDocUrl || null;
+    const res = await apiSend(`/api/vehicles/${editing.id}`, "PATCH", payload);
+    setSaving(false);
+    if (res.ok) { setEditing(null); reload(); }
+    else setError(res.error ?? "Failed to save");
+  }
 
   return (
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] p-4">
         <div>
           <p className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700"><Truck size={16} /> Truck DOT Annual Safety Inspections</p>
-          <p className="mt-0.5 text-xs text-slate-500">49 CFR 396.17 — annual inspection status per truck. Upload each report on the vehicle&rsquo;s page.</p>
+          <p className="mt-0.5 text-xs text-slate-500">49 CFR 396.17 — annual inspection status per truck.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Search size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search truck…" className="h-9 rounded-lg border border-[var(--color-border)] bg-white pl-8 pr-3 text-sm outline-none focus:border-blue-500" />
+          </div>
+          <select value={station} onChange={(e) => setStation(e.target.value)} className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-2 text-sm">
+            <option value="">All stations</option>
+            {stations.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "" | DateStatus)} className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-2 text-sm">
+            <option value="">All statuses</option>
+            <option value="expired">Expired</option>
+            <option value="expiring">Expiring ≤30d</option>
+            <option value="valid">Valid</option>
+            <option value="missing">Not set</option>
+          </select>
         </div>
       </div>
-      {trucks.length === 0 ? (
+      {allTrucks.length === 0 ? (
         <p className="p-6 text-center text-sm text-slate-400">No trucks in the active fleet. Set a vehicle&rsquo;s type to Truck to track its DOT inspection.</p>
+      ) : trucks.length === 0 ? (
+        <p className="p-6 text-center text-sm text-slate-400">No trucks match the current filters.</p>
       ) : (
         <Table>
           <thead>
-            <tr><Th>Truck</Th><Th>Station</Th><Th>Last inspection</Th><Th>Expiry / status</Th><Th>Report</Th></tr>
+            <tr>
+              <Th><TruckSortHeader label="Truck" col="truck" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+              <Th><TruckSortHeader label="Station" col="station" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+              <Th><TruckSortHeader label="Last inspection" col="inspection" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+              <Th><TruckSortHeader label="Expiry / status" col="expiry" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+              <Th>Report</Th>{canManage && <Th />}
+            </tr>
           </thead>
           <tbody>
             {trucks.map((t) => (
@@ -688,11 +823,55 @@ function TruckInspectionsSection() {
                 <Td className="text-sm text-slate-600">{t.dotInspectionDate ? formatDate(t.dotInspectionDate) : "—"}</Td>
                 <Td><StatusCell value={t.dotInspectionExpiry} /></Td>
                 <Td>{t.dotInspectionDocUrl ? <a href={t.dotInspectionDocUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 hover:underline"><Paperclip size={13} /> View</a> : <span className="text-slate-400">—</span>}</Td>
+                {canManage && <Td><button onClick={() => openEdit(t)} className="text-xs font-medium text-blue-700 hover:underline">Edit</button></Td>}
               </tr>
             ))}
           </tbody>
         </Table>
       )}
+
+      <Modal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title={`DOT inspection — ${editing?.name ?? ""}`}
+        footer={<><Button variant="secondary" onClick={() => setEditing(null)}>Cancel</Button><Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button></>}
+      >
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Inspection date">
+            <Input type="date" value={form.dotInspectionDate} onChange={(e) => setForm({ ...form, dotInspectionDate: e.target.value })} />
+          </Field>
+          <Field label="Expiry date">
+            <Input type="date" value={form.dotInspectionExpiry} onChange={(e) => setForm({ ...form, dotInspectionExpiry: e.target.value })} />
+          </Field>
+        </div>
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-2.5">
+          <span className="text-sm font-medium text-slate-700">Inspection report (image or PDF)</span>
+          <div className="flex items-center gap-2">
+            {form.dotInspectionDocUrl ? (
+              <>
+                <a href={form.dotInspectionDocUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 hover:underline"><Paperclip size={13} /> View</a>
+                <button onClick={() => setForm((f) => ({ ...f, dotInspectionDocUrl: "" }))} className="text-xs text-red-600 hover:underline">Remove</button>
+              </>
+            ) : <span className="text-xs text-slate-400">No file</span>}
+            <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+              <Upload size={13} /> {uploading ? "Uploading…" : form.dotInspectionDocUrl ? "Replace" : "Upload"}
+              <input type="file" accept="image/*,application/pdf" className="hidden" disabled={uploading}
+                onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; setError(""); setUploading(true); const result = await uploadFile(f); setUploading(false); if ("url" in result) setForm((s) => ({ ...s, dotInspectionDocUrl: result.url })); else setError(result.error); }} />
+            </label>
+          </div>
+        </div>
+        {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      </Modal>
     </Card>
+  );
+}
+
+function TruckSortHeader({ label, col, sortKey, sortDir, onClick }: { label: string; col: TruckSortKey; sortKey: TruckSortKey; sortDir: "asc" | "desc"; onClick: (c: TruckSortKey) => void }) {
+  const active = sortKey === col;
+  return (
+    <button onClick={() => onClick(col)} className={`inline-flex items-center gap-1 hover:text-slate-900 ${active ? "text-slate-900" : "text-slate-500"}`}>
+      {label}
+      {active ? (sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />) : <ChevronsUpDown size={13} className="text-slate-300" />}
+    </button>
   );
 }
