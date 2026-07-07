@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/guide", "/driver-dvir", "/api/dvir/public"];
+// `/api/vehicles/transfer/ingest` is server-to-server (sister portal) and is
+// guarded by a shared secret in the handler, so it must bypass session auth.
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/guide", "/driver-dvir", "/api/dvir/public", "/api/vehicles/transfer/ingest"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
