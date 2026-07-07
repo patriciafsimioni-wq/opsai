@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiUser } from "@/lib/api";
-import { PM_CATEGORIES, WO_TITLE_TO_PM_CATEGORY, CR_CATEGORIES, WO_TITLE_TO_CR_CATEGORY, STATIONS } from "@/lib/constants";
+import { PM_CATEGORIES, WO_TITLE_TO_PM_CATEGORY, CR_CATEGORIES, WO_TITLE_TO_CR_CATEGORY, STATIONS, STATION_LABEL } from "@/lib/constants";
 
 const ALL_STATIONS = STATIONS as readonly string[];
 
@@ -130,16 +130,20 @@ export async function GET(req: NextRequest) {
     }
 
     for (const wo of workOrders) {
-      const station = wo.vehicle?.station ?? "IAH";
       const cat = classify(wo.title);
-      if (!cat || !(CATEGORIES as readonly string[]).includes(cat) || !ALL_STATIONS.includes(station)) continue;
+      if (!cat || !(CATEGORIES as readonly string[]).includes(cat)) continue;
+
+      // A service whose vehicle has no (or a non-brand) station still counts in
+      // the consolidated "ALL" total — only skip it from a per-station bucket.
+      const rawStation = wo.vehicle?.station ?? "";
+      const station = ALL_STATIONS.includes(rawStation) ? rawStation : null;
 
       const woMonth = wo.completedAt ? new Date(wo.completedAt).getMonth() + 1 : month;
       const woDate = wo.completedAt ? new Date(wo.completedAt) : null;
       const cost = wo.cost ?? 0;
 
       // YTD
-      if (data[station]?.[cat]) {
+      if (station && data[station]?.[cat]) {
         data[station][cat].ytd += cost;
       }
       if (data["ALL"]?.[cat]) {
@@ -155,7 +159,7 @@ export async function GET(req: NextRequest) {
       }
 
       if (inPeriod) {
-        if (data[station]?.[cat]) {
+        if (station && data[station]?.[cat]) {
           data[station][cat].monthly += cost;
         }
         if (data["ALL"]?.[cat]) {
@@ -232,7 +236,7 @@ export async function GET(req: NextRequest) {
 
       for (const wo of woFullYear) {
         const woMonth = wo.completedAt ? new Date(wo.completedAt).getMonth() + 1 : 0;
-        const woStation = wo.vehicle?.station ?? "IAH";
+        const woStation = wo.vehicle?.station ?? "";
         if (woMonth === m && (station === "ALL" || woStation === station)) {
           const cat = classify(wo.title);
           if (cat) actual += wo.cost ?? 0;
@@ -241,7 +245,7 @@ export async function GET(req: NextRequest) {
 
       for (const wo of woFullPrev) {
         const woMonth = wo.completedAt ? new Date(wo.completedAt).getMonth() + 1 : 0;
-        const woStation = wo.vehicle?.station ?? "IAH";
+        const woStation = wo.vehicle?.station ?? "";
         if (woMonth === m && (station === "ALL" || woStation === station)) {
           const cat = classify(wo.title);
           if (cat) prev += wo.cost ?? 0;
@@ -314,14 +318,8 @@ export async function GET(req: NextRequest) {
 
   const stations: Record<string, { rows: CategoryRow[]; label: string }> = {};
   const stationLabels: Record<string, string> = {
-    ALL: "All Stations - Consolidated TX",
-    IAH: "IAH - Houston",
-    AUS: "AUS - Austin",
-    HRL: "HRL - Harlingen",
-    LRD: "LRD - Laredo",
-    ACT: "ACT - Waco",
-    CLL: "CLL - College Station",
-    BPT: "BPT - Beaumont",
+    ALL: "All Stations - Consolidated",
+    ...Object.fromEntries(ALL_STATIONS.map((s) => [s, (STATION_LABEL[s] ?? s).replace(" — ", " - ")])),
   };
 
   for (const station of ["ALL", ...ALL_STATIONS]) {
@@ -341,7 +339,7 @@ export async function GET(req: NextRequest) {
     date: string;
     category: string;
   };
-  let serviceDetails: ServiceDetail[] = [];
+  const serviceDetails: ServiceDetail[] = [];
 
   if (reportType === "CR") {
     for (const wo of woCurrent) {
@@ -363,7 +361,7 @@ export async function GET(req: NextRequest) {
           title: wo.title,
           cost: wo.cost ?? 0,
           vehicle: v?.dxNumber ?? v?.name ?? "Unknown",
-          station: v?.station ?? "IAH",
+          station: v?.station ?? "—",
           vendor: (wo.performedBy ?? wo.vendor ?? "") as string,
           date: wo.completedAt ? new Date(wo.completedAt).toISOString().slice(0, 10) : "",
           category: cat,

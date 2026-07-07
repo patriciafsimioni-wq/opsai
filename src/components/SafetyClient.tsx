@@ -12,6 +12,8 @@ import {
   Zap,
   TrendingDown,
   Flag,
+  ArrowUpDown,
+  Download,
 } from "lucide-react";
 import { Card, Badge, EmptyState } from "@/components/ui";
 import { ALERT_SEVERITY } from "@/lib/constants";
@@ -50,13 +52,48 @@ interface SamsaraEvent {
   maxG: number | null;
 }
 
+const SORT_OPTIONS = [
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+  { value: "severity", label: "Severity (high→low)" },
+  { value: "driver", label: "Driver (A→Z)" },
+  { value: "vehicle", label: "Vehicle (A→Z)" },
+] as const;
+
+const SEV_RANK: Record<string, number> = { CRITICAL: 3, WARNING: 2, INFO: 1 };
+
+// Categorise a Samsara behaviour label into a coarse type + severity.
+function samsaraKind(label: string): { type: "speed" | "crash" | "harsh"; sev: number } {
+  const l = label?.toLowerCase() ?? "";
+  if (l.includes("crash") || l.includes("collision")) return { type: "crash", sev: 3 };
+  if (l.includes("speed")) return { type: "speed", sev: 2 };
+  return { type: "harsh", sev: 1 };
+}
+
+function downloadCsv(filename: string, rows: Record<string, string | number>[]) {
+  if (rows.length === 0) return;
+  const headers = Object.keys(rows[0]);
+  const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+  const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => escape(r[h] ?? "")).join(","))].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function SafetyClient({ alerts }: { alerts: SafetyAlert[] }) {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [severityFilter, setSeverityFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("newest");
+  const [samsaraType, setSamsaraType] = useState<string>("all");
   const [tab, setTab] = useState<"alerts" | "samsara">("alerts");
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [days, setDays] = useState("7");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const { data: samsaraData, loading: samsaraLoading, reload: refreshSamsara } = useData<{ events: SamsaraEvent[]; total: number }>(`/api/samsara/safety?days=${days}`);
 
   const handleSync = async () => {
@@ -73,16 +110,94 @@ export function SafetyClient({ alerts }: { alerts: SafetyAlert[] }) {
     }
   };
 
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  function toggleAll(ids: string[]) {
+    setSelected((prev) => {
+      const allSelected = ids.length > 0 && ids.every((id) => prev.has(id));
+      if (allSelected) {
+        const next = new Set(prev);
+        ids.forEach((id) => next.delete(id));
+        return next;
+      }
+      return new Set([...prev, ...ids]);
+    });
+  }
+  function clearSelection() {
+    setSelected(new Set());
+  }
+
   const filtered = useMemo(() => {
-    return alerts.filter((a) => {
+    const rows = alerts.filter((a) => {
       if (typeFilter !== "all" && a.type !== typeFilter) return false;
       if (severityFilter !== "all" && a.severity !== severityFilter) return false;
       return true;
     });
-  }, [alerts, typeFilter, severityFilter]);
+    const sorted = [...rows];
+    sorted.sort((a, b) => {
+      switch (sortBy) {
+        case "oldest":
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case "severity":
+          return (SEV_RANK[b.severity] ?? 0) - (SEV_RANK[a.severity] ?? 0);
+        case "driver":
+          return (a.driverName ?? "~").localeCompare(b.driverName ?? "~");
+        case "vehicle":
+          return (a.vehicleName ?? "~").localeCompare(b.vehicleName ?? "~");
+        default:
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
+    return sorted;
+  }, [alerts, typeFilter, severityFilter, sortBy]);
+
+  const samsaraFiltered = useMemo(() => {
+    const rows = (samsaraData?.events ?? []).filter((e) => samsaraType === "all" || samsaraKind(e.behaviorLabel).type === samsaraType);
+    const sorted = [...rows];
+    sorted.sort((a, b) => {
+      switch (sortBy) {
+        case "oldest":
+          return new Date(a.time).getTime() - new Date(b.time).getTime();
+        case "severity":
+          return samsaraKind(b.behaviorLabel).sev - samsaraKind(a.behaviorLabel).sev;
+        case "driver":
+          return (a.driverName ?? "~").localeCompare(b.driverName ?? "~");
+        case "vehicle":
+          return (a.vehicleName ?? "~").localeCompare(b.vehicleName ?? "~");
+        default:
+          return new Date(b.time).getTime() - new Date(a.time).getTime();
+      }
+    });
+    return sorted;
+  }, [samsaraData, samsaraType, sortBy]);
 
   const speedingCount = alerts.filter((a) => a.type === "SPEEDING").length;
   const harshCount = alerts.filter((a) => a.type === "HARSH_DRIVING").length;
+
+  const activeRows = tab === "samsara" ? samsaraFiltered.map((e) => e.id) : filtered.map((a) => a.id);
+  const selectedInView = activeRows.filter((id) => selected.has(id));
+
+  function exportSelected() {
+    if (tab === "samsara") {
+      const rows = samsaraFiltered
+        .filter((e) => selected.has(e.id))
+        .map((e) => ({ Time: formatDate(e.time), Behavior: e.behaviorLabel, Vehicle: e.vehicleName ?? "", Driver: e.driverName ?? "", MaxG: e.maxG ?? "" }));
+      downloadCsv("safety-samsara-events.csv", rows);
+    } else {
+      const rows = filtered
+        .filter((a) => selected.has(a.id))
+        .map((a) => ({ Date: formatDate(a.createdAt), Type: TYPE_LABELS[a.type] || a.type, Severity: a.severity, Message: a.message, Vehicle: a.vehicleName ?? "", Driver: a.driverName ?? "" }));
+      downloadCsv("safety-alerts.csv", rows);
+    }
+  }
+
+  const flagHref = `/issues?create=1&title=${encodeURIComponent(`Safety review — ${selectedInView.length} event(s)`)}&category=Safety`;
 
   return (
     <div>
@@ -119,13 +234,27 @@ export function SafetyClient({ alerts }: { alerts: SafetyAlert[] }) {
 
       {/* Tabs */}
       <div className="mb-4 flex gap-1 rounded-lg bg-slate-100 p-1 w-fit">
-        <button onClick={() => setTab("samsara")} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === "samsara" ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}>
+        <button onClick={() => { setTab("samsara"); clearSelection(); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === "samsara" ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}>
           Samsara Events ({samsaraData?.total ?? 0})
         </button>
-        <button onClick={() => setTab("alerts")} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === "alerts" ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}>
+        <button onClick={() => { setTab("alerts"); clearSelection(); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === "alerts" ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}>
           System Alerts ({alerts.length})
         </button>
       </div>
+
+      {/* Bulk selection toolbar */}
+      {selectedInView.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm">
+          <span className="font-semibold text-blue-800">{selectedInView.length} selected</span>
+          <button onClick={exportSelected} className="inline-flex items-center gap-1.5 rounded-md border border-blue-300 bg-white px-2.5 py-1 font-medium text-blue-700 hover:bg-blue-100">
+            <Download size={14} /> Export CSV
+          </button>
+          <a href={flagHref} className="inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-white px-2.5 py-1 font-medium text-amber-700 hover:bg-amber-100">
+            <Flag size={14} /> Flag Issue
+          </a>
+          <button onClick={clearSelection} className="ml-auto text-slate-500 hover:text-slate-800">Clear</button>
+        </div>
+      )}
 
       {tab === "samsara" ? (
         /* ─── Samsara Events Tab ─── */
@@ -152,36 +281,65 @@ export function SafetyClient({ alerts }: { alerts: SafetyAlert[] }) {
             </div>
           )}
 
-          {/* Period filter */}
-          <div className="mb-4 flex items-center gap-3">
+          {/* Filters + sort */}
+          <div className="mb-4 flex flex-wrap items-center gap-3">
             <Filter size={16} className="text-slate-400" />
+            <select value={samsaraType} onChange={(e) => setSamsaraType(e.target.value)} className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm">
+              <option value="all">All Types</option>
+              <option value="speed">Speeding</option>
+              <option value="harsh">Harsh Driving</option>
+              <option value="crash">Crash / Collision</option>
+            </select>
             <select value={days} onChange={(e) => setDays(e.target.value)} className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm">
               <option value="1">Last 24 hours</option>
               <option value="7">Last 7 days</option>
               <option value="14">Last 14 days</option>
               <option value="30">Last 30 days</option>
             </select>
+            <div className="flex items-center gap-1.5">
+              <ArrowUpDown size={14} className="text-slate-400" />
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm">
+                {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
             <button onClick={() => refreshSamsara()} className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm hover:bg-slate-50 flex items-center gap-1.5">
               <RefreshCw size={14} /> Refresh
             </button>
-            <span className="ml-auto text-sm text-slate-500">{samsaraData?.total ?? 0} events</span>
+            <span className="ml-auto text-sm text-slate-500">{samsaraFiltered.length} events</span>
           </div>
 
           <Card>
+            {samsaraFiltered.length > 0 && (
+              <label className="flex items-center gap-2 border-b border-[var(--color-border)] px-5 py-2 text-xs font-medium text-slate-500">
+                <input
+                  type="checkbox"
+                  checked={samsaraFiltered.every((e) => selected.has(e.id))}
+                  onChange={() => toggleAll(samsaraFiltered.map((e) => e.id))}
+                  className="h-4 w-4 rounded border-slate-300"
+                />
+                Select all
+              </label>
+            )}
             <div className="divide-y divide-[var(--color-border)]">
               {samsaraLoading ? (
                 <div className="flex justify-center py-12"><Loader2 size={28} className="animate-spin text-blue-600" /></div>
-              ) : !samsaraData?.events?.length ? (
-                <EmptyState icon={<ShieldAlert size={32} />} title="No Samsara events" description={`No safety events in the last ${days} days. Click Sync to pull fresh data.`} />
+              ) : samsaraFiltered.length === 0 ? (
+                <EmptyState icon={<ShieldAlert size={32} />} title="No Samsara events" description={`No safety events match your filters in the last ${days} days.`} />
               ) : (
-                samsaraData.events.map((evt) => {
-                  const label = evt.behaviorLabel?.toLowerCase() ?? "";
-                  const isSpeed = label.includes("speed");
-                  const isCrash = label.includes("crash") || label.includes("collision");
+                samsaraFiltered.map((evt) => {
+                  const kind = samsaraKind(evt.behaviorLabel);
+                  const isSpeed = kind.type === "speed";
+                  const isCrash = kind.type === "crash";
                   const Icon = isSpeed ? Gauge : isCrash ? AlertOctagon : Zap;
                   const iconColor = isCrash ? "text-red-600 bg-red-50" : isSpeed ? "text-amber-600 bg-amber-50" : "text-orange-600 bg-orange-50";
                   return (
                     <div key={evt.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(evt.id)}
+                        onChange={() => toggle(evt.id)}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
                       <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${iconColor}`}>
                         <Icon size={16} />
                       </div>
@@ -235,7 +393,7 @@ export function SafetyClient({ alerts }: { alerts: SafetyAlert[] }) {
             </div>
           </div>
 
-          {/* Filters */}
+          {/* Filters + sort */}
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <Filter size={16} className="text-slate-400" />
             <select
@@ -257,11 +415,28 @@ export function SafetyClient({ alerts }: { alerts: SafetyAlert[] }) {
               <option value="WARNING">Warning</option>
               <option value="INFO">Info</option>
             </select>
+            <div className="flex items-center gap-1.5">
+              <ArrowUpDown size={14} className="text-slate-400" />
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm">
+                {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
             <span className="ml-auto text-sm text-slate-500">{filtered.length} events</span>
           </div>
 
           {/* Events list */}
           <Card>
+            {filtered.length > 0 && (
+              <label className="flex items-center gap-2 border-b border-[var(--color-border)] px-5 py-2 text-xs font-medium text-slate-500">
+                <input
+                  type="checkbox"
+                  checked={filtered.every((a) => selected.has(a.id))}
+                  onChange={() => toggleAll(filtered.map((a) => a.id))}
+                  className="h-4 w-4 rounded border-slate-300"
+                />
+                Select all
+              </label>
+            )}
             <div className="divide-y divide-[var(--color-border)]">
               {filtered.length === 0 && (
                 <EmptyState
@@ -279,28 +454,35 @@ export function SafetyClient({ alerts }: { alerts: SafetyAlert[] }) {
                     ? `/drivers/${a.driverId}`
                     : "/safety";
                 return (
-                  <Link
+                  <div
                     key={a.id}
-                    href={href}
                     className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors"
                   >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-600">
-                      <Icon size={16} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{a.message}</p>
-                      <p className="text-xs text-slate-400">
-                        {TYPE_LABELS[a.type] || a.type}
-                        {a.vehicleName && ` · ${a.vehicleName}`}
-                        {a.driverName && ` · ${a.driverName}`}
-                        {" · "}
-                        {relativeTime(new Date(a.createdAt))}
-                      </p>
-                    </div>
-                    <Badge bg={sev.bg} fg={sev.fg}>
-                      {sev.label}
-                    </Badge>
-                  </Link>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(a.id)}
+                      onChange={() => toggle(a.id)}
+                      className="h-4 w-4 rounded border-slate-300"
+                    />
+                    <Link href={href} className="flex flex-1 items-center gap-3 min-w-0">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-600">
+                        <Icon size={16} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{a.message}</p>
+                        <p className="text-xs text-slate-400">
+                          {TYPE_LABELS[a.type] || a.type}
+                          {a.vehicleName && ` · ${a.vehicleName}`}
+                          {a.driverName && ` · ${a.driverName}`}
+                          {" · "}
+                          {relativeTime(new Date(a.createdAt))}
+                        </p>
+                      </div>
+                      <Badge bg={sev.bg} fg={sev.fg}>
+                        {sev.label}
+                      </Badge>
+                    </Link>
+                  </div>
                 );
               })}
             </div>

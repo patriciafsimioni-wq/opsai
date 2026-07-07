@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { BRAND } from "@/lib/brand";
+import { STATIONS, STATION_LABEL } from "@/lib/constants";
 import { ClipboardCheck, CheckCircle2, Truck, Camera } from "lucide-react";
 
 type Vehicle = { id: string; name: string; dxNumber: string | null };
@@ -23,15 +24,10 @@ const INSPECTION_ITEMS = [
   { key: "ac", label: "A/C & Heating" },
 ] as const;
 
-const STATIONS = [
-  { value: "IAH", label: "IAH — Houston" },
-  { value: "AUS", label: "AUS — Austin" },
-  { value: "HRL", label: "HRL — Harlingen" },
-  { value: "LRD", label: "LRD — Laredo" },
-  { value: "CLL", label: "CLL — College Station" },
-  { value: "BPT", label: "BPT — Beaumont" },
-  { value: "ACT", label: "ACT — Waco" },
-] as const;
+const STATION_OPTIONS = STATIONS.map((value) => ({
+  value,
+  label: STATION_LABEL[value] ?? value,
+}));
 
 export default function DriverDvirPage() {
   const [station, setStation] = useState("");
@@ -161,7 +157,7 @@ export default function DriverDvirPage() {
         <div>
           <label className="mb-1.5 block text-sm font-semibold text-slate-700">Station *</label>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {STATIONS.map((s) => (
+            {STATION_OPTIONS.map((s) => (
               <button
                 key={s.value}
                 onClick={() => setStation(s.value)}

@@ -53,7 +53,15 @@ export default async function FleetFinancePage({ searchParams }: { searchParams:
       ? Math.max(0, Math.round((now.getTime() - new Date(v.leaseStartDate).getTime()) / (30 * 86400000)))
       : 0;
     const leasePaid = monthlyPayment * leaseMonthsPaid;
-    const remainingObligation = monthlyPayment * (v.monthsLeftPayoff ?? 0);
+    // Months left on the lease: use the explicit payoff count when present,
+    // otherwise derive it from the lease end date (Mike Albert leases carry an
+    // end date but no payoff count).
+    const monthsLeft =
+      v.monthsLeftPayoff ??
+      (v.leaseEndDate
+        ? Math.max(0, Math.round((new Date(v.leaseEndDate).getTime() - now.getTime()) / (30 * 86400000)))
+        : 0);
+    const remainingObligation = monthlyPayment * monthsLeft;
     const lifetimeCost = initialInvestment + maintCost + fuelCost + leasePaid;
     const costPerMile = v.odometer > 0 ? lifetimeCost / v.odometer : 0;
 
@@ -98,7 +106,7 @@ export default async function FleetFinancePage({ searchParams }: { searchParams:
       score,
       grade,
       leaseEndDate: v.leaseEndDate,
-      monthsLeftPayoff: v.monthsLeftPayoff,
+      monthsLeftPayoff: monthsLeft,
     };
   });
 

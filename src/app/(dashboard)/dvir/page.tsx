@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardHeader, Badge } from "@/components/ui";
 import { ClipboardCheck, AlertTriangle, Camera, CheckCircle2, XCircle, Flag } from "lucide-react";
 import { apiSend } from "@/lib/use-data";
+import { STATIONS as BRAND_STATIONS } from "@/lib/constants";
 
 type Vehicle = { id: string; name: string; dxNumber: string | null; station?: string };
 type DvirReport = {
@@ -51,7 +52,7 @@ const INSPECTION_ITEMS = [
   { key: "ac", label: "A/C & Heating" },
 ] as const;
 
-const STATIONS = ["ALL", "IAH", "AUS", "HRL", "LRD", "CLL", "BPT", "ACT"] as const;
+const STATIONS = ["ALL", ...BRAND_STATIONS] as const;
 
 export default function DvirPage() {
   const [tab, setTab] = useState<"form" | "history" | "alerts">("form");

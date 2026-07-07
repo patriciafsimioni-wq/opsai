@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { badRequest } from "@/lib/api";
+import { STATIONS } from "@/lib/constants";
+import type { Station } from "@prisma/client";
 
 const STATUS_VALUES = ["PASS", "FAIL", "NA"] as const;
 
 const publicDvirSchema = z.object({
   vehicleId: z.string().min(1),
   driverName: z.string().min(1),
-  station: z.enum(["AUS", "ACT", "IAH", "CLL", "BPT", "HRL", "LRD"]),
+  station: z.string().refine((s) => STATIONS.includes(s), "Invalid station"),
   odometer: z.coerce.number().min(0).optional(),
   tires: z.enum(STATUS_VALUES).default("PASS"),
   brakes: z.enum(STATUS_VALUES).default("PASS"),
@@ -33,10 +35,9 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const station = searchParams.get("station");
   if (!station) return NextResponse.json([]);
-  const validStations = ["AUS", "ACT", "IAH", "CLL", "BPT", "HRL", "LRD"];
-  if (!validStations.includes(station)) return NextResponse.json([]);
+  if (!STATIONS.includes(station)) return NextResponse.json([]);
   const vehicles = await prisma.vehicle.findMany({
-    where: { station: station as "AUS" | "ACT" | "IAH" | "CLL" | "BPT" | "HRL" | "LRD" },
+    where: { station: station as Station },
     orderBy: { name: "asc" },
     select: { id: true, name: true, dxNumber: true },
   });
