@@ -48,7 +48,7 @@ export function MaintenanceClient({
   performerName?: string;
 }) {
   const { data: orders, loading, reload } = useData<WorkOrderDTO[]>("/api/maintenance");
-  const { data: vehicles } = useData<VehicleDTO[]>(isVendor ? null : "/api/vehicles");
+  const { data: vehicles } = useData<VehicleDTO[]>(isVendor ? null : "/api/vehicles?fleet=1");
   const { data: services } = useData<ServiceDTO[]>(isVendor ? null : "/api/services");
   const { data: woRequests } = useData<WorkOrderRequestDTO[]>(
     isVendor ? null : "/api/work-order-requests",

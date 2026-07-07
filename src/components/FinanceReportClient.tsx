@@ -594,7 +594,7 @@ export function FinanceReportClient() {
         </div>
         <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
           <p className="text-xs font-medium text-slate-500">Remainder ({100 - budgetUtilPct}% left)</p>
-          <p className="mt-1 text-xl font-bold text-green-700">${totalRemainder.toLocaleString()}</p>
+          <p className={`mt-1 text-xl font-bold ${totalRemainder < 0 ? "text-red-700" : "text-green-700"}`}>${totalRemainder.toLocaleString()}</p>
         </div>
       </div>
 

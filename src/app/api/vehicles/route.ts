@@ -3,13 +3,22 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, requireManager, badRequest, stationWhere } from "@/lib/api";
 
-export async function GET() {
+export async function GET(req: Request) {
   const auth = await requireApiUser();
   if ("error" in auth) return auth.error;
 
+  const { searchParams } = new URL(req.url);
+  // fleet=1 restricts to the active uploaded fleet (excludes off-boarded /
+  // "not in current fleet list" units) — used by vehicle pickers so only real
+  // fleet vehicles are selectable.
+  const fleetOnly = searchParams.get("fleet") === "1";
+
   const sw = stationWhere(auth.user);
+  const where: Record<string, unknown> = { ...(sw ?? {}) };
+  if (fleetOnly) where.offboardStatus = null;
+
   const vehicles = await prisma.vehicle.findMany({
-    where: sw ?? undefined,
+    where,
     orderBy: { name: "asc" },
     include: { assignedDriver: true },
   });

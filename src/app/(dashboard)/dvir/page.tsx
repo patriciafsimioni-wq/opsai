@@ -75,7 +75,7 @@ export default function DvirPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/vehicles").then((r) => r.json()),
+      fetch("/api/vehicles?fleet=1").then((r) => r.json()),
       fetch("/api/dvir").then((r) => r.json()),
     ]).then(([veh, rep]) => {
       setVehicles(Array.isArray(veh) ? veh : []);

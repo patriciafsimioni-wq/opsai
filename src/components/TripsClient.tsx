@@ -22,7 +22,7 @@ const emptyForm = {
 
 export function TripsClient({ canManage }: { canManage: boolean }) {
   const { data: trips, loading, reload } = useData<TripDTO[]>("/api/trips");
-  const { data: vehicles } = useData<VehicleDTO[]>("/api/vehicles");
+  const { data: vehicles } = useData<VehicleDTO[]>("/api/vehicles?fleet=1");
   const { data: drivers } = useData<DriverDTO[]>("/api/drivers");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
