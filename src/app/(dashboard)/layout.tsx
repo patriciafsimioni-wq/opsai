@@ -26,9 +26,9 @@ export default async function DashboardLayout({
   const alertWhere: Record<string, unknown> = { read: false, type: { notIn: ["SPEEDING", "HARSH_DRIVING"] } };
   if (userStations !== null) alertWhere.vehicle = { station: { in: userStations } };
   const alertCount = await prisma.alert.count({ where: alertWhere });
-  const messageCount = await prisma.userMessage.count({
-    where: { recipientId: user.id, read: false },
-  });
+  const messageCount = await prisma.userMessage
+    .count({ where: { recipientId: user.id, read: false } })
+    .catch(() => 0);
 
   return (
     <SidebarProvider>
