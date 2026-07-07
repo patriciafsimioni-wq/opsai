@@ -43,7 +43,7 @@ export async function GET() {
   const auth = await requireApiUser();
   if ("error" in auth) return auth.error;
 
-  const [drivers, companyDocs, audits] = await Promise.all([
+  const [drivers, companyDocs, audits, trucks] = await Promise.all([
     prisma.driver.findMany({
       where: { vehicleType: { in: ["BOX_TRUCK", "TRACTOR_TRUCK"] } },
       orderBy: [{ station: "asc" }, { firstName: "asc" }],
@@ -51,6 +51,14 @@ export async function GET() {
     }),
     prisma.dotDocument.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.dotAudit.findMany({ orderBy: { auditDate: "desc" } }),
+    prisma.vehicle.findMany({
+      where: {
+        type: "TRUCK",
+        OR: [{ offboardStatus: null }, { offboardStatus: { notIn: ["IN_PROGRESS", "COMPLETED"] } }],
+      },
+      orderBy: [{ station: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, dxNumber: true, licensePlate: true, station: true, dotInspectionDate: true, dotInspectionExpiry: true, dotInspectionDocUrl: true },
+    }),
   ]);
 
   const generated = new Date().toLocaleString("en-US", { dateStyle: "full", timeStyle: "short" });
@@ -191,6 +199,17 @@ export async function GET() {
         const docs = companyDocs.filter((d) => d.requirement === r.key);
         return `<tr><td class="item">${esc(r.item)}</td><td>${docs.length ? docs.map((d) => `<div class="docrow">${esc(d.title)}${docCell(d.docUrl)}</div>`).join("") : '<span class="badge missing">NOT ON FILE</span>'}</td></tr>`;
       }).join("")}
+    </tbody>
+  </table>
+
+  <h3>Truck DOT Annual Safety Inspections (49 CFR 396.17) · ${trucks.length} truck(s)</h3>
+  <table class="rules">
+    <thead><tr><th>Vehicle</th><th>Station</th><th>Last Inspection</th><th>Expiry</th><th>Status</th><th>Report</th></tr></thead>
+    <tbody>
+      ${trucks.length ? trucks.map((t) => {
+        const st = status(t.dotInspectionExpiry);
+        return `<tr><td class="item">${esc(t.name || t.dxNumber || t.licensePlate || "—")}</td><td>${esc(STATION_LABEL[t.station ?? ""] ?? t.station ?? "—")}</td><td>${fmt(t.dotInspectionDate)}</td><td>${fmt(t.dotInspectionExpiry)}</td><td><span class="badge ${st.cls}">${st.label}</span></td><td>${docCell(t.dotInspectionDocUrl)}</td></tr>`;
+      }).join("") : '<tr><td colspan="6">No trucks on file.</td></tr>'}
     </tbody>
   </table>
 

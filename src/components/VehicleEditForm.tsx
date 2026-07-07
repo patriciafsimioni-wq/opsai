@@ -24,6 +24,9 @@ type VehicleData = {
   registrationMonth: string | null;
   registrationExpiry: string | null;
   insuranceExpiry: string | null;
+  dotInspectionDate: string | null;
+  dotInspectionExpiry: string | null;
+  dotInspectionDocUrl: string | null;
   lifecycleStatus: string;
   purchasePrice: number | null;
   taxesAndFees: number | null;
@@ -35,16 +38,42 @@ type VehicleData = {
 };
 
 const TYPES = ["VAN", "TRUCK", "CAR", "BUS", "PICKUP", "TRAILER"];
+// Keep raw uploads under Vercel's ~4.5 MB serverless request cap (base64 inflates ~1.33×).
+const MAX_UPLOAD_BYTES = 3.5 * 1024 * 1024;
 const FUEL_TYPES = ["DIESEL", "GASOLINE", "ELECTRIC", "HYBRID", "CNG"];
 const LIFECYCLE_STAGES = ["PLANNING", "ACQUISITION_APPROVED", "ORDERED", "IN_TRANSIT", "RECEIVED", "UPFITTING", "REGISTERED", "ASSIGNED", "ACTIVE", "TEMP_OUT", "LONG_TERM_REPAIR", "READY_DISPOSAL", "SOLD_RETURNED", "ARCHIVED"];
 
 export function VehicleEditForm({ vehicle }: { vehicle: VehicleData }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
   const [form, setForm] = useState({ ...vehicle });
 
   const set = (field: string, value: string | number | null) =>
     setForm((f) => ({ ...f, [field]: value }));
+
+  async function uploadInspection(file: File) {
+    setUploadError("");
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setUploadError(`File is ${(file.size / 1024 / 1024).toFixed(1)} MB — the maximum is about 3.5 MB. Please compress the PDF or scan at a lower resolution.`);
+      return;
+    }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/uploads", { method: "POST", body: fd });
+      if (res.status === 413) { setUploadError("File is too large — the maximum is about 3.5 MB."); return; }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) { setUploadError((data as { error?: string }).error ?? "Upload failed."); return; }
+      set("dotInspectionDocUrl", data.url as string);
+    } catch {
+      setUploadError("Upload failed — check your connection and try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function save() {
     setSaving(true);
@@ -67,6 +96,9 @@ export function VehicleEditForm({ vehicle }: { vehicle: VehicleData }) {
         registrationMonth: form.registrationMonth || null,
         registrationExpiry: form.registrationExpiry || null,
         insuranceExpiry: form.insuranceExpiry || null,
+        dotInspectionDate: form.dotInspectionDate || null,
+        dotInspectionExpiry: form.dotInspectionExpiry || null,
+        dotInspectionDocUrl: form.dotInspectionDocUrl || null,
         lifecycleStatus: form.lifecycleStatus,
         purchasePrice: form.purchasePrice ? Number(form.purchasePrice) : null,
         taxesAndFees: form.taxesAndFees ? Number(form.taxesAndFees) : null,
@@ -124,6 +156,33 @@ export function VehicleEditForm({ vehicle }: { vehicle: VehicleData }) {
         <Field label="Insurance Expiry" value={form.insuranceExpiry ?? ""} onChange={(v) => set("insuranceExpiry", v)} type="date" />
         <SelectField label="Lifecycle Status" value={form.lifecycleStatus} options={LIFECYCLE_STAGES} onChange={(v) => set("lifecycleStatus", v)} />
       </div>
+
+      {form.type === "TRUCK" && (
+        <>
+          <p className="mt-4 mb-2 text-[10px] font-semibold uppercase text-slate-500">DOT Annual Safety Inspection (49 CFR 396.17)</p>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+            <Field label="Inspection Date" value={form.dotInspectionDate ?? ""} onChange={(v) => set("dotInspectionDate", v)} type="date" />
+            <Field label="Expiry Date" value={form.dotInspectionExpiry ?? ""} onChange={(v) => set("dotInspectionExpiry", v)} type="date" />
+            <div>
+              <label className="mb-1 block text-[10px] font-semibold uppercase text-slate-500">Inspection Report</label>
+              <div className="flex items-center gap-2">
+                {form.dotInspectionDocUrl && (
+                  <>
+                    <a href={form.dotInspectionDocUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-blue-600 hover:underline">View</a>
+                    <button type="button" onClick={() => set("dotInspectionDocUrl", null)} className="text-xs text-red-600 hover:underline">Remove</button>
+                  </>
+                )}
+                <label className="cursor-pointer rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                  {uploading ? "Uploading…" : form.dotInspectionDocUrl ? "Replace" : "Upload"}
+                  <input type="file" accept="image/*,application/pdf" className="hidden" disabled={uploading}
+                    onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) await uploadInspection(f); }} />
+                </label>
+              </div>
+            </div>
+          </div>
+          {uploadError && <p className="mt-2 text-xs text-red-600">{uploadError}</p>}
+        </>
+      )}
 
       <p className="mt-4 mb-2 text-[10px] font-semibold uppercase text-slate-500">Initial Investment</p>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">

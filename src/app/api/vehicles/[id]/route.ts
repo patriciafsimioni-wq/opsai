@@ -39,6 +39,9 @@ const patchSchema = z.object({
   assignedDriverId: z.string().optional().nullable(),
   registrationExpiry: z.string().optional().nullable(),
   insuranceExpiry: z.string().optional().nullable(),
+  dotInspectionDate: z.string().optional().nullable(),
+  dotInspectionExpiry: z.string().optional().nullable(),
+  dotInspectionDocUrl: z.string().optional().nullable(),
   branding: z.enum(["YELLOW_DHL", "WHITE"]).optional().nullable(),
   offboardReason: z.string().optional().nullable(),
   offboardedDate: z.string().optional().nullable(),
@@ -71,7 +74,7 @@ export async function PATCH(
   if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Invalid input");
   const d = parsed.data;
 
-  const { assignedDriverId, registrationExpiry, insuranceExpiry, offboardedDate, onboardedDate, leaseEndDate, ...rest } = d;
+  const { assignedDriverId, registrationExpiry, insuranceExpiry, dotInspectionDate, dotInspectionExpiry, offboardedDate, onboardedDate, leaseEndDate, ...rest } = d;
 
   const toDate = (val: string | null | undefined) =>
     val === undefined ? undefined : val ? new Date(val) : null;
@@ -81,6 +84,8 @@ export async function PATCH(
     ...rest,
     registrationExpiry: toDate(registrationExpiry),
     insuranceExpiry: toDate(insuranceExpiry),
+    dotInspectionDate: toDate(dotInspectionDate),
+    dotInspectionExpiry: toDate(dotInspectionExpiry),
     offboardedDate: toDate(offboardedDate),
     onboardedDate: toDate(onboardedDate),
     leaseEndDate: toDate(leaseEndDate),

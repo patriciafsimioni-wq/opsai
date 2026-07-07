@@ -302,6 +302,8 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
 
       <DotAuditsSection canManage={canManage} uploadFile={uploadFile} />
 
+      <TruckInspectionsSection />
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {tiles.map((t) => (
           <button
@@ -638,6 +640,59 @@ function DotAuditsSection({ canManage, uploadFile }: { canManage: boolean; uploa
         </div>
         {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
       </Modal>
+    </Card>
+  );
+}
+
+type TruckRow = {
+  id: string;
+  name: string;
+  dxNumber: string | null;
+  licensePlate: string | null;
+  station: string | null;
+  type: string;
+  dotInspectionDate: string | null;
+  dotInspectionExpiry: string | null;
+  dotInspectionDocUrl: string | null;
+};
+
+function TruckInspectionsSection() {
+  const { data: vehicles } = useData<TruckRow[]>("/api/vehicles?fleet=1");
+  const trucks = useMemo(
+    () => (vehicles ?? []).filter((v) => v.type === "TRUCK"),
+    [vehicles],
+  );
+
+  return (
+    <Card>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] p-4">
+        <div>
+          <p className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700"><Truck size={16} /> Truck DOT Annual Safety Inspections</p>
+          <p className="mt-0.5 text-xs text-slate-500">49 CFR 396.17 — annual inspection status per truck. Upload each report on the vehicle&rsquo;s page.</p>
+        </div>
+      </div>
+      {trucks.length === 0 ? (
+        <p className="p-6 text-center text-sm text-slate-400">No trucks in the active fleet. Set a vehicle&rsquo;s type to Truck to track its DOT inspection.</p>
+      ) : (
+        <Table>
+          <thead>
+            <tr><Th>Truck</Th><Th>Station</Th><Th>Last inspection</Th><Th>Expiry / status</Th><Th>Report</Th></tr>
+          </thead>
+          <tbody>
+            {trucks.map((t) => (
+              <tr key={t.id} className="hover:bg-slate-50">
+                <Td>
+                  <Link href={`/vehicles/${t.id}`} className="font-medium text-blue-700 hover:underline">{t.name || t.dxNumber || t.licensePlate || "—"}</Link>
+                </Td>
+                <Td className="text-sm text-slate-600">{t.station ?? "—"}</Td>
+                <Td className="text-sm text-slate-600">{t.dotInspectionDate ? formatDate(t.dotInspectionDate) : "—"}</Td>
+                <Td><StatusCell value={t.dotInspectionExpiry} /></Td>
+                <Td>{t.dotInspectionDocUrl ? <a href={t.dotInspectionDocUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 hover:underline"><Paperclip size={13} /> View</a> : <span className="text-slate-400">—</span>}</Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      )}
     </Card>
   );
 }

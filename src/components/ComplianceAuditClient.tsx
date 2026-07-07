@@ -13,8 +13,11 @@ type Row = {
   dxNumber: string | null;
   licensePlate: string | null;
   station: string | null;
+  type: string;
   registrationExpiry: string | null;
   insuranceExpiry: string | null;
+  dotInspectionExpiry: string | null;
+  dotInspectionDocUrl: string | null;
 };
 
 type DocState = "valid" | "expiring" | "expired" | "missing";
@@ -49,18 +52,19 @@ function DocBadge({ iso }: { iso: string | null }) {
   );
 }
 
-// Worst of the two documents drives the row's overall status.
+// Worst of the applicable documents drives the row's overall status.
+// The DOT annual inspection only applies to trucks.
 function rowState(v: Row): DocState {
   const order: DocState[] = ["expired", "expiring", "missing", "valid"];
-  const r = docState(v.registrationExpiry).state;
-  const i = docState(v.insuranceExpiry).state;
-  return order.find((s) => s === r || s === i) ?? "valid";
+  const states = [docState(v.registrationExpiry).state, docState(v.insuranceExpiry).state];
+  if (v.type === "TRUCK") states.push(docState(v.dotInspectionExpiry).state);
+  return order.find((s) => states.includes(s)) ?? "valid";
 }
 
 const STATIONS_IN_DATA = (rows: Row[]) =>
   [...new Set(rows.map((r) => r.station).filter(Boolean))].sort() as string[];
 
-type SortKey = "name" | "station" | "registration" | "insurance";
+type SortKey = "name" | "station" | "registration" | "insurance" | "dotInspection";
 
 // null expiries sort last in ascending order.
 function sortValue(v: Row, key: SortKey): string | number {
@@ -69,6 +73,7 @@ function sortValue(v: Row, key: SortKey): string | number {
     case "station": return (v.station ?? "").toLowerCase();
     case "registration": return v.registrationExpiry ? new Date(v.registrationExpiry).getTime() : Number.POSITIVE_INFINITY;
     case "insurance": return v.insuranceExpiry ? new Date(v.insuranceExpiry).getTime() : Number.POSITIVE_INFINITY;
+    case "dotInspection": return v.dotInspectionExpiry ? new Date(v.dotInspectionExpiry).getTime() : Number.POSITIVE_INFINITY;
   }
 }
 
@@ -183,6 +188,7 @@ export function ComplianceAuditClient({ vehicles }: { vehicles: Row[] }) {
                 <Th><SortHeader label="Station" col="station" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
                 <Th><SortHeader label="Registration Expiry" col="registration" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
                 <Th><SortHeader label="Insurance Expiry" col="insurance" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
+                <Th><SortHeader label="DOT Inspection" col="dotInspection" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
               </tr>
             </thead>
             <tbody>
@@ -199,6 +205,18 @@ export function ComplianceAuditClient({ vehicles }: { vehicles: Row[] }) {
                   </Td>
                   <Td><DocBadge iso={v.registrationExpiry} /></Td>
                   <Td><DocBadge iso={v.insuranceExpiry} /></Td>
+                  <Td>
+                    {v.type === "TRUCK" ? (
+                      <div className="flex items-center gap-2">
+                        <DocBadge iso={v.dotInspectionExpiry} />
+                        {v.dotInspectionDocUrl && (
+                          <a href={v.dotInspectionDocUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-blue-600 hover:underline">View</a>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-400">N/A</span>
+                    )}
+                  </Td>
                 </tr>
               ))}
             </tbody>

@@ -131,6 +131,8 @@ export default async function VehicleDetailPage({
   const healthGrade = replacementScore >= 70 ? "HEALTHY" : replacementScore >= 50 ? "MONITOR" : replacementScore >= 30 ? "PLAN_REPLACEMENT" : "REPLACE_NOW";
   const regDays = daysUntil(v.registrationExpiry);
   const insDays = daysUntil(v.insuranceExpiry);
+  const isTruck = v.type === "TRUCK";
+  const dotDays = daysUntil(v.dotInspectionExpiry);
 
   // Build odometer estimation from known data points
   // Collect all WOs with known odometer + date, plus current odometer
@@ -315,6 +317,9 @@ export default async function VehicleDetailPage({
             registrationMonth: v.registrationMonth,
             registrationExpiry: v.registrationExpiry?.toISOString().slice(0, 10) ?? null,
             insuranceExpiry: v.insuranceExpiry?.toISOString().slice(0, 10) ?? null,
+            dotInspectionDate: v.dotInspectionDate?.toISOString().slice(0, 10) ?? null,
+            dotInspectionExpiry: v.dotInspectionExpiry?.toISOString().slice(0, 10) ?? null,
+            dotInspectionDocUrl: v.dotInspectionDocUrl,
             lifecycleStatus: v.lifecycleStatus ?? "ACTIVE",
             purchasePrice: v.purchasePrice,
             taxesAndFees: v.taxesAndFees,
@@ -401,6 +406,14 @@ export default async function VehicleDetailPage({
               date={v.insuranceExpiry}
               days={insDays}
             />
+            {isTruck && (
+              <ComplianceRow
+                label="DOT Annual Inspection"
+                date={v.dotInspectionExpiry}
+                days={dotDays}
+                docUrl={v.dotInspectionDocUrl}
+              />
+            )}
           </div>
         </Card>
 
@@ -870,10 +883,12 @@ function ComplianceRow({
   label,
   date,
   days,
+  docUrl,
 }: {
   label: string;
   date: Date | null;
   days: number | null;
+  docUrl?: string | null;
 }) {
   const expired = days != null && days < 0;
   const soon = days != null && days >= 0 && days < 30;
@@ -886,9 +901,14 @@ function ComplianceRow({
           <ShieldCheck size={16} className={soon ? "text-amber-500" : "text-emerald-500"} />
         )}
         <span className="text-sm">{label}</span>
+        {docUrl && (
+          <a href={docUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-blue-600 hover:underline">
+            View
+          </a>
+        )}
       </div>
       <div className="text-right">
-        <p className="text-sm font-medium">{formatDate(date)}</p>
+        <p className="text-sm font-medium">{date ? formatDate(date) : "Not on file"}</p>
         {days != null && (
           <p
             className={

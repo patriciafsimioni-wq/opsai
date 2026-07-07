@@ -25,8 +25,11 @@ export default async function CompliancePage() {
       dxNumber: true,
       licensePlate: true,
       station: true,
+      type: true,
       registrationExpiry: true,
       insuranceExpiry: true,
+      dotInspectionExpiry: true,
+      dotInspectionDocUrl: true,
     },
     orderBy: { dxNumber: "asc" },
   });
@@ -35,7 +38,7 @@ export default async function CompliancePage() {
     <div>
       <PageHeader
         title="Compliance Audit"
-        subtitle="Registration & Insurance — expiry status across the active fleet."
+        subtitle="Registration, Insurance & DOT annual inspection (trucks) — expiry status across the active fleet."
       />
       <ComplianceAuditClient
         vehicles={vehicles.map((v) => ({
@@ -44,8 +47,11 @@ export default async function CompliancePage() {
           dxNumber: v.dxNumber,
           licensePlate: v.licensePlate,
           station: v.station,
+          type: v.type,
           registrationExpiry: v.registrationExpiry?.toISOString() ?? null,
           insuranceExpiry: v.insuranceExpiry?.toISOString() ?? null,
+          dotInspectionExpiry: v.dotInspectionExpiry?.toISOString() ?? null,
+          dotInspectionDocUrl: v.dotInspectionDocUrl,
         }))}
       />
     </div>

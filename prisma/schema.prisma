@@ -343,6 +343,10 @@ model Vehicle {
   registrationMonth  String?
   registrationExpiry DateTime?
   insuranceExpiry    DateTime?
+  // DOT Annual Safety Inspection (trucks) — 49 CFR 396.17
+  dotInspectionDate   DateTime?
+  dotInspectionExpiry DateTime?
+  dotInspectionDocUrl String?
   purchaseDate       DateTime?
   purchasePrice      Float?
   // Vehicle Lifecycle
