@@ -25,6 +25,7 @@ const schema = z.object({
   rating: z.coerce.number().min(0).max(5).optional(),
   safetyScore: z.coerce.number().min(0).max(100).optional(),
   vehicleType: z.enum(["CARGO_VAN", "BOX_TRUCK", "TRACTOR_TRUCK"]).optional().nullable(),
+  station: z.string().optional().nullable(),
 });
 
 export async function POST(req: Request) {
@@ -47,6 +48,7 @@ export async function POST(req: Request) {
       rating: d.rating ?? 4.5,
       safetyScore: d.safetyScore ?? 85,
       vehicleType: d.vehicleType ?? "CARGO_VAN",
+      station: d.station || null,
       avatarColor: ["#2563eb", "#dc2626", "#16a34a", "#d97706", "#7c3aed"][
         Math.floor(Math.random() * 5)
       ],

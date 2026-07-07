@@ -7,7 +7,7 @@ import { Card, Button, Badge, Table, Th, Td, EmptyState, Avatar } from "@/compon
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
 import type { DriverDTO } from "@/lib/types";
-import { DRIVER_STATUS, DRIVER_STATUSES } from "@/lib/constants";
+import { DRIVER_STATUS, DRIVER_STATUSES, STATIONS, STATION_LABEL } from "@/lib/constants";
 import { formatDate, daysUntil } from "@/lib/utils";
 
 const VEHICLE_TYPE_LABEL: Record<string, string> = {
@@ -26,6 +26,7 @@ const emptyForm = {
   licenseExpiry: "",
   status: "ACTIVE",
   safetyScore: "85",
+  station: "",
   vehicleType: "CARGO_VAN",
   medicalCardExpiry: "",
   mvrCheckedAt: "",
@@ -134,6 +135,7 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
       licenseExpiry: d.licenseExpiry ? d.licenseExpiry.slice(0, 10) : "",
       status: d.status,
       safetyScore: String(d.safetyScore),
+      station: d.station ?? "",
       vehicleType: d.vehicleType ?? "CARGO_VAN",
       medicalCardExpiry: d.medicalCardExpiry ? d.medicalCardExpiry.slice(0, 10) : "",
       mvrCheckedAt: d.mvrCheckedAt ? d.mvrCheckedAt.slice(0, 10) : "",
@@ -378,6 +380,13 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
           </Field>
           <Field label="Safety Score (0-100)">
             <Input type="number" value={form.safetyScore} onChange={(e) => setForm({ ...form, safetyScore: e.target.value })} />
+          </Field>
+          <Field label="Station">
+            <Select
+              value={form.station}
+              onChange={(e) => setForm({ ...form, station: e.target.value })}
+              options={[{ value: "", label: "— None —" }, ...STATIONS.map((s) => ({ value: s, label: STATION_LABEL[s] ?? s }))]}
+            />
           </Field>
           <Field label="Vehicle Type">
             <Select
