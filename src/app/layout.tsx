@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: BRAND,
+    title: "SyncFleet",
   },
   other: {
     "mobile-web-app-capable": "yes",

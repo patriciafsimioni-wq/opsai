@@ -1,6 +1,6 @@
 {
-  "name": "Live Fleet AI",
-  "short_name": "LiveFleet",
+  "name": "SyncFleet",
+  "short_name": "SyncFleet",
   "description": "Fleet management: GPS tracking, maintenance, fuel, DVIR, and analytics",
   "start_url": "/",
   "display": "standalone",
