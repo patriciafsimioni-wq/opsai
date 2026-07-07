@@ -394,6 +394,26 @@ model Service {
   createdAt    DateTime        @default(now())
 }
 
+// Fleet-level parts & supplies purchases (e.g. AutoZone / O'Reilly) that are
+// NOT tied to a specific vehicle. Allocated to a station (or shared) and shown
+// as their own "Parts & Supplies" category in the Finance Report / Service Costs.
+model PartsExpense {
+  id            String   @id @default(cuid())
+  date          DateTime
+  vendor        String
+  station       String?  // ORF / RNH / AUS… or null = Shared/Unassigned
+  amount        Float    @default(0)
+  category      String   @default("PARTS") // PARTS | SUPPLIES
+  description   String?
+  poNumber      String?
+  invoiceNumber String?
+  invoiceUrl    String?
+  createdAt     DateTime @default(now())
+
+  @@index([date])
+  @@index([station])
+}
+
 model MaintenanceSchedule {
   id               String   @id @default(cuid())
   vehicle          Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)

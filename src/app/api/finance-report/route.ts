@@ -391,6 +391,38 @@ export async function GET(req: NextRequest) {
     serviceDetails.sort((a, b) => b.cost - a.cost);
   }
 
+  // Parts & Supplies — a separate expense category not tied to a vehicle.
+  const partsExpenses = await prisma.partsExpense.findMany({
+    where: { date: { gte: new Date(year, 0, 1), lte: new Date(year, 11, 31, 23, 59, 59) } },
+  });
+  const partsMonthly: number[] = Array(12).fill(0);
+  const partsByStation: Record<string, { ytd: number; monthly: number; total: number }> = {};
+  for (const s of [...ALL_STATIONS, "ALL", "Shared"]) partsByStation[s] = { ytd: 0, monthly: 0, total: 0 };
+  let partsYtd = 0, partsMonth = 0, partsTotal = 0, partsParts = 0, partsSuppliesCat = 0;
+  for (const e of partsExpenses) {
+    const m = new Date(e.date).getMonth() + 1;
+    const amt = e.amount ?? 0;
+    partsMonthly[m - 1] += amt;
+    partsTotal += amt;
+    if (e.category === "SUPPLIES") partsSuppliesCat += amt; else partsParts += amt;
+    if (m <= month) partsYtd += amt;
+    if (m === month) partsMonth += amt;
+    const st = ALL_STATIONS.includes((e.station ?? "") as string) ? (e.station as string) : "Shared";
+    partsByStation[st].total += amt;
+    partsByStation["ALL"].total += amt;
+    if (m <= month) { partsByStation[st].ytd += amt; partsByStation["ALL"].ytd += amt; }
+    if (m === month) { partsByStation[st].monthly += amt; partsByStation["ALL"].monthly += amt; }
+  }
+  const partsSupplies = {
+    ytd: Math.round(partsYtd),
+    monthly: Math.round(partsMonth),
+    total: Math.round(partsTotal),
+    parts: Math.round(partsParts),
+    supplies: Math.round(partsSuppliesCat),
+    monthlyTotals: partsMonthly.map((v) => Math.round(v)),
+    byStation: Object.fromEntries(Object.entries(partsByStation).map(([k, v]) => [k, { ytd: Math.round(v.ytd), monthly: Math.round(v.monthly), total: Math.round(v.total) }])),
+  };
+
   return NextResponse.json({
     year,
     month,
@@ -399,6 +431,7 @@ export async function GET(req: NextRequest) {
     stations,
     monthlyTotals,
     monthlyByStation,
+    partsSupplies,
     ...(serviceDetails.length > 0 ? { serviceDetails } : {}),
     ...(weekStart && weekEnd ? { weekStart: weekStart.toISOString(), weekEnd: weekEnd.toISOString() } : {}),
   });

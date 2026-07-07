@@ -43,6 +43,8 @@ function getCategory(o: WorkOrderDTO): string {
 
 export function ServiceCostsClient() {
   const { data: orders, loading } = useData<WorkOrderDTO[]>("/api/maintenance");
+  const { data: partsExpenses } = useData<{ amount: number }[]>("/api/parts-expenses");
+  const partsTotal = (partsExpenses ?? []).reduce((s, e) => s + (e.amount ?? 0), 0);
   const [monthFilter, setMonthFilter] = useState("");
   const [yearFilter, setYearFilter] = useState("");
   const [stationFilter, setStationFilter] = useState("");
@@ -318,7 +320,7 @@ export function ServiceCostsClient() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard label="Total Cost" value={formatCurrency(totals.total)} accent="#2563eb" hint={`${totals.count} services`} />
         <StatCard label="Material" value={formatCurrency(totals.material)} accent="#0891b2" />
         <StatCard label="Labor" value={formatCurrency(totals.labor)} accent="#d97706" />
@@ -327,6 +329,7 @@ export function ServiceCostsClient() {
           value={`${formatCurrency(totals.preventive)} / ${formatCurrency(totals.corrective)}`}
           accent="#16a34a"
         />
+        <StatCard label="Parts & Supplies" value={formatCurrency(partsTotal)} accent="#6366f1" hint="not vehicle-specific" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

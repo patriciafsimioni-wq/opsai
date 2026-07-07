@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useData } from "@/lib/use-data";
 import { SlidePresentation } from "./SlidePresentation";
-import { STATIONS as BRAND_STATIONS } from "@/lib/constants";
+import { STATIONS as BRAND_STATIONS, REGION_ABBR } from "@/lib/constants";
+import { BRAND } from "@/lib/brand";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const STATION_ORDER = ["ALL", ...BRAND_STATIONS];
@@ -59,8 +60,19 @@ type ReportData = {
   monthlyTotals: MonthlyTotal[];
   monthlyByStation: Record<string, MonthlyTotal[]>;
   serviceDetails?: ServiceDetail[];
+  partsSupplies?: PartsSupplies;
   weekStart?: string;
   weekEnd?: string;
+};
+
+type PartsSupplies = {
+  ytd: number;
+  monthly: number;
+  total: number;
+  parts: number;
+  supplies: number;
+  monthlyTotals: number[];
+  byStation: Record<string, { ytd: number; monthly: number; total: number }>;
 };
 
 function fmt(n: number): string {
@@ -574,7 +586,7 @@ export function FinanceReportClient() {
       <div ref={reportRef}>
       {/* Report title for print */}
       <div className="hidden print:block">
-        <h1 className="text-xl font-bold">SYNCTX / Fleet {reportLabel} Expenses</h1>
+        <h1 className="text-xl font-bold">{BRAND} / Fleet {reportLabel} Expenses</h1>
         <p className="text-sm text-slate-600">Year: {year} | Month: {MONTHS[month - 1]} | Actual to Budget Variance Analysis</p>
       </div>
 
@@ -597,6 +609,28 @@ export function FinanceReportClient() {
           <p className={`mt-1 text-xl font-bold ${totalRemainder < 0 ? "text-red-700" : "text-green-700"}`}>${totalRemainder.toLocaleString()}</p>
         </div>
       </div>
+
+      {/* Parts & Supplies (separate category, not tied to a vehicle) */}
+      {data.partsSupplies && (
+        <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold text-indigo-900">Parts &amp; Supplies <span className="font-normal text-indigo-500">(separate category — not vehicle-specific)</span></p>
+              <p className="mt-0.5 text-xs text-indigo-500">Parts ${data.partsSupplies.parts.toLocaleString()} · Shop Supplies ${data.partsSupplies.supplies.toLocaleString()}</p>
+            </div>
+            <div className="flex gap-6">
+              <div>
+                <p className="text-xs font-medium text-indigo-500">YTD ({MONTHS[month - 1]})</p>
+                <p className="text-lg font-bold text-indigo-800">${data.partsSupplies.ytd.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-indigo-500">{year} Total</p>
+                <p className="text-lg font-bold text-indigo-800">${data.partsSupplies.total.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Charts */}
       <div className="space-y-4">
@@ -623,7 +657,7 @@ export function FinanceReportClient() {
       {/* Station tabs */}
       <div className="flex gap-1 overflow-x-auto print:hidden">
         {STATION_ORDER.map((s) => {
-          const label = s === "ALL" ? "Consolidated TX" : s;
+          const label = s === "ALL" ? `Consolidated ${REGION_ABBR}` : s;
           return (
             <button
               key={s}
