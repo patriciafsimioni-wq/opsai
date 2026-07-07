@@ -17,11 +17,13 @@ import {
   Table,
   Th,
   Td,
+  SortTh,
   EmptyState,
   StatCard,
 } from "@/components/ui";
 import { Field, Input, Select, Textarea, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
+import { useTableSort } from "@/lib/use-sort";
 import type { WorkOrderRequestDTO, VehicleDTO, ServiceDTO } from "@/lib/types";
 import {
   FORM_STATIONS,
@@ -115,11 +117,27 @@ export function WorkOrderRequestsClient({
     [services],
   );
 
+  const sort = useTableSort<WorkOrderRequestDTO, "po" | "station" | "vehicle" | "service" | "requestedBy" | "submitted" | "serviceDate" | "estimate" | "status">(
+    {
+      po: (r) => (r.poNumber ?? "").toLowerCase(),
+      station: (r) => r.station ?? "",
+      vehicle: (r) => (r.vehicle ? `${r.vehicle.licensePlate} ${r.vehicle.name}` : r.vehicleOther ?? "").toLowerCase(),
+      service: (r) => (r.service?.name ?? "").toLowerCase(),
+      requestedBy: (r) => r.requestedBy.name.toLowerCase(),
+      submitted: (r) => (r.createdAt ? new Date(r.createdAt).getTime() : null),
+      serviceDate: (r) => (r.requestedDate ? new Date(r.requestedDate).getTime() : null),
+      estimate: (r) => r.vendorEstimate ?? null,
+      status: (r) => r.status,
+    },
+    "submitted",
+    "desc",
+  );
+
   const filtered = useMemo(() => {
     const list = requests ?? [];
-    if (filterStatus === "ALL") return list;
-    return list.filter((r) => r.status === filterStatus);
-  }, [requests, filterStatus]);
+    const result = filterStatus === "ALL" ? list : list.filter((r) => r.status === filterStatus);
+    return sort.sortRows(result);
+  }, [requests, filterStatus, sort]);
 
   const counts = useMemo(() => {
     const list = requests ?? [];
@@ -393,15 +411,15 @@ export function WorkOrderRequestsClient({
                       />
                     </Th>
                   )}
-                  <Th>PO#</Th>
-                  <Th>Station</Th>
-                  <Th>Vehicle</Th>
-                  <Th>Service</Th>
-                  <Th>Requested By</Th>
-                  <Th>Date Submitted</Th>
-                  <Th>Service Date</Th>
-                  <Th>Estimate</Th>
-                  <Th>Status</Th>
+                  <SortTh label="PO#" col="po" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                  <SortTh label="Station" col="station" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                  <SortTh label="Vehicle" col="vehicle" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                  <SortTh label="Service" col="service" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                  <SortTh label="Requested By" col="requestedBy" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                  <SortTh label="Date Submitted" col="submitted" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                  <SortTh label="Service Date" col="serviceDate" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                  <SortTh label="Estimate" col="estimate" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                  <SortTh label="Status" col="status" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
                   <Th />
                 </tr>
               </thead>

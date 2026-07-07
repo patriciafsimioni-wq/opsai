@@ -3,9 +3,10 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, ShieldCheck, Truck, Pencil, FileDown, BellRing, BookOpen, ChevronDown, ChevronUp, ChevronsUpDown, Upload, Paperclip } from "lucide-react";
-import { Card, Table, Th, Td, Badge, EmptyState, Avatar, Button } from "@/components/ui";
+import { Card, Table, Th, Td, SortTh, Badge, EmptyState, Avatar, Button } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
+import { useTableSort } from "@/lib/use-sort";
 import type { DriverDTO, DotDocumentDTO, DotAuditDTO } from "@/lib/types";
 import { formatDate, daysUntil } from "@/lib/utils";
 import { DOT_STATE, DOT_FEDERAL_RULES, DOT_STATE_RULES, type DotRule } from "@/lib/constants";
@@ -206,9 +207,24 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
     return { expired, expiring, missing, total: dotDrivers.length };
   }, [dotDrivers]);
 
+  const driverSort = useTableSort<DriverDTO, "name" | "station" | "vehicleType" | "medical" | "license" | "mvr" | "drug" | "annual" | "docs">(
+    {
+      name: (d) => `${d.firstName} ${d.lastName}`.toLowerCase(),
+      station: (d) => d.station ?? "",
+      vehicleType: (d) => VEHICLE_TYPE_LABEL[d.vehicleType ?? ""] ?? "",
+      medical: (d) => (d.medicalCardExpiry ? new Date(d.medicalCardExpiry).getTime() : null),
+      license: (d) => (d.licenseExpiry ? new Date(d.licenseExpiry).getTime() : null),
+      mvr: (d) => (d.mvrCheckedAt ? new Date(d.mvrCheckedAt).getTime() : null),
+      drug: (d) => d.drugTestStatus ?? "",
+      annual: (d) => (d.annualReviewAt ? new Date(d.annualReviewAt).getTime() : null),
+      docs: (d) => docsUploaded(d),
+    },
+    "name",
+  );
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return dotDrivers.filter((d) => {
+    const result = dotDrivers.filter((d) => {
       if (q && !`${d.firstName} ${d.lastName}`.toLowerCase().includes(q) && !d.email.toLowerCase().includes(q)) return false;
       if (typeFilter !== "all" && d.vehicleType !== typeFilter) return false;
       if (statusFilter !== "all") {
@@ -219,7 +235,8 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
       }
       return true;
     });
-  }, [dotDrivers, search, typeFilter, statusFilter]);
+    return driverSort.sortRows(result);
+  }, [dotDrivers, search, typeFilter, statusFilter, driverSort]);
 
   const tiles: { key: typeof statusFilter; label: string; value: number; bg: string; fg: string }[] = [
     { key: "expired", label: "Expired", value: counts.expired, bg: "#fee2e2", fg: "#991b1b" },
@@ -348,15 +365,15 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
           <Table>
             <thead>
               <tr>
-                <Th>Driver</Th>
-                <Th>Station</Th>
-                <Th>Vehicle Type</Th>
-                <Th>Medical Card</Th>
-                <Th>CDL / License</Th>
-                <Th>MVR Checked</Th>
-                <Th>Drug & Alcohol</Th>
-                <Th>Annual Review</Th>
-                <Th>Documents</Th>
+                <SortTh label="Driver" col="name" sortKey={driverSort.sortKey} sortDir={driverSort.sortDir} onSort={driverSort.toggle} />
+                <SortTh label="Station" col="station" sortKey={driverSort.sortKey} sortDir={driverSort.sortDir} onSort={driverSort.toggle} />
+                <SortTh label="Vehicle Type" col="vehicleType" sortKey={driverSort.sortKey} sortDir={driverSort.sortDir} onSort={driverSort.toggle} />
+                <SortTh label="Medical Card" col="medical" sortKey={driverSort.sortKey} sortDir={driverSort.sortDir} onSort={driverSort.toggle} />
+                <SortTh label="CDL / License" col="license" sortKey={driverSort.sortKey} sortDir={driverSort.sortDir} onSort={driverSort.toggle} />
+                <SortTh label="MVR Checked" col="mvr" sortKey={driverSort.sortKey} sortDir={driverSort.sortDir} onSort={driverSort.toggle} />
+                <SortTh label="Drug & Alcohol" col="drug" sortKey={driverSort.sortKey} sortDir={driverSort.sortDir} onSort={driverSort.toggle} />
+                <SortTh label="Annual Review" col="annual" sortKey={driverSort.sortKey} sortDir={driverSort.sortDir} onSort={driverSort.toggle} />
+                <SortTh label="Documents" col="docs" sortKey={driverSort.sortKey} sortDir={driverSort.sortDir} onSort={driverSort.toggle} />
                 {canManage && <Th />}
               </tr>
             </thead>

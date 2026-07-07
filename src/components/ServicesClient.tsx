@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { Plus, Search, Trash2, Pencil, ListChecks, Building2 } from "lucide-react";
-import { Card, CardHeader, Button, Badge, Table, Th, Td, EmptyState, StatCard } from "@/components/ui";
+import { Card, CardHeader, Button, Badge, Table, Th, Td, SortTh, EmptyState, StatCard } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
+import { useTableSort } from "@/lib/use-sort";
 import type { ServiceDTO } from "@/lib/types";
 import { SERVICE_CATEGORY, SERVICE_CATEGORIES } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
@@ -31,15 +32,29 @@ export function ServicesClient({ canManage }: { canManage: boolean }) {
   const [providerError, setProviderError] = useState("");
   const [addingProvider, setAddingProvider] = useState(false);
 
+  const sort = useTableSort<ServiceDTO, "name" | "category" | "group" | "material" | "labor" | "total" | "used">(
+    {
+      name: (s) => s.name.toLowerCase(),
+      category: (s) => s.category,
+      group: (s) => (s.group ?? "").toLowerCase(),
+      material: (s) => s.materialCost,
+      labor: (s) => s.laborCost,
+      total: (s) => s.materialCost + s.laborCost,
+      used: (s) => s._count?.workOrders ?? 0,
+    },
+    "name",
+  );
+
   const filtered = useMemo(() => {
     if (!services) return [];
     const q = search.toLowerCase();
-    return services.filter((s) => {
+    const result = services.filter((s) => {
       const matchSearch =
         !q || s.name.toLowerCase().includes(q) || (s.group ?? "").toLowerCase().includes(q);
       return matchSearch && (!categoryFilter || s.category === categoryFilter);
     });
-  }, [services, search, categoryFilter]);
+    return sort.sortRows(result);
+  }, [services, search, categoryFilter, sort]);
 
   const stats = useMemo(() => {
     const list = services ?? [];
@@ -131,13 +146,13 @@ export function ServicesClient({ canManage }: { canManage: boolean }) {
           <Table>
             <thead>
               <tr>
-                <Th>Service</Th>
-                <Th>Category</Th>
-                <Th>Group</Th>
-                <Th>Material Cost</Th>
-                <Th>Labor Cost</Th>
-                <Th>Total</Th>
-                <Th>Used</Th>
+                <SortTh label="Service" col="name" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Category" col="category" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Group" col="group" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Material Cost" col="material" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Labor Cost" col="labor" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Total" col="total" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Used" col="used" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
                 <Th />
               </tr>
             </thead>

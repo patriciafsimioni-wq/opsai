@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Card, CardHeader, StatCard, Table, Th, Td, EmptyState, Badge } from "@/components/ui";
+import { Card, CardHeader, StatCard, Table, Th, Td, SortTh, EmptyState, Badge } from "@/components/ui";
 import { MultiLineChart, BarChartCard } from "@/components/charts";
 import { ExportButton } from "@/components/ReportsExport";
 import { useData } from "@/lib/use-data";
+import { useTableSort } from "@/lib/use-sort";
 import type { WorkOrderDTO } from "@/lib/types";
 import { STATIONS, STATION_LABEL, SERVICE_CATEGORY, SERVICE_CATEGORIES, PREVENTIVE_GROUPS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
@@ -170,6 +171,33 @@ export function ServiceCostsClient() {
     () => byStation.map((r) => ({ label: r.station, value: Math.round(r.total) })),
     [byStation],
   );
+
+  const stationSort = useTableSort<(typeof byStation)[number], "station" | "count" | "material" | "labor" | "total">(
+    {
+      station: (r) => r.station,
+      count: (r) => r.count,
+      material: (r) => r.material,
+      labor: (r) => r.labor,
+      total: (r) => r.total,
+    },
+    "total",
+    "desc",
+  );
+  const sortedByStation = useMemo(() => stationSort.sortRows(byStation), [byStation, stationSort]);
+
+  const serviceSort = useTableSort<(typeof byService)[number], "name" | "category" | "count" | "material" | "labor" | "total">(
+    {
+      name: (r) => r.name.toLowerCase(),
+      category: (r) => r.category,
+      count: (r) => r.count,
+      material: (r) => r.material,
+      labor: (r) => r.labor,
+      total: (r) => r.total,
+    },
+    "total",
+    "desc",
+  );
+  const sortedByService = useMemo(() => serviceSort.sortRows(byService), [byService, serviceSort]);
 
   // Preventive matrix: rows = preventive services, columns = stations, for the selected month.
   const prevOrders = useMemo(
@@ -422,15 +450,15 @@ export function ServiceCostsClient() {
           <Table>
             <thead>
               <tr>
-                <Th>Station</Th>
-                <Th>Services</Th>
-                <Th>Material</Th>
-                <Th>Labor</Th>
-                <Th>Total</Th>
+                <SortTh label="Station" col="station" sortKey={stationSort.sortKey} sortDir={stationSort.sortDir} onSort={stationSort.toggle} />
+                <SortTh label="Services" col="count" sortKey={stationSort.sortKey} sortDir={stationSort.sortDir} onSort={stationSort.toggle} />
+                <SortTh label="Material" col="material" sortKey={stationSort.sortKey} sortDir={stationSort.sortDir} onSort={stationSort.toggle} />
+                <SortTh label="Labor" col="labor" sortKey={stationSort.sortKey} sortDir={stationSort.sortDir} onSort={stationSort.toggle} />
+                <SortTh label="Total" col="total" sortKey={stationSort.sortKey} sortDir={stationSort.sortDir} onSort={stationSort.toggle} />
               </tr>
             </thead>
             <tbody>
-              {byStation.map((r) => (
+              {sortedByStation.map((r) => (
                 <tr key={r.station} className="hover:bg-slate-50">
                   <Td><Badge bg="#eef2ff" fg="#3730a3">{r.station}</Badge> <span className="ml-1 text-xs text-slate-400">{STATION_LABEL[r.station].split(" — ")[1]}</span></Td>
                   <Td className="text-slate-600">{r.count}</Td>
@@ -454,16 +482,16 @@ export function ServiceCostsClient() {
           <Table>
             <thead>
               <tr>
-                <Th>Service</Th>
-                <Th>Category</Th>
-                <Th>Count</Th>
-                <Th>Material</Th>
-                <Th>Labor</Th>
-                <Th>Total</Th>
+                <SortTh label="Service" col="name" sortKey={serviceSort.sortKey} sortDir={serviceSort.sortDir} onSort={serviceSort.toggle} />
+                <SortTh label="Category" col="category" sortKey={serviceSort.sortKey} sortDir={serviceSort.sortDir} onSort={serviceSort.toggle} />
+                <SortTh label="Count" col="count" sortKey={serviceSort.sortKey} sortDir={serviceSort.sortDir} onSort={serviceSort.toggle} />
+                <SortTh label="Material" col="material" sortKey={serviceSort.sortKey} sortDir={serviceSort.sortDir} onSort={serviceSort.toggle} />
+                <SortTh label="Labor" col="labor" sortKey={serviceSort.sortKey} sortDir={serviceSort.sortDir} onSort={serviceSort.toggle} />
+                <SortTh label="Total" col="total" sortKey={serviceSort.sortKey} sortDir={serviceSort.sortDir} onSort={serviceSort.toggle} />
               </tr>
             </thead>
             <tbody>
-              {byService.map((r) => (
+              {sortedByService.map((r) => (
                 <tr key={`${r.category}:${r.name}`} className="hover:bg-slate-50">
                   <Td className="font-medium">{r.name}</Td>
                   <Td>

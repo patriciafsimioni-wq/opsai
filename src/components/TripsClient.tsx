@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Search, Trash2, Route, RefreshCw } from "lucide-react";
-import { Card, Button, Badge, Table, Th, Td, EmptyState } from "@/components/ui";
+import { Plus, Search, Pencil, Trash2, Route, RefreshCw } from "lucide-react";
+import { Card, Button, Badge, Table, Th, Td, SortTh, EmptyState } from "@/components/ui";
 import { Field, Input, Select, Textarea, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
+import { useTableSort } from "@/lib/use-sort";
 import type { TripDTO, VehicleDTO, DriverDTO } from "@/lib/types";
 import { TRIP_STATUS, TRIP_STATUSES } from "@/lib/constants";
 import { formatDateTime } from "@/lib/utils";
@@ -27,6 +28,7 @@ export function TripsClient({ canManage }: { canManage: boolean }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -56,10 +58,23 @@ export function TripsClient({ canManage }: { canManage: boolean }) {
     }
   }
 
+  const sort = useTableSort<TripDTO, "route" | "vehicle" | "driver" | "scheduled" | "distance" | "status">(
+    {
+      route: (t) => `${t.origin} → ${t.destination}`.toLowerCase(),
+      vehicle: (t) => t.vehicle.name.toLowerCase(),
+      driver: (t) => (t.driver ? `${t.driver.firstName} ${t.driver.lastName}` : "").toLowerCase(),
+      scheduled: (t) => (t.scheduledStart ? new Date(t.scheduledStart).getTime() : null),
+      distance: (t) => t.distanceKm,
+      status: (t) => t.status,
+    },
+    "scheduled",
+    "desc",
+  );
+
   const filtered = useMemo(() => {
     if (!trips) return [];
     const q = search.toLowerCase();
-    return trips.filter((t) => {
+    const result = trips.filter((t) => {
       const matchSearch =
         !q ||
         t.origin.toLowerCase().includes(q) ||
@@ -67,12 +82,32 @@ export function TripsClient({ canManage }: { canManage: boolean }) {
         t.vehicle.name.toLowerCase().includes(q);
       return matchSearch && (!statusFilter || t.status === statusFilter);
     });
-  }, [trips, search, statusFilter]);
+    return sort.sortRows(result);
+  }, [trips, search, statusFilter, sort]);
+
+  function openCreate() { setEditingId(null); setForm(emptyForm); setError(""); setModalOpen(true); }
+  function openEdit(t: TripDTO) {
+    setEditingId(t.id);
+    setForm({
+      vehicleId: t.vehicle.id,
+      driverId: t.driver?.id ?? "",
+      origin: t.origin,
+      destination: t.destination,
+      scheduledStart: t.scheduledStart ? new Date(t.scheduledStart).toISOString().slice(0, 16) : "",
+      distanceKm: String(t.distanceKm),
+      cargo: t.cargo ?? "",
+      notes: t.notes ?? "",
+    });
+    setError("");
+    setModalOpen(true);
+  }
 
   async function save() {
     setSaving(true);
     setError("");
-    const res = await apiSend("/api/trips", "POST", form);
+    const res = editingId
+      ? await apiSend(`/api/trips/${editingId}`, "PATCH", form)
+      : await apiSend("/api/trips", "POST", form);
     setSaving(false);
     if (res.ok) {
       setModalOpen(false);
@@ -119,7 +154,7 @@ export function TripsClient({ canManage }: { canManage: boolean }) {
             <Button variant="secondary" onClick={syncFromSamsara} disabled={syncing}>
               <RefreshCw size={16} className={syncing ? "animate-spin" : ""} /> {syncing ? "Syncing…" : "Sync from Samsara"}
             </Button>
-            <Button onClick={() => { setForm(emptyForm); setError(""); setModalOpen(true); }}>
+            <Button onClick={openCreate}>
               <Plus size={16} /> New Trip
             </Button>
           </>
@@ -139,12 +174,12 @@ export function TripsClient({ canManage }: { canManage: boolean }) {
         <Table>
           <thead>
             <tr>
-              <Th>Route</Th>
-              <Th>Vehicle</Th>
-              <Th>Driver</Th>
-              <Th>Scheduled</Th>
-              <Th>Distance</Th>
-              <Th>Status</Th>
+              <SortTh label="Route" col="route" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+              <SortTh label="Vehicle" col="vehicle" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+              <SortTh label="Driver" col="driver" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+              <SortTh label="Scheduled" col="scheduled" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+              <SortTh label="Distance" col="distance" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+              <SortTh label="Status" col="status" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
               <Th />
             </tr>
           </thead>
@@ -185,12 +220,20 @@ export function TripsClient({ canManage }: { canManage: boolean }) {
                 </Td>
                 <Td>
                   {canManage && (
-                    <button
-                      onClick={() => remove(t)}
-                      className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                    <div className="flex justify-end gap-1">
+                      <button
+                        onClick={() => openEdit(t)}
+                        className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button
+                        onClick={() => remove(t)}
+                        className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   )}
                 </Td>
               </tr>
@@ -202,12 +245,12 @@ export function TripsClient({ canManage }: { canManage: boolean }) {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="New Trip"
+        title={editingId ? "Edit Trip" : "New Trip"}
         wide
         footer={
           <>
             <Button variant="secondary" onClick={() => setModalOpen(false)}>Cancel</Button>
-            <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Create"}</Button>
+            <Button onClick={save} disabled={saving}>{saving ? "Saving…" : editingId ? "Save" : "Create"}</Button>
           </>
         }
       >

@@ -52,7 +52,13 @@ const STEPS: TourStep[] = [
     path: "/drivers",
     selector: nav("/drivers"),
     title: "Drivers",
-    body: "Every driver synced from Samsara with their real safety score and station. Open a driver to see their detail and history.",
+    body: "Every driver synced from Samsara with their real safety score, station and vehicle type (Cargo Van / Box Truck / Tractor Truck). Every column header sorts, and you can search and filter by station or license status. Click the pencil to edit any driver.",
+  },
+  {
+    path: "/dot-compliance",
+    selector: nav("/dot-compliance"),
+    title: "DOT Compliance",
+    body: "Auditor-ready DOT file for Box Truck and Tractor Truck drivers plus company documents (ELD/HOS, interstate registration, MCS-90). Upload and edit each driver's CDL, medical card, MVR, drug & alcohol and annual review; track truck Annual Safety Inspections (49 CFR 396.17); log on-site officer audits; refresh alerts; and download the full audit packet. Every table sorts, filters and has inline edit.",
   },
   {
     path: "/fuel",
@@ -100,7 +106,13 @@ const STEPS: TourStep[] = [
     path: "/finance-report",
     selector: nav("/finance-report"),
     title: "Finance Report",
-    body: "Your financial overview across the fleet — revenue and cost views you can present to stakeholders.",
+    body: "Your financial overview across the fleet — PM, Corrective and Parts & Supplies cost views, per station, you can present to stakeholders.",
+  },
+  {
+    path: "/parts-supplies",
+    selector: nav("/parts-supplies"),
+    title: "Parts & Supplies",
+    body: "Log parts/supply invoices that aren't tied to a single vehicle (e.g. AutoZone, O'Reilly) — date, vendor, station, amount, PO/invoice # and a receipt upload. They roll up as their own line in the Finance Report. Sort, filter and edit any entry.",
   },
   {
     path: "/service-costs",
@@ -112,7 +124,7 @@ const STEPS: TourStep[] = [
     path: "/compliance",
     selector: nav("/compliance"),
     title: "Compliance Audit",
-    body: "Registration & insurance status across the active fleet. Summary tiles for expired, expiring within 30 days, not set, and valid — with sortable columns. Alerts open automatically a month before expiry.",
+    body: "Registration & insurance status across the active fleet, plus a DOT Annual Safety Inspection column for trucks. Summary tiles for expired, expiring within 30 days, not set, and valid — with sortable columns. Alerts open automatically a month before expiry.",
   },
   {
     path: "/alerts",
@@ -127,10 +139,16 @@ const STEPS: TourStep[] = [
     body: "Drop in a spreadsheet (fuel, routes, vehicles…) and the system classifies and imports it into the right place automatically.",
   },
   {
+    path: "/messages",
+    selector: nav("/messages"),
+    title: "Messages",
+    body: "Send a message to any user — it appears as an alert banner on their dashboard and a badge on their Messages nav, and they can reply in a thread.",
+  },
+  {
     path: "/users",
     selector: nav("/users"),
     title: "Users",
-    body: "Manage who has access and their role — managers, mechanics, vendors and drivers. Roles control exactly what each person can see and do.",
+    body: "Manage who has access and their role — managers, mechanics, vendors and drivers. Search, filter by role and sort every column; the pencil edits a user. Roles control exactly what each person can see and do.",
   },
   {
     path: "/",

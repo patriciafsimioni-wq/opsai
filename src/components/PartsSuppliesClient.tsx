@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { Plus, Search, Pencil, Trash2, Package, Paperclip } from "lucide-react";
-import { Card, Button, Badge, Table, Th, Td, EmptyState } from "@/components/ui";
+import { Card, Button, Badge, Table, Th, Td, SortTh, EmptyState } from "@/components/ui";
 import { Field, Input, Select, Textarea, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
+import { useTableSort } from "@/lib/use-sort";
 import { STATIONS, STATION_LABEL } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 
@@ -50,16 +51,30 @@ export function PartsSuppliesClient({ canManage }: { canManage: boolean }) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  const sort = useTableSort<PartsExpense, "date" | "vendor" | "category" | "station" | "po" | "amount">(
+    {
+      date: (e) => new Date(e.date).getTime(),
+      vendor: (e) => e.vendor.toLowerCase(),
+      category: (e) => CATEGORY_LABEL[e.category] ?? e.category,
+      station: (e) => e.station ?? "",
+      po: (e) => (e.poNumber ?? e.invoiceNumber ?? "").toLowerCase(),
+      amount: (e) => e.amount,
+    },
+    "date",
+    "desc",
+  );
+
   const filtered = useMemo(() => {
     if (!expenses) return [];
     const q = search.toLowerCase();
-    return expenses.filter((e) => {
+    const result = expenses.filter((e) => {
       if (q && !e.vendor.toLowerCase().includes(q) && !(e.description ?? "").toLowerCase().includes(q) && !(e.poNumber ?? "").toLowerCase().includes(q)) return false;
       if (stationFilter === "shared" && e.station) return false;
       if (stationFilter !== "all" && stationFilter !== "shared" && e.station !== stationFilter) return false;
       return true;
     });
-  }, [expenses, search, stationFilter]);
+    return sort.sortRows(result);
+  }, [expenses, search, stationFilter, sort]);
 
   const summary = useMemo(() => {
     const byStation: Record<string, number> = {};
@@ -169,12 +184,12 @@ export function PartsSuppliesClient({ canManage }: { canManage: boolean }) {
           <Table>
             <thead>
               <tr>
-                <Th>Date</Th>
-                <Th>Vendor</Th>
-                <Th>Category</Th>
-                <Th>Station</Th>
-                <Th>PO / Invoice</Th>
-                <Th>Amount</Th>
+                <SortTh label="Date" col="date" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Vendor" col="vendor" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Category" col="category" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Station" col="station" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="PO / Invoice" col="po" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Amount" col="amount" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
                 <Th>Invoice</Th>
                 <Th />
               </tr>

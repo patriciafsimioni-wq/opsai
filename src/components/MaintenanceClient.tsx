@@ -2,10 +2,11 @@
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Trash2, Wrench, ClipboardList, AlertTriangle, CheckCircle2, Upload } from "lucide-react";
-import { Card, Button, Badge, Table, Th, Td, EmptyState, StatCard } from "@/components/ui";
+import { Plus, Search, Pencil, Trash2, Wrench, ClipboardList, AlertTriangle, CheckCircle2, Upload } from "lucide-react";
+import { Card, Button, Badge, Table, Th, Td, SortTh, EmptyState, StatCard } from "@/components/ui";
 import { Field, Input, Select, Textarea, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
+import { useTableSort } from "@/lib/use-sort";
 import type { WorkOrderDTO, VehicleDTO, ServiceDTO, WorkOrderRequestDTO } from "@/lib/types";
 import {
   WO_STATUS,
@@ -62,6 +63,7 @@ export function MaintenanceClient({
   const [statusFilter, setStatusFilter] = useState("");
   const [stationFilter, setStationFilter] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -69,10 +71,26 @@ export function MaintenanceClient({
   const [bulkStatus, setBulkStatus] = useState("COMPLETED");
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
+  const sort = useTableSort<WorkOrderDTO, "wo" | "po" | "title" | "vehicle" | "station" | "mileage" | "material" | "labor" | "total" | "status">(
+    {
+      wo: (o) => o.id.slice(-6).toLowerCase(),
+      po: (o) => (o.poNumber ?? "").toLowerCase(),
+      title: (o) => o.title.toLowerCase(),
+      vehicle: (o) => (o.vehicle?.name ?? o.vehicleOther ?? "").toLowerCase(),
+      station: (o) => o.station ?? "",
+      mileage: (o) => o.odometerAt ?? null,
+      material: (o) => o.materialCost,
+      labor: (o) => o.laborCost,
+      total: (o) => o.cost,
+      status: (o) => o.status,
+    },
+    "title",
+  );
+
   const filtered = useMemo(() => {
     if (!orders) return [];
     const q = search.toLowerCase();
-    return orders.filter((o) => {
+    const result = orders.filter((o) => {
       const matchSearch =
         !q || o.title.toLowerCase().includes(q) || (o.vehicle?.name ?? o.vehicleOther ?? "").toLowerCase().includes(q);
       return (
@@ -81,7 +99,8 @@ export function MaintenanceClient({
         (!stationFilter || o.station === stationFilter)
       );
     });
-  }, [orders, search, statusFilter, stationFilter]);
+    return sort.sortRows(result);
+  }, [orders, search, statusFilter, stationFilter, sort]);
 
   const stats = useMemo(() => {
     const list = orders ?? [];
@@ -121,14 +140,39 @@ export function MaintenanceClient({
     }));
   }
 
+  function openCreate() { setEditingId(null); setForm(emptyForm); setError(""); setModalOpen(true); }
+  function openEdit(o: WorkOrderDTO) {
+    setEditingId(o.id);
+    setForm({
+      vehicleId: o.vehicleId ?? "",
+      serviceId: o.serviceId ?? "",
+      station: o.station ?? "AUS",
+      type: o.type,
+      title: o.title,
+      description: o.description ?? "",
+      status: o.status,
+      priority: o.priority,
+      materialCost: String(o.materialCost ?? "0"),
+      laborHours: String(o.laborHours ?? "0"),
+      laborRate: String(o.laborRate ?? DEFAULT_RATE),
+      vendor: o.vendor ?? "",
+      scheduledFor: o.scheduledFor ? String(o.scheduledFor).slice(0, 10) : "",
+    });
+    setError("");
+    setModalOpen(true);
+  }
+
   async function save() {
     setSaving(true);
     setError("");
-    const res = await apiSend("/api/maintenance", "POST", form);
+    const res = editingId
+      ? await apiSend(`/api/maintenance/${editingId}`, "PATCH", form)
+      : await apiSend("/api/maintenance", "POST", form);
     setSaving(false);
     if (res.ok) {
       setModalOpen(false);
       setForm(emptyForm);
+      setEditingId(null);
       reload();
     } else setError(res.error ?? "Failed");
   }
@@ -263,7 +307,7 @@ export function MaintenanceClient({
             ))}
           </select>
           {canManage && (
-            <Button onClick={() => { setForm(emptyForm); setError(""); setModalOpen(true); }}>
+            <Button onClick={openCreate}>
               <Plus size={16} /> New Work Order
             </Button>
           )}
@@ -316,16 +360,16 @@ export function MaintenanceClient({
                     />
                   </Th>
                 )}
-                <Th>WO#</Th>
-                <Th>PO#</Th>
-                <Th>Work Order</Th>
-                <Th>Vehicle</Th>
-                <Th>Station</Th>
-                <Th>Mileage</Th>
-                <Th>Material</Th>
-                <Th>Labor</Th>
-                <Th>Total</Th>
-                <Th>Status</Th>
+                <SortTh label="WO#" col="wo" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="PO#" col="po" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Work Order" col="title" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Vehicle" col="vehicle" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Station" col="station" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Mileage" col="mileage" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Material" col="material" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Labor" col="labor" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Total" col="total" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Status" col="status" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
                 <Th />
               </tr>
             </thead>
@@ -395,12 +439,20 @@ export function MaintenanceClient({
                     </Td>
                     <Td>
                       {canManage && (
-                        <button
-                          onClick={() => remove(o)}
-                          className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        <div className="flex justify-end gap-1">
+                          <button
+                            onClick={() => openEdit(o)}
+                            className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            onClick={() => remove(o)}
+                            className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       )}
                       {isVendor && (
                         o.status === "COMPLETED" ? (
@@ -428,12 +480,12 @@ export function MaintenanceClient({
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="New Work Order"
+        title={editingId ? "Edit Work Order" : "New Work Order"}
         wide
         footer={
           <>
             <Button variant="secondary" onClick={() => setModalOpen(false)}>Cancel</Button>
-            <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Create"}</Button>
+            <Button onClick={save} disabled={saving}>{saving ? "Saving…" : editingId ? "Save" : "Create"}</Button>
           </>
         }
       >
