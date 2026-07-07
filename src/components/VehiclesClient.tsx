@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Pencil, Trash2, Truck, RefreshCw, Camera, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Truck, RefreshCw, Camera, FileDown, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import {
   Card,
   Button,
@@ -301,6 +301,9 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
         </select>
         {canManage && (
           <>
+            <Button variant="secondary" onClick={() => window.open("/api/vehicles/lease-return-report", "_blank")}>
+              <FileDown size={16} /> Lease Return Report
+            </Button>
             <Button variant="secondary" onClick={syncSamsara} disabled={syncing}>
               <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
               {syncing ? "Syncing..." : "Sync Samsara"}
