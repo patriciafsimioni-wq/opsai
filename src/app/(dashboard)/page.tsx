@@ -22,6 +22,7 @@ import {
 } from "@/lib/constants";
 import { formatCurrency, relativeTime, formatDate } from "@/lib/utils";
 import { StationFilter } from "@/components/StationFilter";
+import { MessagesBanner } from "@/components/MessagesBanner";
 import { SyncSamsaraButton } from "@/components/SyncSamsaraButton";
 import { getSession } from "@/lib/auth";
 import { cookies } from "next/headers";
@@ -310,6 +311,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   return (
     <div>
+      {user && <MessagesBanner currentUserId={user.id} />}
       <div className="mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-700 p-6 text-white shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>

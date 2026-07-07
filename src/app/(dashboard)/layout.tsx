@@ -26,15 +26,19 @@ export default async function DashboardLayout({
   const alertWhere: Record<string, unknown> = { read: false, type: { notIn: ["SPEEDING", "HARSH_DRIVING"] } };
   if (userStations !== null) alertWhere.vehicle = { station: { in: userStations } };
   const alertCount = await prisma.alert.count({ where: alertWhere });
+  const messageCount = await prisma.userMessage.count({
+    where: { recipientId: user.id, read: false },
+  });
 
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full overflow-hidden">
-        <Sidebar alertCount={alertCount} userRole={effectiveRole} />
+        <Sidebar alertCount={alertCount} messageCount={messageCount} userRole={effectiveRole} />
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar
             user={{ name: user.name, email: user.email, role: user.role, station: user.station }}
             alertCount={alertCount}
+            messageCount={messageCount}
             viewAsRole={isRealAdmin ? viewAsRoleCookie : null}
           />
           <main className="flex-1 overflow-y-auto p-5 lg:p-7">{children}</main>

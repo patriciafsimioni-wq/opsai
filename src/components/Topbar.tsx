@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { Bell, LogOut, ChevronDown, Eye, GraduationCap } from "lucide-react";
+import { Bell, LogOut, ChevronDown, Eye, GraduationCap, MessageSquare } from "lucide-react";
 import { MobileMenuButton } from "@/components/Sidebar";
 import { Avatar } from "@/components/ui";
 import { BRAND } from "@/lib/brand";
@@ -23,10 +23,12 @@ const ALL_ROLES: { value: Role; label: string }[] = [
 export function Topbar({
   user,
   alertCount,
+  messageCount = 0,
   viewAsRole,
 }: {
   user: { name: string; email: string; role: Role; station: string | null };
   alertCount: number;
+  messageCount?: number;
   viewAsRole?: string | null;
 }) {
   const router = useRouter();
@@ -102,6 +104,18 @@ export function Topbar({
         >
           <GraduationCap size={15} /> Tour
         </button>
+        <Link
+          href="/messages"
+          className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+          title="Messages"
+        >
+          <MessageSquare size={18} />
+          {messageCount > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
+              {messageCount}
+            </span>
+          )}
+        </Link>
         <Link
           href="/alerts"
           className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"

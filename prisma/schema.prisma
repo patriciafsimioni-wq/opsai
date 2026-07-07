@@ -152,7 +152,28 @@ model User {
   issuesAssigned    Issue[]            @relation("issueAssignedTo")
   issueComments     IssueComment[]
   assignedWorkOrders WorkOrder[]       @relation("assignedWorkOrders")
+  sentMessages      UserMessage[]      @relation("sentMessages")
+  receivedMessages  UserMessage[]      @relation("receivedMessages")
   createdAt         DateTime           @default(now())
+}
+
+// Direct in-app message from one user to another, with threaded replies.
+model UserMessage {
+  id          String        @id @default(cuid())
+  body        String
+  sender      User          @relation("sentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  senderId    String
+  recipient   User          @relation("receivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+  recipientId String
+  read        Boolean       @default(false)
+  parent      UserMessage?  @relation("replies", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId    String?
+  replies     UserMessage[] @relation("replies")
+  createdAt   DateTime      @default(now())
+
+  @@index([recipientId])
+  @@index([senderId])
+  @@index([parentId])
 }
 
 enum IssueStatus {

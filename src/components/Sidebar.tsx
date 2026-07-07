@@ -29,6 +29,7 @@ import {
   Truck as TruckLogo,
   LogOut,
   Flag,
+  MessageSquare,
   Menu,
   X,
 } from "lucide-react";
@@ -51,6 +52,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: "",
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/messages", label: "Messages", icon: MessageSquare },
       { href: "/map", label: "Live Map", icon: Map },
     ],
   },
@@ -117,7 +119,7 @@ export function MobileMenuButton() {
   );
 }
 
-export function Sidebar({ alertCount, userRole }: { alertCount: number; userRole?: string }) {
+export function Sidebar({ alertCount, messageCount, userRole }: { alertCount: number; messageCount?: number; userRole?: string }) {
   const pathname = usePathname();
   const { open, toggle } = useSidebar();
   const role = userRole ?? "ADMIN";
@@ -183,6 +185,11 @@ export function Sidebar({ alertCount, userRole }: { alertCount: number; userRole
                     {item.href === "/alerts" && alertCount > 0 && (
                       <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                         {alertCount}
+                      </span>
+                    )}
+                    {item.href === "/messages" && (messageCount ?? 0) > 0 && (
+                      <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        {messageCount}
                       </span>
                     )}
                   </Link>
