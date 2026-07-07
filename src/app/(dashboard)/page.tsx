@@ -121,13 +121,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const planActualTotal = planRows.reduce((s, r) => s + r.actual, 0);
 
   // Live on Samsara — vehicles currently running (engine on) per station.
-  // Only count vehicles whose engine-on reading is recent; a van that goes
-  // offline stops reporting, so an old "On" state must not linger as "running".
+  // Gate on data freshness (lastSeen, refreshed to now on every sync) rather
+  // than the engine-state timestamp: Samsara's engineStates.time is when the
+  // engine last *changed* state, so a van running steadily for >30 min would
+  // otherwise look stale and drop off. A van that goes offline stops syncing,
+  // so its lastSeen ages out and it correctly leaves the "running now" count.
   const LIVE_WINDOW_MIN = 30;
   const liveSince = new Date(new Date().getTime() - LIVE_WINDOW_MIN * 60 * 1000);
   const liveByStationRaw = await prisma.vehicle.groupBy({
     by: ["station"],
-    where: { engineOn: true, engineOnAt: { gte: liveSince }, ...activeStationFilter },
+    where: { engineOn: true, lastSeen: { gte: liveSince }, ...activeStationFilter },
     _count: true,
   });
   const liveByStation: Record<string, number> = {};

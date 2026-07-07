@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, ShieldCheck, Truck } from "lucide-react";
-import { Card, Table, Th, Td, Badge, EmptyState, Avatar } from "@/components/ui";
-import { useData } from "@/lib/use-data";
+import { Search, ShieldCheck, Truck, Pencil } from "lucide-react";
+import { Card, Table, Th, Td, Badge, EmptyState, Avatar, Button } from "@/components/ui";
+import { Field, Input, Select, Modal } from "@/components/form";
+import { useData, apiSend } from "@/lib/use-data";
 import type { DriverDTO } from "@/lib/types";
 import { formatDate, daysUntil } from "@/lib/utils";
 
@@ -42,11 +43,55 @@ const DRUG_STATUS: Record<string, { bg: string; fg: string; label: string }> = {
   FAIL: { bg: "#fee2e2", fg: "#991b1b", label: "Fail" },
 };
 
-export function DotComplianceClient() {
-  const { data: drivers, loading } = useData<DriverDTO[]>("/api/drivers");
+const emptyForm = {
+  medicalCardExpiry: "",
+  licenseClass: "",
+  licenseExpiry: "",
+  mvrCheckedAt: "",
+  drugTestStatus: "",
+  annualReviewAt: "",
+};
+
+export function DotComplianceClient({ canManage = false }: { canManage?: boolean }) {
+  const { data: drivers, loading, reload } = useData<DriverDTO[]>("/api/drivers");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "expired" | "expiring" | "missing">("all");
+  const [editing, setEditing] = useState<DriverDTO | null>(null);
+  const [form, setForm] = useState(emptyForm);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  function openEdit(d: DriverDTO) {
+    setEditing(d);
+    setForm({
+      medicalCardExpiry: d.medicalCardExpiry ? d.medicalCardExpiry.slice(0, 10) : "",
+      licenseClass: d.licenseClass ?? "",
+      licenseExpiry: d.licenseExpiry ? d.licenseExpiry.slice(0, 10) : "",
+      mvrCheckedAt: d.mvrCheckedAt ? d.mvrCheckedAt.slice(0, 10) : "",
+      drugTestStatus: d.drugTestStatus ?? "",
+      annualReviewAt: d.annualReviewAt ? d.annualReviewAt.slice(0, 10) : "",
+    });
+    setError("");
+  }
+  async function save() {
+    if (!editing) return;
+    setSaving(true);
+    setError("");
+    const res = await apiSend(`/api/drivers/${editing.id}`, "PATCH", {
+      medicalCardExpiry: form.medicalCardExpiry || null,
+      licenseClass: form.licenseClass || null,
+      licenseExpiry: form.licenseExpiry || undefined,
+      mvrCheckedAt: form.mvrCheckedAt || null,
+      drugTestStatus: form.drugTestStatus || null,
+      annualReviewAt: form.annualReviewAt || null,
+    });
+    setSaving(false);
+    if (res.ok) {
+      setEditing(null);
+      reload();
+    } else setError(res.error ?? "Failed to save");
+  }
 
   const dotDrivers = useMemo(
     () => (drivers ?? []).filter((d) => d.vehicleType === "BOX_TRUCK" || d.vehicleType === "TRACTOR_TRUCK"),
@@ -140,6 +185,7 @@ export function DotComplianceClient() {
                 <Th>MVR Checked</Th>
                 <Th>Drug & Alcohol</Th>
                 <Th>Annual Review</Th>
+                {canManage && <Th />}
               </tr>
             </thead>
             <tbody>
@@ -172,12 +218,58 @@ export function DotComplianceClient() {
                     )}
                   </Td>
                   <Td><StatusCell value={d.annualReviewAt} /></Td>
+                  {canManage && (
+                    <Td>
+                      <div className="flex justify-end">
+                        <button onClick={() => openEdit(d)} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Edit DOT info"><Pencil size={15} /></button>
+                      </div>
+                    </Td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </Table>
         )}
       </Card>
+
+      <Modal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title={editing ? `DOT Info — ${editing.firstName} ${editing.lastName}` : "DOT Info"}
+        wide
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setEditing(null)}>Cancel</Button>
+            <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+          </>
+        }
+      >
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Medical Card Expiry">
+            <Input type="date" value={form.medicalCardExpiry} onChange={(e) => setForm({ ...form, medicalCardExpiry: e.target.value })} />
+          </Field>
+          <Field label="CDL / License Class">
+            <Input value={form.licenseClass} onChange={(e) => setForm({ ...form, licenseClass: e.target.value })} placeholder="A, B, C…" />
+          </Field>
+          <Field label="License Expiry">
+            <Input type="date" value={form.licenseExpiry} onChange={(e) => setForm({ ...form, licenseExpiry: e.target.value })} />
+          </Field>
+          <Field label="MVR Checked">
+            <Input type="date" value={form.mvrCheckedAt} onChange={(e) => setForm({ ...form, mvrCheckedAt: e.target.value })} />
+          </Field>
+          <Field label="Drug & Alcohol Status">
+            <Select
+              value={form.drugTestStatus}
+              onChange={(e) => setForm({ ...form, drugTestStatus: e.target.value })}
+              options={[{ value: "", label: "Not set" }, { value: "PASS", label: "Pass" }, { value: "PENDING", label: "Pending" }, { value: "FAIL", label: "Fail" }]}
+            />
+          </Field>
+          <Field label="Annual Review">
+            <Input type="date" value={form.annualReviewAt} onChange={(e) => setForm({ ...form, annualReviewAt: e.target.value })} />
+          </Field>
+        </div>
+        {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      </Modal>
     </div>
   );
 }
