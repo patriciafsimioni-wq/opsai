@@ -64,6 +64,12 @@ export const STATIONS: readonly string[] = IS_TROVA
   ? ["ORF", "RNH"]
   : ["AUS", "ACT", "IAH", "CLL", "BPT", "HRL", "LRD"];
 
+// The sister portal's stations (the other deployment) — used for cross-portal
+// vehicle transfers so the source portal can offer the destination's stations.
+export const SISTER_STATIONS: readonly string[] = IS_TROVA
+  ? ["AUS", "ACT", "IAH", "CLL", "BPT", "HRL", "LRD"]
+  : ["ORF", "RNH"];
+
 // Region the brand operates in — used for slide headers / consolidated labels.
 export const REGION_LABEL = IS_TROVA ? "Virginia" : "Texas";
 // Region abbreviation — used for compact "Consolidated VA/TX" labels.

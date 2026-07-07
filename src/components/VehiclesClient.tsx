@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Pencil, Trash2, Truck, RefreshCw, Camera, FileDown, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Truck, RefreshCw, Camera, FileDown, ArrowRightLeft, X, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import {
   Card,
   Button,
@@ -24,8 +24,10 @@ import {
   FUEL_TYPES,
   STATION_LABEL,
   STATIONS,
+  SISTER_STATIONS,
   titleCase,
 } from "@/lib/constants";
+import { SISTER_BRAND } from "@/lib/brand";
 import { formatNumber, cn } from "@/lib/utils";
 
 const emptyForm = {
@@ -87,6 +89,20 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [checkingCameras, setCheckingCameras] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferDest, setTransferDest] = useState("");
+  const [transferring, setTransferring] = useState(false);
+  const [transferError, setTransferError] = useState("");
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   // Active fleet excludes vehicles that are off-boarded or in the off-boarding
   // process — those are managed on the Off-boarding page and must not inflate
@@ -218,6 +234,47 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
     else alert(res.error);
   }
 
+  function openTransfer() {
+    setTransferDest("");
+    setTransferError("");
+    setTransferOpen(true);
+  }
+
+  async function submitTransfer() {
+    if (!transferDest) {
+      setTransferError("Choose a destination station.");
+      return;
+    }
+    const destPortal = SISTER_STATIONS.includes(transferDest) ? "sister" : "self";
+    if (
+      destPortal === "sister" &&
+      !confirm(
+        `Move ${selected.size} vehicle(s) to ${SISTER_BRAND} (${transferDest})? They will be created in ${SISTER_BRAND} and off-boarded from here.`,
+      )
+    ) {
+      return;
+    }
+    setTransferring(true);
+    setTransferError("");
+    const res = await apiSend("/api/vehicles/transfer", "POST", {
+      ids: [...selected],
+      destStation: transferDest,
+      destPortal,
+    });
+    setTransferring(false);
+    if (res.ok) {
+      const d = res.data as { moved: number; failed?: { name: string; error: string }[]; destPortal: string; destStation: string };
+      setTransferOpen(false);
+      setSelected(new Set());
+      reload();
+      const failNote = d.failed && d.failed.length ? ` ${d.failed.length} failed: ${d.failed.map((f) => f.name).join(", ")}.` : "";
+      setSyncResult(`Transferred ${d.moved} vehicle(s) to ${d.destPortal} (${d.destStation}).${failNote}`);
+      setTimeout(() => setSyncResult(null), 8000);
+    } else {
+      setTransferError(res.error ?? "Transfer failed");
+    }
+  }
+
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const s of VEHICLE_STATUSES) counts[s] = 0;
@@ -325,6 +382,18 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
         </div>
       )}
 
+      {canManage && selected.size > 0 && (
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800">
+          <span className="font-medium">{selected.size} selected</span>
+          <Button variant="secondary" onClick={openTransfer}>
+            <ArrowRightLeft size={16} /> Transfer Station
+          </Button>
+          <button onClick={() => setSelected(new Set())} className="ml-auto inline-flex items-center gap-1 text-blue-700 hover:underline">
+            <X size={14} /> Clear
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <p className="p-8 text-center text-sm text-slate-400">Loading…</p>
       ) : filtered.length === 0 ? (
@@ -337,6 +406,18 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
         <Table>
           <thead>
             <tr>
+              {canManage && (
+                <Th>
+                  <input
+                    type="checkbox"
+                    aria-label="Select all"
+                    checked={filtered.length > 0 && filtered.every((v) => selected.has(v.id))}
+                    onChange={(e) =>
+                      setSelected(e.target.checked ? new Set(filtered.map((v) => v.id)) : new Set())
+                    }
+                  />
+                </Th>
+              )}
               <Th><SortHeader label="Vehicle" col="name" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
               <Th><SortHeader label="Station" col="station" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
               <Th><SortHeader label="Type" col="type" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
@@ -351,6 +432,16 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
           <tbody>
             {filtered.map((v) => (
               <tr key={v.id} className="hover:bg-slate-50">
+                {canManage && (
+                  <Td>
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${v.name}`}
+                      checked={selected.has(v.id)}
+                      onChange={() => toggleSelect(v.id)}
+                    />
+                  </Td>
+                )}
                 <Td>
                   <Link href={`/vehicles/${v.id}`} className="block">
                     <p className="font-medium text-blue-700 hover:underline">
@@ -558,6 +649,58 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
         {error && (
           <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}
+          </p>
+        )}
+      </Modal>
+
+      <Modal
+        open={transferOpen}
+        onClose={() => setTransferOpen(false)}
+        title={`Transfer ${selected.size} vehicle(s)`}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setTransferOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={submitTransfer} disabled={transferring}>
+              {transferring ? "Transferring…" : "Transfer"}
+            </Button>
+          </>
+        }
+      >
+        <Field label="Destination station">
+          <select
+            value={transferDest}
+            onChange={(e) => setTransferDest(e.target.value)}
+            className="h-10 w-full rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm"
+          >
+            <option value="">Select destination…</option>
+            <optgroup label="This portal">
+              {STATIONS.map((s) => (
+                <option key={s} value={s}>
+                  {STATION_LABEL[s] ?? s}
+                </option>
+              ))}
+            </optgroup>
+            {SISTER_BRAND && (
+              <optgroup label={`${SISTER_BRAND} (other portal)`}>
+                {SISTER_STATIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {STATION_LABEL[s] ?? s}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+        </Field>
+        {transferDest && SISTER_STATIONS.includes(transferDest) && (
+          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Full move to {SISTER_BRAND}: the vehicle(s) will be created in {SISTER_BRAND} and off-boarded from this portal.
+          </p>
+        )}
+        {transferError && (
+          <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {transferError}
           </p>
         )}
       </Modal>
