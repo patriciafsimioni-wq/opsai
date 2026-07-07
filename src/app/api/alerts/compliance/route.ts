@@ -67,7 +67,69 @@ async function generateComplianceAlerts() {
     created++;
   }
 
-  return { scanned: vehicles.length, expiringDocs: docs.length, created };
+  // DOT driver-file items for Box Truck / Tractor Truck drivers.
+  const dotResult = await generateDotAlerts(now, cutoff);
+
+  return { scanned: vehicles.length, expiringDocs: docs.length, created: created + dotResult.created, dotAlerts: dotResult.created };
+}
+
+// Scan Box Truck / Tractor Truck drivers for expiring or missing DOT file items
+// (medical card, CDL, annual review, MVR overdue, drug & alcohol) and open a
+// DOCUMENT_EXPIRY alert per driver+item. Idempotent (skips existing unresolved).
+async function generateDotAlerts(now: Date, cutoff: Date) {
+  const YEAR = 365 * 24 * 60 * 60 * 1000;
+  const drivers = await prisma.driver.findMany({
+    where: { vehicleType: { in: ["BOX_TRUCK", "TRACTOR_TRUCK"] } },
+    select: {
+      id: true, firstName: true, lastName: true,
+      medicalCardExpiry: true, licenseExpiry: true, annualReviewAt: true,
+      mvrCheckedAt: true, drugTestStatus: true,
+    },
+  });
+
+  const items: { driverId: string; label: string; message: string; critical: boolean }[] = [];
+  const dateStr = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const days = (d: Date) => Math.ceil((d.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+
+  for (const d of drivers) {
+    const who = `${d.firstName} ${d.lastName}`;
+    const expiryItem = (label: string, date: Date | null) => {
+      if (!date) { items.push({ driverId: d.id, label, message: `${label} missing for ${who}`, critical: true }); return; }
+      if (date <= cutoff) {
+        const n = days(date);
+        items.push({ driverId: d.id, label, message: n < 0 ? `${label} expired ${dateStr(date)} for ${who}` : `${label} expires ${dateStr(date)} (in ${n} day${n === 1 ? "" : "s"}) for ${who}`, critical: n < 0 || n <= 7 });
+      }
+    };
+    expiryItem("DOT medical card", d.medicalCardExpiry);
+    expiryItem("CDL / license", d.licenseExpiry);
+    expiryItem("Annual review", d.annualReviewAt);
+    if (!d.mvrCheckedAt) items.push({ driverId: d.id, label: "MVR", message: `MVR not on file for ${who}`, critical: true });
+    else if (now.getTime() - d.mvrCheckedAt.getTime() > YEAR) items.push({ driverId: d.id, label: "MVR", message: `MVR review overdue (last ${dateStr(d.mvrCheckedAt)}) for ${who}`, critical: true });
+    if (d.drugTestStatus !== "PASS") items.push({ driverId: d.id, label: "Drug & alcohol", message: `Drug & alcohol status ${d.drugTestStatus ?? "missing"} for ${who}`, critical: d.drugTestStatus === "FAIL" });
+  }
+
+  const existing = await prisma.alert.findMany({
+    where: { type: "DOCUMENT_EXPIRY", resolvedAt: null, driverId: { not: null } },
+    select: { driverId: true, message: true },
+  });
+  const existingKey = new Set(existing.map((a) => `${a.driverId}|${a.message.split(" ")[0]}`));
+
+  let created = 0;
+  for (const it of items) {
+    const key = `${it.driverId}|${it.message.split(" ")[0]}`;
+    if (existingKey.has(key)) continue;
+    await prisma.alert.create({
+      data: {
+        type: "DOCUMENT_EXPIRY",
+        severity: it.critical ? "CRITICAL" : "WARNING",
+        message: it.message,
+        driverId: it.driverId,
+      },
+    });
+    existingKey.add(key);
+    created++;
+  }
+  return { created };
 }
 
 export async function POST() {

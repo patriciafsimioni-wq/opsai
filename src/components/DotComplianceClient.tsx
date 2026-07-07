@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, ShieldCheck, Truck, Pencil } from "lucide-react";
+import { Search, ShieldCheck, Truck, Pencil, FileDown, BellRing, BookOpen, ChevronDown } from "lucide-react";
 import { Card, Table, Th, Td, Badge, EmptyState, Avatar, Button } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
 import type { DriverDTO } from "@/lib/types";
 import { formatDate, daysUntil } from "@/lib/utils";
+import { DOT_STATE, DOT_FEDERAL_RULES, DOT_STATE_RULES } from "@/lib/constants";
 
 const VEHICLE_TYPE_LABEL: Record<string, string> = {
   BOX_TRUCK: "Box Truck",
@@ -61,6 +62,20 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<string | null>(null);
+
+  async function refreshAlerts() {
+    setScanning(true);
+    setScanResult(null);
+    const res = await fetch("/api/alerts/compliance", { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    setScanning(false);
+    if (res.ok) setScanResult(`${(data as { dotAlerts?: number }).dotAlerts ?? 0} new DOT alert(s) opened`);
+    else setScanResult("Failed to refresh alerts");
+    setTimeout(() => setScanResult(null), 6000);
+  }
 
   function openEdit(d: DriverDTO) {
     setEditing(d);
@@ -133,6 +148,53 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <span className="inline-flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-800">
+            <ShieldCheck size={16} /> {DOT_STATE.name} DOT rules ({DOT_STATE.code})
+          </span>
+          <span className="ml-2 text-xs text-slate-500">{DOT_STATE.agency}</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {scanResult && <span className="text-xs font-medium text-slate-600">{scanResult}</span>}
+          {canManage && (
+            <Button variant="secondary" onClick={refreshAlerts} disabled={scanning}>
+              <BellRing size={15} /> {scanning ? "Scanning…" : "Refresh alerts"}
+            </Button>
+          )}
+          <a href="/api/dot-compliance/audit" target="_blank" rel="noreferrer">
+            <Button><FileDown size={15} /> Download audit packet</Button>
+          </a>
+        </div>
+      </div>
+
+      <Card>
+        <button onClick={() => setRulesOpen((o) => !o)} className="flex w-full items-center justify-between p-4 text-left">
+          <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700"><BookOpen size={16} /> DOT compliance requirements — {DOT_STATE.name} &amp; federal (FMCSA)</span>
+          <ChevronDown size={16} className={`text-slate-400 transition ${rulesOpen ? "rotate-180" : ""}`} />
+        </button>
+        {rulesOpen && (
+          <div className="grid gap-4 border-t border-[var(--color-border)] p-4 lg:grid-cols-2">
+            {[{ title: "Federal FMCSA (49 CFR)", rows: DOT_FEDERAL_RULES }, { title: `${DOT_STATE.name} state requirements`, rows: DOT_STATE_RULES }].map((grp) => (
+              <div key={grp.title}>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{grp.title}</p>
+                <div className="space-y-2">
+                  {grp.rows.map((r) => (
+                    <div key={r.item} className="rounded-lg border border-slate-200 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-slate-800">{r.item}</p>
+                        <span className="whitespace-nowrap rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{r.cadence}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-500">{r.rule}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {tiles.map((t) => (
           <button
