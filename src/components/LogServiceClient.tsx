@@ -93,6 +93,21 @@ export function LogServiceClient({
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
+  const [search, setSearch] = useState("");
+  const [editParamHandled, setEditParamHandled] = useState(false);
+
+  // Support deep-linking to edit a specific service (e.g. from a vehicle's
+  // Maintenance History): /log-service?edit=<workOrderId>.
+  useEffect(() => {
+    if (editParamHandled || !orders) return;
+    const editId = new URLSearchParams(window.location.search).get("edit");
+    if (!editId) return;
+    const o = orders.find((x) => x.id === editId);
+    if (o) {
+      startEdit(o);
+      setEditParamHandled(true);
+    }
+  }, [orders, editParamHandled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const total = Number(form.materialCost || 0) + Number(form.serviceCost || 0);
 
@@ -110,10 +125,21 @@ export function LogServiceClient({
     "desc",
   );
 
-  const recent = useMemo(
-    () => sort.sortRows((orders ?? []).filter((o) => o.status === "COMPLETED")).slice(0, 12),
-    [orders, sort],
-  );
+  const recent = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const list = (orders ?? []).filter((o) => o.status === "COMPLETED");
+    const filtered = q
+      ? list.filter(
+          (o) =>
+            (o.title ?? "").toLowerCase().includes(q) ||
+            (o.vehicle?.name ?? o.vehicleOther ?? "").toLowerCase().includes(q) ||
+            (o.vendor ?? "").toLowerCase().includes(q) ||
+            (o.poNumber ?? "").toLowerCase().includes(q) ||
+            (o.station ?? "").toLowerCase().includes(q),
+        )
+      : list;
+    return sort.sortRows(filtered);
+  }, [orders, sort, search]);
 
   const catServices = useMemo(
     () =>
@@ -442,11 +468,22 @@ export function LogServiceClient({
       </Card>
 
       <Card className="lg:col-span-3">
-        <CardHeader title="Recently logged services" />
+        <CardHeader
+          title="Logged services"
+          subtitle={`${recent.length} service${recent.length === 1 ? "" : "s"} shown`}
+          action={
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search service, vehicle, vendor, PO, station…"
+              className="h-8 w-64"
+            />
+          }
+        />
         {loading ? (
           <p className="p-8 text-center text-sm text-slate-400">Loading…</p>
         ) : recent.length === 0 ? (
-          <EmptyState icon={<ClipboardCheck size={40} />} title="No services logged yet" />
+          <EmptyState icon={<ClipboardCheck size={40} />} title={search ? "No services match your search" : "No services logged yet"} />
         ) : (
           <div className="overflow-x-auto">
             <Table>

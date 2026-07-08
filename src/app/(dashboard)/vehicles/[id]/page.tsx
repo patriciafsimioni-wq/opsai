@@ -803,6 +803,7 @@ export default async function VehicleDetailPage({
                   <Th>Status</Th>
                   <Th>Priority</Th>
                   <Th>Cost</Th>
+                  <Th></Th>
                 </tr>
               </thead>
               <tbody>
@@ -836,6 +837,14 @@ export default async function VehicleDetailPage({
                       </Badge>
                     </Td>
                     <Td>{formatCurrency(w.cost)}</Td>
+                    <Td>
+                      <Link
+                        href={`/log-service?edit=${w.id}`}
+                        className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                      >
+                        Edit
+                      </Link>
+                    </Td>
                   </tr>
                 ))}
               </tbody>
