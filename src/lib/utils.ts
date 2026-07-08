@@ -22,6 +22,12 @@ export function formatNumber(value: number, digits = 0) {
 
 export const APP_TIMEZONE = "America/Chicago";
 
+// Today's date as YYYY-MM-DD in Central time, for <input type="date"> defaults.
+// (Using UTC here would roll to "tomorrow" for Central users after ~7pm.)
+export function todayInputDate() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: APP_TIMEZONE });
+}
+
 export function formatDate(date: Date | string | null | undefined) {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
@@ -41,7 +47,8 @@ export function formatDateTime(date: Date | string | null | undefined) {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "UTC",
+    timeZone: APP_TIMEZONE,
+    timeZoneName: "short",
   });
 }
 

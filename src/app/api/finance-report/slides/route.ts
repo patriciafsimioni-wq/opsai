@@ -228,7 +228,7 @@ export async function GET(req: NextRequest) {
         return d.ytdActual > 0 || d.annualBudget > 0;
       }).map((s) => STATION_LABELS[s] ?? s),
     ],
-    footer: `${reportLabelShort} Expenses & Invoices Updated as of ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`,
+    footer: `${reportLabelShort} Expenses & Invoices Updated as of ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "America/Chicago" })}`,
   };
 
   // Slide 2: Executive Summary

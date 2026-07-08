@@ -7,13 +7,13 @@ import { Card, Button, Table, Th, Td, EmptyState, StatCard } from "@/components/
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
 import type { FuelLogDTO, VehicleDTO, DriverDTO } from "@/lib/types";
-import { formatCurrency, formatDate, formatNumber, APP_TIMEZONE } from "@/lib/utils";
+import { formatCurrency, formatDate, formatNumber, todayInputDate } from "@/lib/utils";
 import { STATION_LABEL } from "@/lib/constants";
 
 const emptyForm = {
   vehicleId: "",
   driverId: "",
-  date: new Date().toISOString().slice(0, 10),
+  date: todayInputDate(),
   liters: "",
   pricePerLiter: "1.20",
   odometer: "",

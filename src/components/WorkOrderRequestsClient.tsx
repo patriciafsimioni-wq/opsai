@@ -31,10 +31,10 @@ import {
   WO_REQUEST_STATUS,
   PARTS_LIST,
 } from "@/lib/constants";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, todayInputDate } from "@/lib/utils";
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  return todayInputDate();
 }
 
 function StatusBadge({ status }: { status: string }) {

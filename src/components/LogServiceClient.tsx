@@ -8,10 +8,10 @@ import { useData, apiSend } from "@/lib/use-data";
 import { useTableSort } from "@/lib/use-sort";
 import type { WorkOrderDTO, VehicleDTO, ServiceDTO } from "@/lib/types";
 import { FORM_STATIONS, STATION_LABEL } from "@/lib/constants";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, todayInputDate } from "@/lib/utils";
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  return todayInputDate();
 }
 
 export function LogServiceClient({

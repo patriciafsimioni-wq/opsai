@@ -7,7 +7,7 @@ import { Field, Input, Select, Textarea, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
 import { useTableSort } from "@/lib/use-sort";
 import { STATIONS, STATION_LABEL } from "@/lib/constants";
-import { formatDate } from "@/lib/utils";
+import { formatDate, todayInputDate } from "@/lib/utils";
 
 type PartsExpense = {
   id: string;
@@ -25,7 +25,7 @@ type PartsExpense = {
 const CATEGORY_LABEL: Record<string, string> = { PARTS: "Parts", SUPPLIES: "Shop Supplies" };
 
 const emptyForm = {
-  date: new Date().toISOString().slice(0, 10),
+  date: todayInputDate(),
   vendor: "",
   station: "",
   amount: "",

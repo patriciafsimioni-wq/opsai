@@ -19,7 +19,7 @@ import {
   SERVICE_CATEGORY,
   titleCase,
 } from "@/lib/constants";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, todayInputDate } from "@/lib/utils";
 
 const DEFAULT_RATE = "95";
 
@@ -594,7 +594,7 @@ function ServiceDoneModal({
   onSaved: () => void;
 }) {
   const [form, setForm] = useState({
-    completedAt: new Date().toISOString().slice(0, 10),
+    completedAt: todayInputDate(),
     odometerAt: order.odometerAt != null ? String(order.odometerAt) : "",
     materialCost: order.materialCost ? String(order.materialCost) : "",
     serviceCost: order.laborCost ? String(order.laborCost) : "",

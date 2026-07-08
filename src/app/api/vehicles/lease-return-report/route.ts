@@ -4,6 +4,7 @@ import { BRAND } from "@/lib/brand";
 import { STATION_LABEL } from "@/lib/constants";
 
 const DAY = 24 * 60 * 60 * 1000;
+const APP_TZ = "America/Chicago";
 
 function esc(s: unknown): string {
   return String(s ?? "").replace(/[&<>"']/g, (c) =>
@@ -13,7 +14,8 @@ function esc(s: unknown): string {
 
 function fmtDate(d: Date | null | undefined): string {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  // date-only fields are stored at midnight UTC; render in UTC to avoid off-by-one
+  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
 function fmtMoney(n: number | null | undefined): string {
@@ -44,7 +46,7 @@ export async function GET() {
   });
 
   const now = new Date();
-  const generated = now.toLocaleString("en-US", { dateStyle: "full", timeStyle: "short" });
+  const generated = now.toLocaleString("en-US", { dateStyle: "full", timeStyle: "short", timeZone: APP_TZ, timeZoneName: "short" });
 
   type Assessed = {
     v: (typeof vehicles)[number];
