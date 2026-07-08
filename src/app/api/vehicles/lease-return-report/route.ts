@@ -69,9 +69,14 @@ export async function GET() {
         ? overMileage * v.excessMileageRate
         : null;
 
-    // A vehicle that's already been off-boarded (returned/sold) is done — it
-    // shows as RETURNED, never as due for return.
-    const returned = v.offboardStatus === "COMPLETED" || v.lifecycleStatus === "SOLD_RETURNED";
+    // A vehicle that's been off-boarded OR is going through the off-boarding
+    // process (return/sale/disposal underway) is done — it shows as RETURNED,
+    // never as due for return.
+    const OFFBOARD_LIFECYCLE = new Set(["READY_DISPOSAL", "SOLD_RETURNED", "ARCHIVED"]);
+    const returned =
+      v.offboardStatus === "IN_PROGRESS" ||
+      v.offboardStatus === "COMPLETED" ||
+      OFFBOARD_LIFECYCLE.has(v.lifecycleStatus);
 
     // Return-due assessment: overdue drives red, approaching drives amber.
     let returnState: { label: string; cls: string; rank: number };
