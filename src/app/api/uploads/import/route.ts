@@ -8,10 +8,18 @@ import { STATIONS, stationFromRouteId } from "@/lib/constants";
 const MAX_BYTES = 20 * 1024 * 1024;
 
 function parseDate(val: unknown): Date | null {
-  if (!val) return null;
-  if (typeof val === "number") {
-    // Excel serial date
-    const d = XLSX.SSF.parse_date_code(val);
+  if (val === null || val === undefined || val === "") return null;
+  // Excel serial date — as a number OR a numeric string (sheet values often
+  // get stringified upstream). Serials in ~20000–90000 map to years 1954–2146,
+  // which distinguishes them from a bare year like "2024".
+  const serial =
+    typeof val === "number"
+      ? val
+      : /^\d+(\.\d+)?$/.test(String(val).trim())
+        ? parseFloat(String(val).trim())
+        : NaN;
+  if (!isNaN(serial) && serial > 20000 && serial < 90000) {
+    const d = XLSX.SSF.parse_date_code(serial);
     if (d) return new Date(Date.UTC(d.y, d.m - 1, d.d));
   }
   const s = String(val).trim();
