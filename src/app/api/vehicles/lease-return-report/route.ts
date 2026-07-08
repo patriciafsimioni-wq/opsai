@@ -172,6 +172,11 @@ export async function GET() {
         <h3>${esc(lessor)} · ${list.length} vehicle(s)${due ? ` · ${due} due for return` : ""}</h3>
         <div class="scroll">
         <table class="grid">
+          <colgroup>
+            <col style="width:6%"><col style="width:9%"><col style="width:5%"><col style="width:8%"><col style="width:5%"><col style="width:6%">
+            <col style="width:6%"><col style="width:6%"><col style="width:6%"><col style="width:4%"><col style="width:6%">
+            <col style="width:7%"><col style="width:3%"><col style="width:6%"><col style="width:6%"><col style="width:6%"><col style="width:6%">
+          </colgroup>
           <thead>
             <tr>
               <th>Vehicle</th><th>Description</th><th>Age</th><th>VIN</th><th>Plate</th><th>Station</th>
@@ -222,9 +227,14 @@ export async function GET() {
     body { padding: 0; }
     .scroll { overflow: visible !important; width: 100%; }
     /* Fixed layout + 100% width keeps the wide table inside the page in every
-       browser (Safari ignores @page landscape and otherwise clips/blank-prints). */
-    table.grid { font-size: 8px; table-layout: fixed; width: 100%; }
-    table.grid th, table.grid td { white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
+       browser (Safari ignores @page landscape and otherwise clips/blank-prints).
+       Column widths come from the <colgroup> so content isn't crammed equally. */
+    table.grid { font-size: 9px; table-layout: fixed; width: 100%; }
+    table.grid th, table.grid td { padding: 4px 5px; }
+    /* Headers keep whole words (wrap only at spaces) so we don't get "VEHIC LE". */
+    table.grid th { white-space: normal; word-break: keep-all; overflow-wrap: normal; hyphens: none; }
+    /* Body cells wrap normally; only long unbroken tokens (VIN) break to fit. */
+    table.grid td { white-space: normal; word-break: normal; overflow-wrap: break-word; }
     .lessor { page-break-inside: auto; }
     .summary { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
