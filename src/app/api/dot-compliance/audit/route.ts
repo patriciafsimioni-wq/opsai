@@ -64,7 +64,7 @@ export async function GET() {
     }),
   ]);
 
-  const generated = new Date().toLocaleString("en-US", { dateStyle: "full", timeStyle: "short", timeZone: "America/Chicago", timeZoneName: "short" });
+  const generated = new Date().toLocaleString("en-US", { dateStyle: "full", timeStyle: "short", timeZone: "America/Chicago" }) + " CT";
 
   const rulesRows = (title: string, rows: typeof DOT_FEDERAL_RULES) => `
     <h3>${esc(title)}</h3>

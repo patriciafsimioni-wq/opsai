@@ -46,7 +46,7 @@ export async function GET() {
   });
 
   const now = new Date();
-  const generated = now.toLocaleString("en-US", { dateStyle: "full", timeStyle: "short", timeZone: APP_TZ, timeZoneName: "short" });
+  const generated = now.toLocaleString("en-US", { dateStyle: "full", timeStyle: "short", timeZone: APP_TZ }) + " CT";
 
   type Assessed = {
     v: (typeof vehicles)[number];
