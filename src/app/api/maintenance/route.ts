@@ -22,7 +22,10 @@ export async function GET() {
   }
   const sw = stationWhere(auth.user);
   const orders = await prisma.workOrder.findMany({
-    where: sw ? { vehicle: { is: sw } } : undefined,
+    // Match either the linked vehicle's station or the work order's own station,
+    // so services logged against "Other" (no vehicle) or a vehicle at another
+    // station still surface for station-scoped users.
+    where: sw ? { OR: [{ vehicle: { is: sw } }, sw] } : undefined,
     orderBy: { createdAt: "desc" },
     include: { vehicle: true, service: true, assignedTo: ASSIGNEE_SELECT },
   });
