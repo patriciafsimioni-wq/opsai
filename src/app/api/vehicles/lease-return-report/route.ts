@@ -217,11 +217,14 @@ export async function GET() {
   .lessor { page-break-inside: auto; margin-bottom: 8px; }
   @media print {
     @page { size: A4 landscape; margin: 8mm; }
+    html, body { width: 100%; overflow: visible !important; }
     .toolbar { display: none; }
     body { padding: 0; }
-    .scroll { overflow: visible !important; }
-    table.grid { font-size: 8px; }
-    table.grid th, table.grid td { white-space: normal; word-break: break-word; }
+    .scroll { overflow: visible !important; width: 100%; }
+    /* Fixed layout + 100% width keeps the wide table inside the page in every
+       browser (Safari ignores @page landscape and otherwise clips/blank-prints). */
+    table.grid { font-size: 8px; table-layout: fixed; width: 100%; }
+    table.grid th, table.grid td { white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
     .lessor { page-break-inside: auto; }
     .summary { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
