@@ -230,11 +230,9 @@ export async function GET() {
        browser (Safari ignores @page landscape and otherwise clips/blank-prints).
        Column widths come from the <colgroup> so content isn't crammed equally. */
     table.grid { font-size: 9px; table-layout: fixed; width: 100%; }
-    table.grid th, table.grid td { padding: 4px 5px; }
-    /* Headers keep whole words (wrap only at spaces) so we don't get "VEHIC LE". */
-    table.grid th { white-space: normal; word-break: keep-all; overflow-wrap: normal; hyphens: none; }
-    /* Body cells wrap normally; only long unbroken tokens (VIN) break to fit. */
-    table.grid td { white-space: normal; word-break: normal; overflow-wrap: break-word; }
+    /* Always allow content to wrap/break so nothing ever overflows the fixed
+       column widths — an overflow is what makes Safari print a blank page. */
+    table.grid th, table.grid td { padding: 4px 5px; white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
     .lessor { page-break-inside: auto; }
     .summary { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
