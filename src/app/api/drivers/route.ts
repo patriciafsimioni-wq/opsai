@@ -24,7 +24,7 @@ const schema = z.object({
   status: z.enum(["ACTIVE", "ON_TRIP", "OFF_DUTY", "INACTIVE"]),
   rating: z.coerce.number().min(0).max(5).optional(),
   safetyScore: z.coerce.number().min(0).max(100).optional(),
-  vehicleType: z.enum(["CARGO_VAN", "BOX_TRUCK", "TRACTOR_TRUCK"]).optional().nullable(),
+  vehicleType: z.preprocess((v) => (v === "" ? null : v), z.enum(["CARGO_VAN", "BOX_TRUCK", "TRACTOR_TRUCK"]).optional().nullable()),
   station: z.string().optional().nullable(),
 });
 
