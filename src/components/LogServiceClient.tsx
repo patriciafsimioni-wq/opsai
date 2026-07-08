@@ -194,6 +194,23 @@ export function LogServiceClient({
     form.serviceCost !== "" &&
     form.description.trim();
 
+  const missingFields = [
+    { ok: !!form.station, label: "Station" },
+    { ok: !!hasVehicle, label: "Vehicle" },
+    { ok: !!form.serviceId, label: "Service" },
+    { ok: !!form.vin.trim(), label: "VIN" },
+    { ok: form.odometer !== "", label: "Odometer" },
+    { ok: !!provider, label: "Service provider" },
+    { ok: !!form.completedAt, label: "Date" },
+    { ok: !!form.poNumber.trim(), label: "PO number" },
+    { ok: !!form.invoiceNumber.trim(), label: "Invoice number" },
+    { ok: form.materialCost !== "", label: "Parts cost" },
+    { ok: form.serviceCost !== "", label: "Service cost" },
+    { ok: !!form.description.trim(), label: "Description" },
+  ]
+    .filter((f) => !f.ok)
+    .map((f) => f.label);
+
   async function save() {
     setSaving(true);
     setError("");
@@ -460,6 +477,11 @@ export function LogServiceClient({
 
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
           {savedMsg && <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{savedMsg}</p>}
+          {!valid && missingFields.length > 0 && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Complete these required fields to submit: {missingFields.join(", ")}
+            </p>
+          )}
           <Button onClick={save} disabled={saving || !valid} className="w-full">
             {file ? <Upload size={16} /> : <ClipboardCheck size={16} />}{" "}
             {saving ? (editingId ? "Saving…" : "Submitting…") : editingId ? "Save Changes" : "Submit"}
