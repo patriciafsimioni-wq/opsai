@@ -1,13 +1,32 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiUser } from "@/lib/api";
+import { sendEmail, buildAlertDigestEmail, getAppUrl } from "@/lib/email";
+import { canManage } from "@/lib/auth";
 
 const DAYS_AHEAD = 30;
+
+type NewAlert = { severity: string; message: string; context?: string | null };
+
+// Email a digest of newly-flagged issues to users who can manage the fleet.
+// Non-blocking: never fails the alert run. Only called with freshly-created
+// alerts, so cron re-runs (which skip existing alerts) don't re-notify.
+async function notifyFlaggedIssues(newAlerts: NewAlert[]) {
+  if (newAlerts.length === 0) return;
+  const users = await prisma.user.findMany({ select: { email: true, name: true, role: true } });
+  const recipients = users.filter((u) => u.email && canManage(u.role));
+  const appUrl = getAppUrl();
+  for (const r of recipients) {
+    const email = buildAlertDigestEmail({ recipientName: r.name || "there", alerts: newAlerts, appUrl });
+    sendEmail({ to: r.email, ...email }).catch(() => {});
+  }
+}
 
 // Scan vehicles for registration/insurance documents expiring within DAYS_AHEAD
 // days and open a DOCUMENT_EXPIRY alert for each (skipping duplicates that are
 // still unresolved). Designed to be safe to run repeatedly (idempotent).
 async function generateComplianceAlerts() {
+  const newAlerts: NewAlert[] = [];
   const now = new Date();
   const cutoff = new Date(now.getTime() + DAYS_AHEAD * 24 * 60 * 60 * 1000);
 
@@ -64,11 +83,14 @@ async function generateComplianceAlerts() {
       },
     });
     existingKey.add(key);
+    newAlerts.push({ severity: expired || days <= 7 ? "CRITICAL" : "WARNING", message, context: d.name });
     created++;
   }
 
   // DOT driver-file items for Box Truck / Tractor Truck drivers.
-  const dotResult = await generateDotAlerts(now, cutoff);
+  const dotResult = await generateDotAlerts(now, cutoff, newAlerts);
+
+  await notifyFlaggedIssues(newAlerts);
 
   return { scanned: vehicles.length, expiringDocs: docs.length, created: created + dotResult.created, dotAlerts: dotResult.created };
 }
@@ -76,7 +98,7 @@ async function generateComplianceAlerts() {
 // Scan Box Truck / Tractor Truck drivers for expiring or missing DOT file items
 // (medical card, CDL, annual review, MVR overdue, drug & alcohol) and open a
 // DOCUMENT_EXPIRY alert per driver+item. Idempotent (skips existing unresolved).
-async function generateDotAlerts(now: Date, cutoff: Date) {
+async function generateDotAlerts(now: Date, cutoff: Date, newAlerts: NewAlert[]) {
   const YEAR = 365 * 24 * 60 * 60 * 1000;
   const drivers = await prisma.driver.findMany({
     where: { vehicleType: { in: ["BOX_TRUCK", "TRACTOR_TRUCK"] } },
@@ -140,6 +162,7 @@ async function generateDotAlerts(now: Date, cutoff: Date) {
       },
     });
     existingKey.add(key);
+    newAlerts.push({ severity: it.critical ? "CRITICAL" : "WARNING", message: it.message });
     created++;
   }
   return { created };

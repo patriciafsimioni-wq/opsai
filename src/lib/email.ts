@@ -13,6 +13,102 @@ export interface EmailPayload {
   html: string;
 }
 
+// Resolve the portal's public URL for links in emails. Prefers an explicit
+// override, then Vercel's production domain, then a safe default.
+export function getAppUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  return "https://opsai-opal.vercel.app";
+}
+
+function shell(title: string, accent: string, bodyHtml: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"/></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1e293b;">
+  <div style="border-bottom: 3px solid ${accent}; padding-bottom: 16px; margin-bottom: 24px;">
+    <h1 style="margin: 0; font-size: 20px; color: #0f172a;">${BRAND}</h1>
+    <p style="margin: 4px 0 0; font-size: 13px; color: #64748b;">${title}</p>
+  </div>
+  ${bodyHtml}
+  <p style="font-size: 13px; color: #64748b; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+    This is an automated notification from ${BRAND}.
+  </p>
+</body>
+</html>`;
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+export function buildMessageEmail(params: {
+  recipientName: string;
+  senderName: string;
+  body: string;
+  isReply: boolean;
+  appUrl: string;
+}): { subject: string; html: string } {
+  const { recipientName, senderName, body, isReply, appUrl } = params;
+  const subject = isReply
+    ? `New reply from ${senderName} — ${BRAND}`
+    : `New message from ${senderName} — ${BRAND}`;
+  const html = shell(
+    isReply ? "New reply" : "New message",
+    "#2563eb",
+    `
+  <p style="font-size: 14px; line-height: 1.6;">Hi ${escapeHtml(recipientName)},</p>
+  <p style="font-size: 14px; line-height: 1.6;">
+    You have a new ${isReply ? "reply" : "message"} from <strong>${escapeHtml(senderName)}</strong>:
+  </p>
+  <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin: 16px 0; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(body)}</div>
+  <div style="text-align: center; margin: 24px 0;">
+    <a href="${appUrl}/messages" style="display: inline-block; background: #2563eb; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Open in ${BRAND}</a>
+  </div>`,
+  );
+  return { subject, html };
+}
+
+export function buildAlertDigestEmail(params: {
+  recipientName: string;
+  alerts: { severity: string; message: string; context?: string | null }[];
+  appUrl: string;
+}): { subject: string; html: string } {
+  const { recipientName, alerts, appUrl } = params;
+  const criticalCount = alerts.filter((a) => a.severity === "CRITICAL").length;
+  const subject = `${alerts.length} flagged issue${alerts.length === 1 ? "" : "s"} on ${BRAND}${criticalCount ? ` (${criticalCount} critical)` : ""}`;
+  const rows = alerts
+    .map((a) => {
+      const color = a.severity === "CRITICAL" ? "#dc2626" : "#d97706";
+      return `<tr>
+      <td style="padding: 8px 12px; border: 1px solid #e2e8f0; color: ${color}; font-weight: 600; white-space: nowrap;">${escapeHtml(a.severity)}</td>
+      <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${escapeHtml(a.message)}${a.context ? ` <span style="color:#64748b;">— ${escapeHtml(a.context)}</span>` : ""}</td>
+    </tr>`;
+    })
+    .join("");
+  const html = shell(
+    "Flagged Issues",
+    "#dc2626",
+    `
+  <p style="font-size: 14px; line-height: 1.6;">Hi ${escapeHtml(recipientName)},</p>
+  <p style="font-size: 14px; line-height: 1.6;">
+    The following <strong>${alerts.length}</strong> issue${alerts.length === 1 ? " was" : "s were"} flagged and need attention:
+  </p>
+  <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px;">
+    <thead><tr>
+      <th style="padding: 8px 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left;">Severity</th>
+      <th style="padding: 8px 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left;">Issue</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div style="text-align: center; margin: 24px 0;">
+    <a href="${appUrl}/alerts" style="display: inline-block; background: #dc2626; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Review Alerts</a>
+  </div>`,
+  );
+  return { subject, html };
+}
+
 export async function sendEmail(payload: EmailPayload): Promise<{ success: boolean; error?: string }> {
   if (!resend) {
     console.warn("[Email] RESEND_API_KEY not set — skipping email send");

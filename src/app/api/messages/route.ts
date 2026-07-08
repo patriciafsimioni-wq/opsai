@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, badRequest } from "@/lib/api";
 import { canManage } from "@/lib/auth";
+import { sendEmail, buildMessageEmail, getAppUrl } from "@/lib/email";
 
 const personSelect = { select: { id: true, name: true, role: true } };
 
@@ -66,6 +67,23 @@ export async function POST(req: Request) {
   const msg = await prisma.userMessage.create({
     data: { body, senderId: user.id, recipientId: recipientId!, parentId: rootParentId },
   });
+
+  // Notify the recipient by email (non-blocking — never fail the request).
+  const recipient = await prisma.user.findUnique({
+    where: { id: recipientId! },
+    select: { email: true, name: true },
+  });
+  if (recipient?.email) {
+    const email = buildMessageEmail({
+      recipientName: recipient.name || "there",
+      senderName: user.name || "A teammate",
+      body,
+      isReply: Boolean(parentId),
+      appUrl: getAppUrl(),
+    });
+    sendEmail({ to: recipient.email, ...email }).catch(() => {});
+  }
+
   return NextResponse.json(msg, { status: 201 });
 }
 

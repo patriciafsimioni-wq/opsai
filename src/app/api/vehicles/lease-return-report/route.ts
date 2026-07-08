@@ -182,7 +182,16 @@ export async function GET() {
   .badge.ok { background: #dcfce7; color: #166534; }
   .badge.returned { background: #e0e7ff; color: #3730a3; }
   .lessor { page-break-inside: auto; margin-bottom: 8px; }
-  @media print { .toolbar { display: none; } body { padding: 0; } table.grid { font-size: 9px; } }
+  @media print {
+    @page { size: A4 landscape; margin: 8mm; }
+    .toolbar { display: none; }
+    body { padding: 0; }
+    .scroll { overflow: visible !important; }
+    table.grid { font-size: 8px; }
+    table.grid th, table.grid td { white-space: normal; word-break: break-word; }
+    .lessor { page-break-inside: auto; }
+    .summary { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
 </style></head>
 <body>
   <div class="toolbar">
