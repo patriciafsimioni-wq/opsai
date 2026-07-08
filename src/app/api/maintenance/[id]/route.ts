@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, requireManager, badRequest } from "@/lib/api";
 import { canManage } from "@/lib/auth";
+import { STATIONS } from "@/lib/constants";
+import type { Station } from "@prisma/client";
 
 const schema = z.object({
   status: z.enum(["OPEN", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
@@ -16,7 +18,7 @@ const schema = z.object({
   vehicleId: z.string().optional().nullable(),
   vehicleOther: z.string().optional().nullable(),
   serviceId: z.string().optional().nullable(),
-  station: z.enum(["AUS", "ACT", "IAH", "CLL", "BPT", "HRL", "LRD"]).optional(),
+  station: z.string().refine((s) => STATIONS.includes(s), "Invalid station").optional(),
   type: z.enum(["SCHEDULED_SERVICE", "REPAIR", "INSPECTION", "TIRE", "OIL_CHANGE", "RECALL"]).optional(),
   title: z.string().min(1).optional(),
   description: z.string().optional().nullable(),
@@ -89,7 +91,7 @@ export async function PATCH(
       vehicleId: d.vehicleId === undefined ? undefined : d.vehicleId || null,
       vehicleOther: d.vehicleOther === undefined ? undefined : d.vehicleOther || null,
       serviceId: d.serviceId === undefined ? undefined : d.serviceId || null,
-      station: d.station,
+      station: d.station as Station | undefined,
       type: d.type,
       title: d.title,
       description: d.description === undefined ? undefined : d.description || null,

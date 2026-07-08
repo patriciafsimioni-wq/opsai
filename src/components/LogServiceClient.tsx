@@ -29,7 +29,7 @@ export function LogServiceClient({
 
   const initialForm = useMemo(
     () => ({
-      station: "IAH",
+      station: FORM_STATIONS[0],
       vin: "",
       vehicleId: "",
       vehicleOther: "",
@@ -60,7 +60,7 @@ export function LogServiceClient({
     const category = o.service?.category ?? (o.type === "REPAIR" ? "CORRECTIVE" : "PREVENTIVE");
     const knownProvider = o.vendor && serviceProviders.includes(o.vendor);
     setForm({
-      station: o.station ?? "IAH",
+      station: o.station ?? FORM_STATIONS[0],
       vin: o.vin ?? "",
       vehicleId: o.vehicleId ?? (o.vehicleOther ? "OTHER" : ""),
       vehicleOther: o.vehicleOther ?? "",

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { STATIONS } from "@/lib/constants";
+import type { Station } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   const auth = await requireApiUser();
@@ -21,7 +23,7 @@ export async function GET(req: NextRequest) {
 const upsertSchema = z.object({
   year: z.number().int().min(2020).max(2035),
   month: z.number().int().min(1).max(12),
-  station: z.enum(["AUS", "ACT", "IAH", "CLL", "BPT", "HRL", "LRD"]),
+  station: z.string().refine((s) => STATIONS.includes(s), "Invalid station"),
   category: z.string().min(1),
   amount: z.number().min(0),
 });
@@ -45,7 +47,7 @@ export async function POST(req: NextRequest) {
         year_month_station_category: {
           year: b.year,
           month: b.month,
-          station: b.station,
+          station: b.station as Station,
           category: b.category,
         },
       },
@@ -53,7 +55,7 @@ export async function POST(req: NextRequest) {
       create: {
         year: b.year,
         month: b.month,
-        station: b.station,
+        station: b.station as Station,
         category: b.category,
         amount: b.amount,
       },

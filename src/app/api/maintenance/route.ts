@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, requireManager, badRequest, stationWhere } from "@/lib/api";
 import { sendEmail, buildWorkOrderAssignmentEmail } from "@/lib/email";
+import { STATIONS } from "@/lib/constants";
+import type { Station } from "@prisma/client";
 
 const ASSIGNEE_SELECT = { select: { id: true, name: true, email: true } } as const;
 
@@ -31,7 +33,7 @@ const schema = z.object({
   vehicleId: z.string().min(1).optional(),
   vehicleOther: z.string().optional().nullable(),
   serviceId: z.string().optional().nullable(),
-  station: z.enum(["AUS", "ACT", "IAH", "CLL", "BPT", "HRL", "LRD"]),
+  station: z.string().refine((s) => STATIONS.includes(s), "Invalid station"),
   type: z.enum(["SCHEDULED_SERVICE", "REPAIR", "INSPECTION", "TIRE", "OIL_CHANGE", "RECALL"]),
   title: z.string().min(1),
   description: z.string().optional().nullable(),
@@ -75,7 +77,7 @@ export async function POST(req: Request) {
       vehicleId: d.vehicleId || null,
       vehicleOther: d.vehicleOther || null,
       serviceId: d.serviceId || null,
-      station: d.station,
+      station: d.station as Station,
       type: d.type,
       title: d.title,
       description: d.description || null,

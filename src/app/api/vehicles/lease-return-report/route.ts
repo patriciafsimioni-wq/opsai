@@ -101,6 +101,15 @@ export async function GET() {
   const soonCount = rows.filter((r) => r.returnState.rank === 1).length;
   const returnedCount = rows.filter((r) => r.returnState.rank === 3).length;
 
+  // Net equity across the fleet = Σ (market value − book value). Positive means
+  // the fleet is worth more than its book value; negative means underwater.
+  const netEquity = rows.reduce((sum, r) => {
+    const book = r.v.currentBookValue ?? r.v.openEndNetBookValue;
+    const market = r.v.currentMarketValue;
+    if (book == null || market == null) return sum;
+    return sum + (market - book);
+  }, 0);
+
   // Group rows by leasing company for per-lessor sections.
   const byLessor = new Map<string, Assessed[]>();
   for (const r of rows) {
@@ -108,6 +117,20 @@ export async function GET() {
     if (!byLessor.has(key)) byLessor.set(key, []);
     byLessor.get(key)!.push(r);
   }
+
+  const equityOf = (v: Assessed["v"]) => {
+    const book = v.currentBookValue ?? v.openEndNetBookValue;
+    const market = v.currentMarketValue;
+    if (book == null || market == null) return null;
+    return market - book;
+  };
+  const equityCell = (v: Assessed["v"]) => {
+    const eq = equityOf(v);
+    if (eq == null) return "—";
+    const cls = eq >= 0 ? "eq-pos" : "eq-neg";
+    const sign = eq >= 0 ? "+" : "−";
+    return `<span class="${cls}">${sign}${fmtMoney(Math.abs(eq))}</span>`;
+  };
 
   const detailRow = (a: Assessed) => {
     const v = a.v;
@@ -129,6 +152,7 @@ export async function GET() {
         <td>${a.excessExposure != null ? fmtMoney(a.excessExposure) : "—"}</td>
         <td>${fmtMoney(v.currentBookValue ?? v.openEndNetBookValue)}</td>
         <td>${fmtMoney(v.currentMarketValue)}</td>
+        <td>${equityCell(v)}</td>
         <td><span class="badge ${a.returnState.cls}">${a.returnState.label}</span></td>
       </tr>`;
   };
@@ -145,7 +169,7 @@ export async function GET() {
             <tr>
               <th>Vehicle</th><th>Description</th><th>Age</th><th>VIN</th><th>Plate</th><th>Station</th>
               <th>Lease Type</th><th>Lease Start</th><th>Lease End</th><th>Months Left</th><th>Rent/Mo</th>
-              <th>Odo / Contract</th><th>Over Miles</th><th>Excess Exposure</th><th>Book Value</th><th>Market Value</th><th>Status</th>
+              <th>Odo / Contract</th><th>Over Miles</th><th>Excess Exposure</th><th>Book Value</th><th>Market Value</th><th>Equity</th><th>Status</th>
             </tr>
           </thead>
           <tbody>${list.map(detailRow).join("")}</tbody>
@@ -176,6 +200,8 @@ export async function GET() {
   table.grid th { background: #f1f5f9; font-size: 10px; text-transform: uppercase; letter-spacing: .03em; }
   table.grid td.k { font-weight: 600; }
   .over { color: #991b1b; font-weight: 600; }
+  .eq-pos { color: #166534; font-weight: 700; }
+  .eq-neg { color: #991b1b; font-weight: 700; }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; }
   .badge.due { background: #fee2e2; color: #991b1b; }
   .badge.soon { background: #fef9c3; color: #854d0e; }
@@ -205,6 +231,7 @@ export async function GET() {
     <div class="tile soon"><div class="n">${soonCount}</div><div class="l">Return Soon (≤3 mo)</div></div>
     <div class="tile returned"><div class="n">${returnedCount}</div><div class="l">Returned</div></div>
     <div class="tile total"><div class="n">${rows.length}</div><div class="l">Total Leased</div></div>
+    <div class="tile"><div class="n ${netEquity >= 0 ? "eq-pos" : "eq-neg"}">${netEquity >= 0 ? "+" : "−"}${fmtMoney(Math.abs(netEquity))}</div><div class="l">Net Equity (Mkt − Book)</div></div>
   </div>
   <p class="sub">Return-due criteria: lease end date reached, no lease months remaining, or vehicle age at/over the age limit (vans 4 yrs, trucks 7 yrs). &quot;Return Soon&quot; = within 3 months or one year of the age limit.</p>
   ${rows.length ? lessorSections : '<p class="sub">No leased vehicles on file.</p>'}

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, badRequest } from "@/lib/api";
-import { PO_PREFIX, PO_START } from "@/lib/constants";
+import { PO_PREFIX, PO_START, STATIONS } from "@/lib/constants";
+import type { Station } from "@prisma/client";
 
 const userSelect = { id: true, name: true, email: true, role: true } as const;
 
@@ -22,7 +23,7 @@ export async function GET() {
 }
 
 const schema = z.object({
-  station: z.enum(["AUS", "ACT", "IAH", "CLL", "BPT", "HRL", "LRD"]),
+  station: z.string().refine((s) => STATIONS.includes(s), "Invalid station"),
   vehicleId: z.string().optional().nullable(),
   vehicleOther: z.string().optional().nullable(),
   odometer: z.coerce.number().min(0).optional().nullable(),
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
   const record = await prisma.workOrderRequest.create({
     data: {
       poNumber,
-      station: d.station,
+      station: d.station as Station,
       vehicleId: d.vehicleId || null,
       vehicleOther: d.vehicleOther || null,
       odometer: d.odometer ?? null,
