@@ -69,9 +69,15 @@ export async function GET() {
         ? overMileage * v.excessMileageRate
         : null;
 
+    // A vehicle that's already been off-boarded (returned/sold) is done — it
+    // shows as RETURNED, never as due for return.
+    const returned = v.offboardStatus === "COMPLETED" || v.lifecycleStatus === "SOLD_RETURNED";
+
     // Return-due assessment: overdue drives red, approaching drives amber.
     let returnState: { label: string; cls: string; rank: number };
-    if (leaseEnded || (monthsLeft != null && monthsLeft <= 0) || ageYears >= maxAge) {
+    if (returned) {
+      returnState = { label: "RETURNED", cls: "returned", rank: 3 };
+    } else if (leaseEnded || (monthsLeft != null && monthsLeft <= 0) || ageYears >= maxAge) {
       returnState = { label: "RETURN DUE", cls: "due", rank: 0 };
     } else if ((monthsLeft != null && monthsLeft <= 3) || ageYears >= maxAge - 1) {
       returnState = { label: "RETURN SOON", cls: "soon", rank: 1 };
@@ -88,6 +94,7 @@ export async function GET() {
 
   const dueCount = rows.filter((r) => r.returnState.rank === 0).length;
   const soonCount = rows.filter((r) => r.returnState.rank === 1).length;
+  const returnedCount = rows.filter((r) => r.returnState.rank === 3).length;
 
   // Group rows by leasing company for per-lessor sections.
   const byLessor = new Map<string, Assessed[]>();
@@ -156,7 +163,7 @@ export async function GET() {
   .summary { display: flex; gap: 16px; margin: 16px 0 8px; }
   .tile { border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 16px; text-align: center; }
   .tile .n { font-size: 22px; font-weight: 800; }
-  .tile.due .n { color: #991b1b; } .tile.soon .n { color: #854d0e; } .tile.total .n { color: #1e40af; }
+  .tile.due .n { color: #991b1b; } .tile.soon .n { color: #854d0e; } .tile.returned .n { color: #3730a3; } .tile.total .n { color: #1e40af; }
   .tile .l { font-size: 11px; text-transform: uppercase; color: #64748b; }
   .scroll { overflow-x: auto; }
   table.grid { width: 100%; border-collapse: collapse; font-size: 11px; }
@@ -168,6 +175,7 @@ export async function GET() {
   .badge.due { background: #fee2e2; color: #991b1b; }
   .badge.soon { background: #fef9c3; color: #854d0e; }
   .badge.ok { background: #dcfce7; color: #166534; }
+  .badge.returned { background: #e0e7ff; color: #3730a3; }
   .lessor { page-break-inside: auto; margin-bottom: 8px; }
   @media print { .toolbar { display: none; } body { padding: 0; } table.grid { font-size: 9px; } }
 </style></head>
@@ -181,6 +189,7 @@ export async function GET() {
   <div class="summary">
     <div class="tile due"><div class="n">${dueCount}</div><div class="l">Return Due</div></div>
     <div class="tile soon"><div class="n">${soonCount}</div><div class="l">Return Soon (≤3 mo)</div></div>
+    <div class="tile returned"><div class="n">${returnedCount}</div><div class="l">Returned</div></div>
     <div class="tile total"><div class="n">${rows.length}</div><div class="l">Total Leased</div></div>
   </div>
   <p class="sub">Return-due criteria: lease end date reached, no lease months remaining, or vehicle age at/over the age limit (vans 4 yrs, trucks 7 yrs). &quot;Return Soon&quot; = within 3 months or one year of the age limit.</p>
