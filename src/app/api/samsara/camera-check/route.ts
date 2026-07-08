@@ -28,8 +28,16 @@ export async function POST() {
 
   // Get local vehicles
   const vehicles = await prisma.vehicle.findMany({
-    select: { id: true, dxNumber: true, licensePlate: true, name: true, hasSamsaraCamera: true, samsaraId: true },
+    select: { id: true, dxNumber: true, licensePlate: true, name: true, hasSamsaraCamera: true, samsaraId: true, offboardStatus: true, lifecycleStatus: true },
   });
+
+  // Vehicles being off-boarded or already off-boarded have had their cameras
+  // uninstalled on purpose, so they must never raise "no camera" alerts.
+  const OFFBOARD_LIFECYCLE = new Set(["READY_DISPOSAL", "SOLD_RETURNED", "ARCHIVED"]);
+  const isOffboarding = (v: { offboardStatus: string | null; lifecycleStatus: string }) =>
+    v.offboardStatus === "IN_PROGRESS" ||
+    v.offboardStatus === "COMPLETED" ||
+    OFFBOARD_LIFECYCLE.has(v.lifecycleStatus);
 
   let updated = 0;
   let withCamera = 0;
@@ -37,6 +45,9 @@ export async function POST() {
   const noCameraVehicles: { id: string; dxNumber: string | null; name: string }[] = [];
 
   for (const v of vehicles) {
+    // Skip off-boarding / off-boarded vehicles entirely — no camera expected.
+    if (isOffboarding(v)) continue;
+
     const dx = v.dxNumber?.toUpperCase();
     const plate = v.licensePlate?.toUpperCase().replace(/\s+/g, "");
 
@@ -60,6 +71,19 @@ export async function POST() {
       });
       updated++;
     }
+  }
+
+  // Remove any stale "no camera" alerts on vehicles that are now off-boarding /
+  // off-boarded (cameras were intentionally uninstalled).
+  const offboardIds = vehicles.filter(isOffboarding).map((v) => v.id);
+  if (offboardIds.length) {
+    await prisma.alert.deleteMany({
+      where: {
+        type: "MAINTENANCE_DUE",
+        message: { contains: "No Samsara camera" },
+        vehicleId: { in: offboardIds },
+      },
+    });
   }
 
   // Create alerts for vehicles without cameras (if not already alerted)

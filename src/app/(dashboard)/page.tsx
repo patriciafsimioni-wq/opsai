@@ -295,8 +295,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     .slice(0, 8);
 
   // Vehicles missing Samsara camera or not transmitting (no lastSeen in 24h)
-  const noCamera = vehicles.filter((v) => (v.status === "ACTIVE" || v.status === "IDLE") && !v.hasSamsaraCamera);
-  const notTransmitting = vehicles.filter((v) => (v.status === "ACTIVE" || v.status === "IDLE") && v.samsaraId && v.lastSeen && now - new Date(v.lastSeen).getTime() > 24 * 3600000);
+  const noCamera = fleetVehicles.filter((v) => (v.status === "ACTIVE" || v.status === "IDLE") && !v.hasSamsaraCamera);
+  const notTransmitting = fleetVehicles.filter((v) => (v.status === "ACTIVE" || v.status === "IDLE") && v.samsaraId && v.lastSeen && now - new Date(v.lastSeen).getTime() > 24 * 3600000);
 
   // Drivers are already ordered by safety score (desc) from the query; only
   // rank those that actually have a Samsara safety score (>0).

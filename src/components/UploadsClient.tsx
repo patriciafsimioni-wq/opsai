@@ -12,7 +12,7 @@ type SheetClassification = {
   rowCount: number;
   preview: Record<string, unknown>[];
   importStatus?: "idle" | "importing" | "imported" | "error";
-  importResult?: { imported: number; skipped: number; unmatched: number; total: number; errors: string[] };
+  importResult?: { imported: number; updated?: number; skipped: number; unmatched: number; total: number; errors: string[] };
   importError?: string;
 };
 
@@ -34,7 +34,7 @@ type ClassifiedFile = {
   status: "classifying" | "classified" | "error" | "importing" | "imported";
   error?: string;
   file?: File;
-  importResult?: { imported: number; skipped: number; unmatched: number; total: number; errors: string[] };
+  importResult?: { imported: number; updated?: number; skipped: number; unmatched: number; total: number; errors: string[] };
 };
 
 const CONFIDENCE_STYLE = {
@@ -374,7 +374,7 @@ export function UploadsClient({ canManage }: { canManage: boolean }) {
                         <div className="mt-2 space-y-2">
                           <p className="text-xs font-semibold text-slate-600">Sheets detected:</p>
                           {f.sheetClassifications.filter((sc) => sc.rowCount > 0).map((sc) => {
-                            const importable = ["Service History", "FareEye Routes"].includes(sc.category);
+                            const importable = ["Service History", "FareEye Routes", "Fleet / Vehicles"].includes(sc.category);
                             return (
                               <div key={sc.sheetName} className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                                 <div className="flex items-center gap-2">
@@ -393,7 +393,7 @@ export function UploadsClient({ canManage }: { canManage: boolean }) {
                                   <span className="flex items-center gap-1 text-xs text-blue-600"><Loader2 size={12} className="animate-spin" /> Importing...</span>
                                 )}
                                 {sc.importStatus === "imported" && sc.importResult && (
-                                  <span className="flex items-center gap-1 text-xs text-green-700"><CheckCircle2 size={12} /> {sc.importResult.imported} imported{sc.importResult.skipped > 0 ? `, ${sc.importResult.skipped} skipped` : ""}</span>
+                                  <span className="flex items-center gap-1 text-xs text-green-700"><CheckCircle2 size={12} /> {sc.importResult.imported} imported{sc.importResult.updated ? `, ${sc.importResult.updated} updated` : ""}{sc.importResult.skipped > 0 ? `, ${sc.importResult.skipped} skipped` : ""}</span>
                                 )}
                                 {sc.importStatus === "error" && (
                                   <span className="text-xs text-red-600">{sc.importError}</span>
@@ -405,7 +405,7 @@ export function UploadsClient({ canManage }: { canManage: boolean }) {
                       )}
 
                       {/* Single-sheet import button */}
-                      {(!f.sheetClassifications || f.sheetClassifications.length <= 1) && ["Service History", "FareEye Routes"].includes(f.category) && f.rowCount > 0 && (
+                      {(!f.sheetClassifications || f.sheetClassifications.length <= 1) && ["Service History", "FareEye Routes", "Fleet / Vehicles"].includes(f.category) && f.rowCount > 0 && (
                         <button
                           onClick={() => importFile(f)}
                           className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
@@ -460,6 +460,7 @@ export function UploadsClient({ canManage }: { canManage: boolean }) {
                       <div className="flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
                         <CheckCircle2 size={16} />
                         Imported {f.importResult.imported} of {f.importResult.total} records
+                        {f.importResult.updated ? ` (${f.importResult.updated} updated)` : ""}
                         {f.importResult.skipped > 0 && ` (${f.importResult.skipped} duplicates skipped)`}
                         {f.importResult.unmatched > 0 && ` (${f.importResult.unmatched} unmatched)`}
                       </div>

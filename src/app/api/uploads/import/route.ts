@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireManager, badRequest } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import * as XLSX from "xlsx";
-import { Station } from "@prisma/client";
+import { Station, VehicleType, FuelType } from "@prisma/client";
 import { STATIONS, stationFromRouteId } from "@/lib/constants";
 
 const MAX_BYTES = 20 * 1024 * 1024;
@@ -61,7 +61,163 @@ export async function POST(req: Request) {
     return importFareyeRoutes(rows);
   }
 
+  if (cat === "Fleet / Vehicles") {
+    return importVehicles(rows);
+  }
+
   return badRequest(`Import not supported for category: ${cat}`);
+}
+
+/** First non-empty value across a set of candidate column names. */
+function pick(row: Record<string, unknown>, keys: string[]): string {
+  for (const k of keys) {
+    const v = row[k];
+    if (v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
+  }
+  return "";
+}
+
+function inferType(text: string): "VAN" | "TRUCK" {
+  const t = text.toLowerCase();
+  if (/\b(van|cargo|transit|express|savana|sprinter|promaster)\b/.test(t)) return "VAN";
+  if (/\b(truck|tractor|international|freightliner|box)\b/.test(t)) return "TRUCK";
+  return "VAN";
+}
+
+function inferFuel(text: string): "ELECTRIC" | "DIESEL" | "GASOLINE" {
+  const t = text.toLowerCase();
+  if (/\b(e-transit|etransit|electric|ev|bev)\b/.test(t)) return "ELECTRIC";
+  if (/\b(diesel|international|freightliner|mv607)\b/.test(t)) return "DIESEL";
+  return "GASOLINE";
+}
+
+// Import the "Fleet List" / "Lease" template tabs as vehicles. Rows are upserted
+// by VIN (then DX, then plate) so re-uploads and the separate Fleet/Lease tabs
+// enrich the same record instead of creating duplicates. On an existing vehicle
+// only lease/financial/odometer fields are enriched — station, name, plate and
+// type are never overwritten.
+async function importVehicles(rows: Record<string, unknown>[]) {
+  const existing = await prisma.vehicle.findMany({
+    select: { id: true, name: true, vin: true, dxNumber: true, licensePlate: true },
+  });
+  const byVin = new Map(existing.filter((v) => v.vin).map((v) => [v.vin.toUpperCase(), v]));
+  const byDx = new Map(existing.filter((v) => v.dxNumber).map((v) => [v.dxNumber!.toUpperCase(), v]));
+  const byPlate = new Map(existing.map((v) => [v.licensePlate.toUpperCase().replace(/[\s-]/g, ""), v]));
+
+  let imported = 0;
+  let updated = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const vin = pick(row, ["VIN #", "VIN", "VIN NUMBER", "VIN Number", "Vin"]).toUpperCase();
+    const dxRaw = pick(row, ["DX #", "DX#", "DX Number", "DX NUMBER"]).toUpperCase();
+    const plateRaw = pick(row, ["Plate #", "License Plate Number", "Plate", "License Plate", "Plate Number"]);
+    const plateKey = plateRaw.toUpperCase().replace(/[\s-]/g, "");
+
+    // Need at least one identifier to key on.
+    if (!vin && !dxRaw && !plateRaw) { skipped++; continue; }
+
+    const year = Math.round(parseNum(pick(row, ["Year"])));
+    const make = pick(row, ["Make"]);
+    const model = pick(row, ["Model", "Model Description", "Vehicle Model", "Model Code"]);
+    const vehicleText = pick(row, ["Vehicle", "Contract Description"]) + " " + make + " " + model;
+    const leasingCompany = pick(row, ["Leasing Company", "Tier 2 Account Name"]) || null;
+    const stationRaw = pick(row, ["Location", "STATION", "Station", "Cost Center"]).toUpperCase();
+    const station = ((STATIONS as readonly string[]).includes(stationRaw) ? stationRaw : DEFAULT_STATION) as Station;
+    const odometer = parseNum(pick(row, ["Current Mileage", "Last Odo Reading", "Odometer", "In Service Miles"]));
+
+    // Lease / financial fields (present on the Lease tabs, optional on Fleet List).
+    const leaseType = pick(row, ["Lease Type", "Contract Description"]) || null;
+    const leaseTerm = Math.round(parseNum(pick(row, ["Term", "Term in Months", "Projected Months"]))) || null;
+    const leaseStartDate = parseDate(pick(row, ["Start Date", "Contract Start Date", "In Service Date"]));
+    const leaseEndDate = parseDate(pick(row, ["Lease End Date", "End Date", "Contract End Date"]));
+    const contractMileage = parseNum(pick(row, ["Contract Mileage", "Permitted Mileage"])) || null;
+    const totalRentPerMonth = parseNum(pick(row, ["Total Rent Per Month", "Base Lease Rate"])) || null;
+    const leaseChargePerMonth = parseNum(pick(row, ["Lease Charge Per Month"])) || null;
+    const serviceChargePerMonth = parseNum(pick(row, ["Service Charge Per Month", "Services Amount"])) || null;
+    const currentBookValue = parseNum(pick(row, ["Current Book Value", "Open End Net Book Value"])) || null;
+    const openEndCapCost = parseNum(pick(row, ["Open End Cap Cost", "Delivered Price"])) || null;
+    const openEndNetBookValue = parseNum(pick(row, ["Open End Net Book Value"])) || null;
+    const currentMarketValue = parseNum(pick(row, ["Current Market Value Open End Contracts and Owned Units", "Current Market Value"])) || null;
+    const excessMileageRate = parseNum(pick(row, ["Excess Mileage Rate"])) || null;
+    const monthsLeftPayoff = Math.round(parseNum(pick(row, ["Months left for Pay off", "Months In Service"]))) || null;
+    const registrationMonth = pick(row, ["Registration Month"]) || null;
+
+    // Fields to enrich on an existing vehicle (never clobber identity/station).
+    const leaseData = {
+      leasingCompany, leaseType, leaseTerm, leaseStartDate, leaseEndDate,
+      contractMileage, totalRentPerMonth, leaseChargePerMonth, serviceChargePerMonth,
+      currentBookValue, openEndCapCost, openEndNetBookValue, currentMarketValue,
+      excessMileageRate, monthsLeftPayoff, registrationMonth,
+    };
+    // Drop null/empty so we only overwrite when the sheet actually has a value.
+    const enrich: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(leaseData)) if (v !== null && v !== "") enrich[k] = v;
+
+    const match =
+      (vin && byVin.get(vin)) ||
+      (dxRaw && byDx.get(dxRaw)) ||
+      (plateKey && byPlate.get(plateKey)) ||
+      null;
+
+    try {
+      if (match) {
+        if (odometer > 0) enrich.odometer = odometer;
+        if (dxRaw && !match.dxNumber) enrich.dxNumber = dxRaw;
+        await prisma.vehicle.update({ where: { id: match.id }, data: enrich });
+        updated++;
+        continue;
+      }
+
+      // New vehicle — VIN is required by the schema (unique). Without one we
+      // can't safely create, so record it and move on.
+      if (!vin) {
+        skipped++;
+        errors.push(`Row ${i + 2}: no VIN — cannot create "${dxRaw || plateRaw}" (VIN required for new vehicles)`);
+        continue;
+      }
+
+      const name = dxRaw || plateRaw || vin;
+      const created = await prisma.vehicle.create({
+        data: {
+          name,
+          dxNumber: dxRaw || null,
+          make: make || "Unknown",
+          model: model || "Unknown",
+          year: year || new Date().getFullYear(),
+          vin,
+          licensePlate: plateRaw || name,
+          type: inferType(vehicleText) as VehicleType,
+          fuelType: inferFuel(vehicleText) as FuelType,
+          station,
+          odometer: odometer || 0,
+          ...enrich,
+        },
+        select: { id: true, name: true, vin: true, dxNumber: true, licensePlate: true },
+      });
+      // Track so later rows in the same file don't duplicate it.
+      byVin.set(vin, created);
+      if (dxRaw) byDx.set(dxRaw, created);
+      if (plateKey) byPlate.set(plateKey, created);
+      existing.push(created);
+      imported++;
+    } catch (e) {
+      skipped++;
+      errors.push(`Row ${i + 2}: ${String(e instanceof Error ? e.message : e).slice(0, 140)}`);
+    }
+  }
+
+  return NextResponse.json({
+    success: true,
+    imported,
+    updated,
+    skipped,
+    unmatched: 0,
+    total: rows.length,
+    errors: errors.slice(0, 20),
+  });
 }
 
 async function importServiceHistory(rows: Record<string, unknown>[]) {
