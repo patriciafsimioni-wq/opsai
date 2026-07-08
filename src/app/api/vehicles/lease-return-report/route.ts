@@ -101,13 +101,13 @@ export async function GET() {
   const soonCount = rows.filter((r) => r.returnState.rank === 1).length;
   const returnedCount = rows.filter((r) => r.returnState.rank === 3).length;
 
-  // Net equity across the fleet = Σ (market value − book value). Positive means
-  // the fleet is worth more than its book value; negative means underwater.
+  // Net equity across the fleet = Σ (market value − remaining lease obligation).
+  // Positive means worth more than what's left to pay; negative = underwater.
   const netEquity = rows.reduce((sum, r) => {
-    const book = r.v.currentBookValue ?? r.v.openEndNetBookValue;
+    const rent = r.v.totalRentPerMonth ?? r.v.leaseChargePerMonth;
     const market = r.v.currentMarketValue;
-    if (book == null || market == null) return sum;
-    return sum + (market - book);
+    if (rent == null || r.monthsLeft == null || market == null) return sum;
+    return sum + (market - rent * Math.max(r.monthsLeft, 0));
   }, 0);
 
   // Group rows by leasing company for per-lessor sections.
@@ -118,14 +118,22 @@ export async function GET() {
     byLessor.get(key)!.push(r);
   }
 
-  const equityOf = (v: Assessed["v"]) => {
-    const book = v.currentBookValue ?? v.openEndNetBookValue;
-    const market = v.currentMarketValue;
-    if (book == null || market == null) return null;
-    return market - book;
+  // Remaining lease obligation = remaining monthly payments (rent × months left).
+  const remainingObligationOf = (a: Assessed) => {
+    const rent = a.v.totalRentPerMonth ?? a.v.leaseChargePerMonth;
+    if (rent == null || a.monthsLeft == null) return null;
+    return rent * Math.max(a.monthsLeft, 0);
   };
-  const equityCell = (v: Assessed["v"]) => {
-    const eq = equityOf(v);
+  // Equity = market value − remaining lease obligation. Positive means the
+  // vehicle is worth more than what's left to pay; negative means underwater.
+  const equityOf = (a: Assessed) => {
+    const obligation = remainingObligationOf(a);
+    const market = a.v.currentMarketValue;
+    if (obligation == null || market == null) return null;
+    return market - obligation;
+  };
+  const equityCell = (a: Assessed) => {
+    const eq = equityOf(a);
     if (eq == null) return "—";
     const cls = eq >= 0 ? "eq-pos" : "eq-neg";
     const sign = eq >= 0 ? "+" : "−";
@@ -149,10 +157,9 @@ export async function GET() {
         <td>${fmtMoney(v.totalRentPerMonth ?? v.leaseChargePerMonth)}</td>
         <td>${fmtNum(v.odometer)} / ${fmtNum(v.contractMileage)}</td>
         <td>${a.overMileage > 0 ? `<span class="over">+${fmtNum(a.overMileage)}</span>` : "—"}</td>
-        <td>${a.excessExposure != null ? fmtMoney(a.excessExposure) : "—"}</td>
         <td>${fmtMoney(v.currentBookValue ?? v.openEndNetBookValue)}</td>
         <td>${fmtMoney(v.currentMarketValue)}</td>
-        <td>${equityCell(v)}</td>
+        <td>${equityCell(a)}</td>
         <td><span class="badge ${a.returnState.cls}">${a.returnState.label}</span></td>
       </tr>`;
   };
@@ -169,7 +176,7 @@ export async function GET() {
             <tr>
               <th>Vehicle</th><th>Description</th><th>Age</th><th>VIN</th><th>Plate</th><th>Station</th>
               <th>Lease Type</th><th>Lease Start</th><th>Lease End</th><th>Months Left</th><th>Rent/Mo</th>
-              <th>Odo / Contract</th><th>Over Miles</th><th>Excess Exposure</th><th>Book Value</th><th>Market Value</th><th>Equity</th><th>Status</th>
+              <th>Odo / Contract</th><th>Over Miles</th><th>Book Value</th><th>Market Value</th><th>Equity</th><th>Status</th>
             </tr>
           </thead>
           <tbody>${list.map(detailRow).join("")}</tbody>
@@ -231,7 +238,7 @@ export async function GET() {
     <div class="tile soon"><div class="n">${soonCount}</div><div class="l">Return Soon (≤3 mo)</div></div>
     <div class="tile returned"><div class="n">${returnedCount}</div><div class="l">Returned</div></div>
     <div class="tile total"><div class="n">${rows.length}</div><div class="l">Total Leased</div></div>
-    <div class="tile"><div class="n ${netEquity >= 0 ? "eq-pos" : "eq-neg"}">${netEquity >= 0 ? "+" : "−"}${fmtMoney(Math.abs(netEquity))}</div><div class="l">Net Equity (Mkt − Book)</div></div>
+    <div class="tile"><div class="n ${netEquity >= 0 ? "eq-pos" : "eq-neg"}">${netEquity >= 0 ? "+" : "−"}${fmtMoney(Math.abs(netEquity))}</div><div class="l">Net Equity (Mkt − Remaining Obligation)</div></div>
   </div>
   <p class="sub">Return-due criteria: lease end date reached, no lease months remaining, or vehicle age at/over the age limit (vans 4 yrs, trucks 7 yrs). &quot;Return Soon&quot; = within 3 months or one year of the age limit.</p>
   ${rows.length ? lessorSections : '<p class="sub">No leased vehicles on file.</p>'}
