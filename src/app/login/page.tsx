@@ -13,10 +13,14 @@ const DEMO = [
   { role: "Driver", email: "driver@livefleet.ai", password: "driver123" },
 ];
 
+// Demo quick-fill accounts are a convenience for the SYNCTX demo only. They are
+// hidden (and credentials are not pre-filled) on TROVA, which is a live portal.
+const SHOW_DEMO = BRAND !== "TROVA";
+
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@livefleet.ai");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState(SHOW_DEMO ? "admin@livefleet.ai" : "");
+  const [password, setPassword] = useState(SHOW_DEMO ? "admin123" : "");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -118,25 +122,27 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6">
-            <p className="mb-2 text-center text-xs text-[var(--color-muted)]">
-              Demo accounts — click to fill
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              {DEMO.map((d) => (
-                <button
-                  key={d.role}
-                  onClick={() => {
-                    setEmail(d.email);
-                    setPassword(d.password);
-                  }}
-                  className="rounded-lg border border-[var(--color-border)] bg-white px-2 py-2 text-xs font-medium hover:border-blue-400 hover:bg-blue-50"
-                >
-                  {d.role}
-                </button>
-              ))}
+          {SHOW_DEMO && (
+            <div className="mt-6">
+              <p className="mb-2 text-center text-xs text-[var(--color-muted)]">
+                Demo accounts — click to fill
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {DEMO.map((d) => (
+                  <button
+                    key={d.role}
+                    onClick={() => {
+                      setEmail(d.email);
+                      setPassword(d.password);
+                    }}
+                    className="rounded-lg border border-[var(--color-border)] bg-white px-2 py-2 text-xs font-medium hover:border-blue-400 hover:bg-blue-50"
+                  >
+                    {d.role}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
