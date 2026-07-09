@@ -6,6 +6,7 @@ import { Sidebar, SidebarProvider } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { GuidedTour } from "@/components/GuidedTour";
 import { Heartbeat } from "@/components/Heartbeat";
+import { RouteRefresh } from "@/components/RouteRefresh";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,7 @@ export default async function DashboardLayout({
       </div>
       <GuidedTour />
       <Heartbeat />
+      <RouteRefresh />
     </SidebarProvider>
   );
 }
