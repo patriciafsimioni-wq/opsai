@@ -62,6 +62,46 @@ export async function DELETE(
   const existing = await prisma.user.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  await prisma.user.delete({ where: { id } });
+  // A user is referenced by several records. Optional references (work orders /
+  // issues assigned to them, reviews they performed) can be safely detached so
+  // the login can be removed without losing that data. Required references
+  // (records they authored — WO requests, issues, comments, DVIRs) represent
+  // history we must not silently destroy, so we block deletion with a clear
+  // message instead of letting the DB throw an opaque foreign-key error.
+  const [woRequests, issuesCreated, issueComments, dvirReports] = await Promise.all([
+    prisma.workOrderRequest.count({ where: { requestedById: id } }),
+    prisma.issue.count({ where: { createdById: id } }),
+    prisma.issueComment.count({ where: { authorId: id } }),
+    prisma.dvirReport.count({ where: { submittedById: id } }),
+  ]);
+
+  const blockers: string[] = [];
+  if (woRequests) blockers.push(`${woRequests} work order request${woRequests === 1 ? "" : "s"}`);
+  if (issuesCreated) blockers.push(`${issuesCreated} flagged issue${issuesCreated === 1 ? "" : "s"}`);
+  if (issueComments) blockers.push(`${issueComments} issue comment${issueComments === 1 ? "" : "s"}`);
+  if (dvirReports) blockers.push(`${dvirReports} DVIR report${dvirReports === 1 ? "" : "s"}`);
+
+  if (blockers.length) {
+    return NextResponse.json(
+      {
+        error: `Can't delete this user — they authored ${blockers.join(", ")}. Reassign or remove those records first to preserve history.`,
+      },
+      { status: 409 },
+    );
+  }
+
+  try {
+    await prisma.$transaction([
+      prisma.workOrder.updateMany({ where: { assignedToId: id }, data: { assignedToId: null } }),
+      prisma.issue.updateMany({ where: { assignedToId: id }, data: { assignedToId: null } }),
+      prisma.workOrderRequest.updateMany({ where: { reviewedById: id }, data: { reviewedById: null } }),
+      prisma.user.delete({ where: { id } }),
+    ]);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[Users] Delete failed:", message);
+    return NextResponse.json({ error: "Failed to delete user — it may still be referenced by other records." }, { status: 409 });
+  }
+
   return NextResponse.json({ ok: true });
 }

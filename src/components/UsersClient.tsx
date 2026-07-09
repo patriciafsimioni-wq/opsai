@@ -63,6 +63,7 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
   const [modalOpen, setModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -136,10 +137,13 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
   }
 
   async function deleteUser(id: string) {
+    setDeleteError("");
     const res = await apiSend(`/api/users/${id}`, "DELETE", {});
     if (res.ok) {
       setUsers((prev) => prev.filter((u) => u.id !== id));
       setDeleteConfirm(null);
+    } else {
+      setDeleteError(res.error ?? "Failed to delete user");
     }
   }
 
@@ -206,6 +210,11 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
             {Object.entries(ROLE_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
           </select>
         </div>
+        {deleteError && (
+          <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {deleteError}
+          </div>
+        )}
         <Table>
           <thead>
             <tr>
