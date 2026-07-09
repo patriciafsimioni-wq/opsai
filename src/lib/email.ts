@@ -1,11 +1,30 @@
 import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import { BRAND } from "@/lib/brand";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-const FROM_EMAIL = process.env.EMAIL_FROM || `${BRAND} <onboarding@resend.dev>`;
+// SMTP transport (e.g. Google Workspace). Preferred when configured because it
+// needs no DNS changes on domains already set up in Workspace. Falls back to
+// Resend when SMTP env vars are absent.
+const smtpConfigured =
+  !!process.env.SMTP_HOST && !!process.env.SMTP_USER && !!process.env.SMTP_PASS;
+
+const smtpTransport = smtpConfigured
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT ?? 587),
+      secure: Number(process.env.SMTP_PORT ?? 587) === 465,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    })
+  : null;
+
+// "From" precedence: explicit EMAIL_FROM, else the SMTP user, else Resend sandbox.
+const FROM_EMAIL =
+  process.env.EMAIL_FROM ||
+  (process.env.SMTP_USER ? `${BRAND} <${process.env.SMTP_USER}>` : `${BRAND} <onboarding@resend.dev>`);
 
 export interface EmailPayload {
   to: string;
@@ -110,9 +129,26 @@ export function buildAlertDigestEmail(params: {
 }
 
 export async function sendEmail(payload: EmailPayload): Promise<{ success: boolean; error?: string }> {
+  // Prefer SMTP (Google Workspace) when configured; no DNS changes required.
+  if (smtpTransport) {
+    try {
+      await smtpTransport.sendMail({
+        from: FROM_EMAIL,
+        to: payload.to,
+        subject: payload.subject,
+        html: payload.html,
+      });
+      return { success: true };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      console.error("[Email] SMTP send failed:", message);
+      return { success: false, error: message };
+    }
+  }
+
   if (!resend) {
-    console.warn("[Email] RESEND_API_KEY not set — skipping email send");
-    return { success: false, error: "RESEND_API_KEY not configured" };
+    console.warn("[Email] No email transport configured (SMTP_* or RESEND_API_KEY) — skipping send");
+    return { success: false, error: "No email transport configured" };
   }
 
   try {
