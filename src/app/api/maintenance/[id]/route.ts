@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
 import { canManage } from "@/lib/auth";
 import { STATIONS } from "@/lib/constants";
 import type { Station } from "@prisma/client";
@@ -104,6 +105,12 @@ export async function PATCH(
       completedAt,
     },
   });
+  await logActivity(auth.user, {
+    action: "updated",
+    entity: "Work Order",
+    entityLabel: order.poNumber ? `${order.title} (PO ${order.poNumber})` : order.title,
+    station: order.station,
+  });
   return NextResponse.json(order);
 }
 
@@ -114,6 +121,13 @@ export async function DELETE(
   const auth = await requireManager();
   if ("error" in auth) return auth.error;
   const { id } = await params;
+  const existing = await prisma.workOrder.findUnique({ where: { id }, select: { title: true, poNumber: true, station: true } });
   await prisma.workOrder.delete({ where: { id } });
+  await logActivity(auth.user, {
+    action: "deleted",
+    entity: "Work Order",
+    entityLabel: existing ? (existing.poNumber ? `${existing.title} (PO ${existing.poNumber})` : existing.title) : id,
+    station: existing?.station ?? null,
+  });
   return NextResponse.json({ ok: true });
 }

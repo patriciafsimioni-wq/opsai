@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireManager, badRequest } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
 import { hashPassword } from "@/lib/auth";
 
 const updateSchema = z.object({
@@ -45,6 +46,14 @@ export async function PATCH(
     where: { id },
     data,
     select: { id: true, email: true, name: true, role: true, station: true, createdAt: true },
+  });
+
+  await logActivity(auth.user, {
+    action: "updated",
+    entity: "User",
+    entityLabel: `${user.name} (${user.email})`,
+    station: user.station,
+    detail: d.password ? "Password reset" : undefined,
   });
 
   return NextResponse.json(user);
@@ -102,6 +111,13 @@ export async function DELETE(
     console.error("[Users] Delete failed:", message);
     return NextResponse.json({ error: "Failed to delete user — it may still be referenced by other records." }, { status: 409 });
   }
+
+  await logActivity(auth.user, {
+    action: "deleted",
+    entity: "User",
+    entityLabel: `${existing.name} (${existing.email})`,
+    station: existing.station,
+  });
 
   return NextResponse.json({ ok: true });
 }

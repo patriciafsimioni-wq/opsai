@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireManager, badRequest } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
 
 const schema = z.object({
   date: z.string().min(1).optional(),
@@ -40,6 +41,12 @@ export async function PATCH(
       invoiceUrl: d.invoiceUrl === undefined ? undefined : d.invoiceUrl || null,
     },
   });
+  await logActivity(auth.user, {
+    action: "updated",
+    entity: "Parts & Supplies",
+    entityLabel: `${expense.vendor}${expense.poNumber ? ` (PO ${expense.poNumber})` : ""}`,
+    station: expense.station,
+  });
   return NextResponse.json(expense);
 }
 
@@ -50,6 +57,13 @@ export async function DELETE(
   const auth = await requireManager();
   if ("error" in auth) return auth.error;
   const { id } = await params;
+  const existing = await prisma.partsExpense.findUnique({ where: { id }, select: { vendor: true, poNumber: true, station: true } });
   await prisma.partsExpense.delete({ where: { id } });
+  await logActivity(auth.user, {
+    action: "deleted",
+    entity: "Parts & Supplies",
+    entityLabel: existing ? `${existing.vendor}${existing.poNumber ? ` (PO ${existing.poNumber})` : ""}` : id,
+    station: existing?.station ?? null,
+  });
   return NextResponse.json({ ok: true });
 }

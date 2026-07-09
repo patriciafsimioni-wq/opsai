@@ -158,6 +158,23 @@ model User {
   lastActiveAt      DateTime?
 }
 
+// Audit trail: one row per meaningful change, so the dashboard can show
+// "who changed what, and when" across the whole portal.
+model ActivityLog {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  userId      String?
+  userName    String
+  action      String
+  entity      String
+  entityLabel String
+  station     String?
+  detail      String?
+
+  @@index([createdAt])
+  @@index([station])
+}
+
 // Direct in-app message from one user to another, with threaded replies.
 model UserMessage {
   id          String        @id @default(cuid())

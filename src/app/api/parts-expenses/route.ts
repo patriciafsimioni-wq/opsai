@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
 
 export async function GET(req: Request) {
   const auth = await requireApiUser();
@@ -49,6 +50,13 @@ export async function POST(req: Request) {
       invoiceNumber: d.invoiceNumber || null,
       invoiceUrl: d.invoiceUrl || null,
     },
+  });
+  await logActivity(auth.user, {
+    action: "logged",
+    entity: "Parts & Supplies",
+    entityLabel: `${expense.vendor}${expense.poNumber ? ` (PO ${expense.poNumber})` : ""}`,
+    station: expense.station,
+    detail: `$${expense.amount.toFixed(2)}`,
   });
   return NextResponse.json(expense, { status: 201 });
 }

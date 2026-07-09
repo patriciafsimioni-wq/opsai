@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, requireManager, badRequest, stationWhere } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
 
 export async function GET(req: Request) {
   const auth = await requireApiUser();
@@ -73,6 +74,12 @@ export async function POST(req: Request) {
       lng: -122.4194 + (Math.random() - 0.5) * 0.25,
       lastSeen: new Date(),
     },
+  });
+  await logActivity(auth.user, {
+    action: "created",
+    entity: "Vehicle",
+    entityLabel: vehicle.name,
+    station: vehicle.station,
   });
   return NextResponse.json(vehicle, { status: 201 });
 }

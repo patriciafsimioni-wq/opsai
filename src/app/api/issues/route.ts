@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiUser, stationWhere } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
 
 export async function GET(req: NextRequest) {
   const auth = await requireApiUser();
@@ -68,6 +69,14 @@ export async function POST(req: NextRequest) {
       createdBy: { select: { id: true, name: true, role: true } },
       assignedTo: { select: { id: true, name: true, role: true } },
     },
+  });
+
+  await logActivity(auth.user, {
+    action: "flagged",
+    entity: "Issue",
+    entityLabel: issue.title,
+    station: issue.station,
+    detail: issue.priority,
   });
 
   return NextResponse.json(issue, { status: 201 });

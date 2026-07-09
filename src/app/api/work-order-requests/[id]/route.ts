@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
 import { sendEmail, buildApprovalEmail } from "@/lib/email";
 
 const userSelect = { id: true, name: true, email: true, role: true } as const;
@@ -79,6 +80,13 @@ export async function PATCH(
     sendEmail({ to: recipientEmail, ...emailData }).catch(() => {});
   }
 
+  await logActivity(auth.user, {
+    action: parsed.data.status === "APPROVED" ? "approved" : "rejected",
+    entity: "WO Request",
+    entityLabel: `${updated.service?.name ?? "Service Request"} (PO ${updated.poNumber ?? "N/A"})`,
+    station: updated.station,
+  });
+
   return NextResponse.json(updated);
 }
 
@@ -89,6 +97,13 @@ export async function DELETE(
   const auth = await requireManager();
   if ("error" in auth) return auth.error;
   const { id } = await params;
+  const existing = await prisma.workOrderRequest.findUnique({ where: { id }, select: { poNumber: true, station: true, service: { select: { name: true } } } });
   await prisma.workOrderRequest.delete({ where: { id } }).catch(() => null);
+  await logActivity(auth.user, {
+    action: "deleted",
+    entity: "WO Request",
+    entityLabel: existing ? `${existing.service?.name ?? "Service Request"} (PO ${existing.poNumber ?? "N/A"})` : id,
+    station: existing?.station ?? null,
+  });
   return NextResponse.json({ ok: true });
 }

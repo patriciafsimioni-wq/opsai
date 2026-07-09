@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
 
 export async function GET(
   _req: Request,
@@ -76,6 +77,12 @@ export async function PATCH(
       annualReviewDocUrl: d.annualReviewDocUrl === undefined ? undefined : d.annualReviewDocUrl || null,
     },
   });
+  await logActivity(auth.user, {
+    action: "updated",
+    entity: "Driver",
+    entityLabel: `${driver.firstName} ${driver.lastName}`,
+    station: driver.station,
+  });
   return NextResponse.json(driver);
 }
 
@@ -86,10 +93,17 @@ export async function DELETE(
   const auth = await requireManager();
   if ("error" in auth) return auth.error;
   const { id } = await params;
+  const existing = await prisma.driver.findUnique({ where: { id }, select: { firstName: true, lastName: true, station: true } });
   await prisma.vehicle.updateMany({
     where: { assignedDriverId: id },
     data: { assignedDriverId: null },
   });
   await prisma.driver.delete({ where: { id } });
+  await logActivity(auth.user, {
+    action: "deleted",
+    entity: "Driver",
+    entityLabel: existing ? `${existing.firstName} ${existing.lastName}` : id,
+    station: existing?.station ?? null,
+  });
   return NextResponse.json({ ok: true });
 }

@@ -29,6 +29,7 @@ import {
   Truck as TruckLogo,
   LogOut,
   Flag,
+  History,
   MessageSquare,
   Menu,
   X,
@@ -99,6 +100,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/safety", label: "Safety", icon: ShieldAlert, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "MECHANIC"] },
       { href: "/compliance", label: "Compliance Audit", icon: ShieldCheck, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER"] },
       { href: "/issues", label: "Issue Tracker", icon: Flag },
+      { href: "/activity", label: "Activity Log", icon: History, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER"] },
     ],
   },
   {

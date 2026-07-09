@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
 import { getUserStationFilter } from "@/lib/auth";
 
 function getMonday(d: Date): Date {
@@ -155,6 +156,14 @@ export async function POST(req: Request) {
       transactionTime: d.transactionTime || null,
       purchaseType: d.purchaseType ?? "DIESEL",
     },
+  });
+  const veh = await prisma.vehicle.findUnique({ where: { id: d.vehicleId }, select: { name: true, station: true } });
+  await logActivity(auth.user, {
+    action: "logged",
+    entity: "Fuel Log",
+    entityLabel: veh?.name ?? d.vehicleId,
+    station: veh?.station ?? null,
+    detail: `$${log.totalCost.toFixed(2)}`,
   });
   return NextResponse.json(log, { status: 201 });
 }

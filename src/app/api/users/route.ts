@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireManager, badRequest } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
 import { hashPassword } from "@/lib/auth";
 import { sendEmail, buildInviteEmail } from "@/lib/email";
 
@@ -76,6 +77,14 @@ export async function POST(req: Request) {
   } catch {
     // ignore — user is still created even if the invite email fails
   }
+
+  await logActivity(auth.user, {
+    action: "created",
+    entity: "User",
+    entityLabel: `${user.name} (${user.email})`,
+    station: user.station,
+    detail: user.role,
+  });
 
   return NextResponse.json({
     id: user.id,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiUser } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireApiUser();
@@ -57,6 +58,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     },
   });
 
+  await logActivity(auth.user, {
+    action: "updated",
+    entity: "Issue",
+    entityLabel: issue.title,
+    station: issue.station,
+    detail: status ? `Status: ${status}` : undefined,
+  });
+
   return NextResponse.json(issue);
 }
 
@@ -65,6 +74,13 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if ("error" in auth) return auth.error;
   const { id } = await params;
 
+  const existing = await prisma.issue.findUnique({ where: { id }, select: { title: true, station: true } });
   await prisma.issue.delete({ where: { id } });
+  await logActivity(auth.user, {
+    action: "deleted",
+    entity: "Issue",
+    entityLabel: existing?.title ?? id,
+    station: existing?.station ?? null,
+  });
   return NextResponse.json({ ok: true });
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, badRequest } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
 import { PO_PREFIX, PO_START, STATIONS } from "@/lib/constants";
 import type { Station } from "@prisma/client";
 
@@ -103,6 +104,14 @@ export async function POST(req: Request) {
       message: alertMessage,
       vehicleId: d.vehicleId || null,
     },
+  });
+
+  await logActivity(auth.user, {
+    action: "requested",
+    entity: "WO Request",
+    entityLabel: `${serviceName} (PO ${poNumber})`,
+    station: d.station,
+    detail: vehicleLabel,
   });
 
   return NextResponse.json(record, { status: 201 });

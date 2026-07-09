@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, requireManager, badRequest, stationWhere } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
 import { sendEmail, buildWorkOrderAssignmentEmail } from "@/lib/email";
 import { STATIONS } from "@/lib/constants";
 import type { Station } from "@prisma/client";
@@ -102,6 +103,14 @@ export async function POST(req: Request) {
       scheduledFor: d.scheduledFor ? new Date(d.scheduledFor) : null,
       completedAt,
     },
+  });
+
+  await logActivity(auth.user, {
+    action: "logged",
+    entity: "Work Order",
+    entityLabel: order.poNumber ? `${order.title} (PO ${order.poNumber})` : order.title,
+    station: order.station,
+    detail: order.status === "COMPLETED" ? "Completed" : undefined,
   });
 
   // Notify the assigned vendor with the full list of their open work orders.
