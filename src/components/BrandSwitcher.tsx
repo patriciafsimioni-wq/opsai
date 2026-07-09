@@ -4,10 +4,14 @@ import { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { BRAND, SISTER_BRAND, SISTER_BRAND_URL } from "@/lib/brand";
 
-export function BrandSwitcher() {
+// Only these roles may switch between the sister portals (Sync ↔ Trova).
+const SWITCH_ROLES = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"];
+
+export function BrandSwitcher({ userRole }: { userRole?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const hasSister = Boolean(SISTER_BRAND && SISTER_BRAND_URL);
+  const canSwitch = !!userRole && SWITCH_ROLES.includes(userRole);
+  const hasSister = Boolean(SISTER_BRAND && SISTER_BRAND_URL) && canSwitch;
 
   useEffect(() => {
     if (!open) return;

@@ -145,7 +145,7 @@ export function Sidebar({ alertCount, messageCount, userRole }: { alertCount: nu
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white">
             <TruckLogo size={18} />
           </div>
-          <BrandSwitcher />
+          <BrandSwitcher userRole={role} />
         </div>
         <button onClick={toggle} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 lg:hidden">
           <X size={20} />
