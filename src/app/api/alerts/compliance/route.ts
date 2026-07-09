@@ -16,10 +16,14 @@ async function notifyFlaggedIssues(newAlerts: NewAlert[]) {
   const users = await prisma.user.findMany({ select: { email: true, name: true, role: true } });
   const recipients = users.filter((u) => u.email && canManage(u.role));
   const appUrl = getAppUrl();
-  for (const r of recipients) {
-    const email = buildAlertDigestEmail({ recipientName: r.name || "there", alerts: newAlerts, appUrl });
-    sendEmail({ to: r.email, ...email }).catch(() => {});
-  }
+  // Await all sends: on Vercel the serverless function freezes once the
+  // response returns, dropping any fire-and-forget promise. Never throw.
+  await Promise.allSettled(
+    recipients.map((r) => {
+      const email = buildAlertDigestEmail({ recipientName: r.name || "there", alerts: newAlerts, appUrl });
+      return sendEmail({ to: r.email, ...email });
+    }),
+  );
 }
 
 // Scan vehicles for registration/insurance documents expiring within DAYS_AHEAD

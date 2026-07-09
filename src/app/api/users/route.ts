@@ -67,7 +67,14 @@ export async function POST(req: Request) {
     stations: d.station || null,
     appUrl,
   });
-  sendEmail({ to: d.email.toLowerCase(), ...invite }).catch(() => {});
+  // Await the send: on Vercel the serverless function is frozen once the
+  // response returns, so a fire-and-forget promise never completes and the
+  // email is silently dropped. Wrapped so a send failure never breaks signup.
+  try {
+    await sendEmail({ to: d.email.toLowerCase(), ...invite });
+  } catch {
+    // ignore — user is still created even if the invite email fails
+  }
 
   return NextResponse.json({
     id: user.id,

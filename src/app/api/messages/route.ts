@@ -81,7 +81,13 @@ export async function POST(req: Request) {
       isReply: Boolean(parentId),
       appUrl: getAppUrl(),
     });
-    sendEmail({ to: recipient.email, ...email }).catch(() => {});
+    // Await so the send completes before the serverless function is frozen
+    // (a fire-and-forget promise is dropped on Vercel). Never fail the request.
+    try {
+      await sendEmail({ to: recipient.email, ...email });
+    } catch {
+      // ignore — message is still saved even if the email fails
+    }
   }
 
   return NextResponse.json(msg, { status: 201 });
