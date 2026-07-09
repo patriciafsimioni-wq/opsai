@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiUser } from "@/lib/api";
-import { PM_CATEGORIES, WO_TITLE_TO_PM_CATEGORY, CR_CATEGORIES, WO_TITLE_TO_CR_CATEGORY, STATIONS, REGION_LABEL, REGION_ABBR } from "@/lib/constants";
+import { PM_CATEGORIES, CR_CATEGORIES, STATIONS, REGION_LABEL, REGION_ABBR } from "@/lib/constants";
+import { classifyPM, classifyCR } from "@/lib/classify";
 import { BRAND } from "@/lib/brand";
 
 const ALL_STATIONS = STATIONS as readonly string[];
@@ -17,70 +18,6 @@ const STATION_LABELS: Record<string, string> = {
   CLL: "CLL - College Station",
   BPT: "BPT - Beaumont",
 };
-
-function classifyPM(title: string): string | null {
-  if (WO_TITLE_TO_PM_CATEGORY[title]) return WO_TITLE_TO_PM_CATEGORY[title];
-  const lower = title.toLowerCase();
-  if (lower.includes("brake pad") || lower.includes("brake rotor") || lower.includes("air brake")) return "Brakes";
-  if (lower.includes("tire")) return "Tires Replacement";
-  if (lower.includes("oil change") || lower.includes("pm a") || lower.includes("pm b") || lower.includes("pm c")) return "Oil Change";
-  if (lower.includes("caliper")) return "Brake Calipers";
-  if (lower.includes("drivetrain")) return "Drivetrain Overhaul";
-  if (lower.includes("transmission")) return "Transmission Fluid";
-  if (lower.includes("coolant") || lower.includes("spark plug")) return "Coolant + Spark plugs";
-  if (lower.includes("timing") || lower.includes("time belt")) return "Time Belt";
-  if (lower.includes("diesel filter")) return "Diesel Filter Cleaning";
-  if (lower.includes("engine filter") || lower.includes("engine air filter") || lower.includes("air filter")) return "Engine Filter";
-  if (lower.includes("battery")) return "Battery Replacement";
-  if (lower.includes("fluid")) return "Fluids";
-  if (lower.includes("wiper")) return "Wiper Replacement";
-  if (lower.includes("turbo")) return "Turbo Charger Inspection";
-  if (lower.includes("dot") || lower.includes("inspection")) return "Brakes";
-  return null;
-}
-
-function classifyCR(title: string): string | null {
-  if (WO_TITLE_TO_CR_CATEGORY[title]) return WO_TITLE_TO_CR_CATEGORY[title];
-  const lower = title.toLowerCase();
-  if (lower.includes("engine") || lower.includes("def system") || lower.includes("turbo") || lower.includes("actuator")) return "Engine Services";
-  if (lower.includes("electric") || lower.includes("wiring") || lower.includes("fuse")) return "Electrical Repairs";
-  if (lower.includes("ac ") || lower.includes("a/c") || lower.includes("heating") || lower.includes("hvac")) return "A/C & Heating";
-  if (
-    lower.includes("body") ||
-    lower.includes("cosmetic") ||
-    lower.includes("paint") ||
-    lower.includes("dent") ||
-    lower.includes("registration") ||
-    lower.includes("wash") ||
-    lower.includes("detail") ||
-    lower.includes("decal") ||
-    lower.includes("sticker") ||
-    lower.includes("samsara") ||
-    lower.includes("key replacement") ||
-    lower.includes("key programming") ||
-    lower.includes("door") ||
-    lower.includes("latch") ||
-    lower.includes("roller") ||
-    lower.includes("windshield") ||
-    lower.includes("bumper") ||
-    lower.includes("headlight") ||
-    lower.includes("trim")
-  ) return "Cosmetic / Utility";
-  // Explicitly corrective mechanical work.
-  if (
-    lower.includes("transmission") ||
-    lower.includes("radiator") ||
-    lower.includes("cooling system") ||
-    lower.includes("suspension") ||
-    lower.includes("exhaust") ||
-    lower.includes("drivetrain overhaul") ||
-    lower.includes("repair") ||
-    lower.includes("replace part")
-  ) return "Mechanical Repairs";
-  // Anything the preventive classifier recognizes is scheduled PM — never corrective.
-  if (classifyPM(title) !== null) return null;
-  return "Mechanical Repairs";
-}
 
 function fmtDollar(n: number): string {
   return "$" + Math.abs(n).toLocaleString("en-US");
