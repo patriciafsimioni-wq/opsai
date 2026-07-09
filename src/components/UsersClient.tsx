@@ -64,6 +64,8 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
+  const [resending, setResending] = useState(false);
+  const [resendResult, setResendResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -147,8 +149,28 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
     }
   }
 
+  async function resendWelcome() {
+    if (!editingUser) return;
+    setResending(true);
+    setResendResult(null);
+    const res = await apiSend(`/api/users/${editingUser.id}/resend-invite`, "POST", {});
+    setResending(false);
+    if (res.ok) {
+      const d = res.data as { emailSent: boolean; tempPassword: string; emailError?: string | null };
+      setResendResult({
+        ok: d.emailSent,
+        msg: d.emailSent
+          ? `Welcome email sent to ${editingUser.email}. New temporary password: ${d.tempPassword}`
+          : `Password reset to "${d.tempPassword}" but the email failed to send${d.emailError ? ` (${d.emailError})` : ""}. Share the password manually.`,
+      });
+    } else {
+      setResendResult({ ok: false, msg: res.error ?? "Failed to resend welcome email" });
+    }
+  }
+
   function openEdit(u: UserRow) {
     setEditingUser(u);
+    setResendResult(null);
     setForm({
       name: u.name,
       email: u.email,
@@ -376,6 +398,26 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
           <Button onClick={save} disabled={saving} className="w-full">
             {saving ? (editingUser ? "Saving…" : "Creating…") : (editingUser ? "Save Changes" : "Create User")}
           </Button>
+          {editingUser && (
+            <div className="border-t border-slate-100 pt-3">
+              <button
+                type="button"
+                onClick={resendWelcome}
+                disabled={resending}
+                className="w-full rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-60"
+              >
+                {resending ? "Sending…" : "Resend welcome email"}
+              </button>
+              <p className="mt-1 text-[10px] text-slate-400">
+                Resets the password to a new temporary one and emails the login details.
+              </p>
+              {resendResult && (
+                <p className={`mt-2 text-xs ${resendResult.ok ? "text-green-700" : "text-red-600"}`}>
+                  {resendResult.msg}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </Modal>
     </div>
