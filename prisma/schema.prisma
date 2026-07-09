@@ -155,6 +155,7 @@ model User {
   sentMessages      UserMessage[]      @relation("sentMessages")
   receivedMessages  UserMessage[]      @relation("receivedMessages")
   createdAt         DateTime           @default(now())
+  lastActiveAt      DateTime?
 }
 
 // Direct in-app message from one user to another, with threaded replies.

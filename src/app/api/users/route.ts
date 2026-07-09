@@ -17,6 +17,7 @@ export async function GET() {
       role: true,
       station: true,
       createdAt: true,
+      lastActiveAt: true,
     },
     orderBy: { createdAt: "desc" },
   });

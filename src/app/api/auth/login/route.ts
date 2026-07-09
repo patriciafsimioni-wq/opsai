@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authenticate, createSession } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 
 const schema = z.object({
   email: z.string().email(),
@@ -21,5 +22,8 @@ export async function POST(req: Request) {
     );
   }
   await createSession(user);
+  await prisma.user
+    .update({ where: { id: user.id }, data: { lastActiveAt: new Date() } })
+    .catch(() => {});
   return NextResponse.json({ ok: true, user });
 }

@@ -40,6 +40,29 @@ const ROLE_LABELS: Record<string, string> = {
   DRIVER: "Driver",
 };
 
+// A user is considered "online now" if they pinged within the last 5 minutes.
+const ONLINE_WINDOW_MS = 5 * 60 * 1000;
+
+function renderLastActive(value?: string | Date | null) {
+  if (!value) return <span className="text-slate-400">Never</span>;
+  const t = new Date(value).getTime();
+  const diff = Date.now() - t;
+  const online = diff < ONLINE_WINDOW_MS;
+  let label: string;
+  if (online) label = "Online now";
+  else if (diff < 60 * 60 * 1000) label = `${Math.max(1, Math.round(diff / 60000))} min ago`;
+  else if (diff < 24 * 60 * 60 * 1000) label = `${Math.round(diff / 3600000)}h ago`;
+  else label = formatDate(value);
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span
+        className={`inline-block h-2 w-2 rounded-full ${online ? "bg-green-500" : "bg-slate-300"}`}
+      />
+      <span className={online ? "font-medium text-green-700" : "text-slate-600"}>{label}</span>
+    </span>
+  );
+}
+
 type UserRow = {
   id: string;
   email: string;
@@ -47,6 +70,7 @@ type UserRow = {
   role: string;
   station: string | null;
   createdAt: string | Date;
+  lastActiveAt?: string | Date | null;
 };
 
 const emptyForm = {
@@ -72,13 +96,14 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
 
-  const sort = useTableSort<UserRow, "name" | "email" | "role" | "station" | "created">(
+  const sort = useTableSort<UserRow, "name" | "email" | "role" | "station" | "created" | "active">(
     {
       name: (u) => u.name.toLowerCase(),
       email: (u) => u.email.toLowerCase(),
       role: (u) => ROLE_LABELS[u.role] ?? u.role,
       station: (u) => (u.station ?? "").toLowerCase(),
       created: (u) => new Date(u.createdAt).getTime(),
+      active: (u) => (u.lastActiveAt ? new Date(u.lastActiveAt).getTime() : 0),
     },
     "name",
   );
@@ -244,6 +269,7 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
               <SortTh label="Email" col="email" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
               <SortTh label="Role" col="role" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
               <SortTh label="Station" col="station" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+              <SortTh label="Last active" col="active" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
               <SortTh label="Created" col="created" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
               {canCreate && <Th>Actions</Th>}
             </tr>
@@ -259,6 +285,7 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
                   </Badge>
                 </Td>
                 <Td className="text-slate-600">{u.station ? u.station.split(",").join(", ") : "All"}</Td>
+                <Td className="text-slate-600">{renderLastActive(u.lastActiveAt)}</Td>
                 <Td className="text-slate-600">{formatDate(u.createdAt)}</Td>
                 {canCreate && (
                   <Td>

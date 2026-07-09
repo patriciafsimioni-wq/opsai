@@ -20,6 +20,7 @@ export default async function UsersPage() {
       role: true,
       station: true,
       createdAt: true,
+      lastActiveAt: true,
     },
     orderBy: { createdAt: "desc" },
   });
