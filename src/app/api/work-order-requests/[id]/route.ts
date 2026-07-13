@@ -87,6 +87,51 @@ export async function PATCH(
     station: updated.station,
   });
 
+  // Approving a request turns it into an actual Work Order, linked by the same
+  // PO number, so the two are tracked end-to-end. Skip if one already exists
+  // for this PO (e.g. a re-run) to avoid duplicates.
+  if (parsed.data.status === "APPROVED") {
+    const already = updated.poNumber
+      ? await prisma.workOrder.findFirst({ where: { poNumber: updated.poNumber }, select: { id: true } })
+      : null;
+    if (!already) {
+      const requesterIsVendor = updated.requestedBy?.role === "VENDOR";
+      const estimate = updated.vendorEstimate ?? 0;
+      const description = [updated.comments, updated.partsNeeded ? `Parts: ${updated.partsNeeded}` : null]
+        .filter(Boolean)
+        .join("\n") || null;
+      const workOrder = await prisma.workOrder.create({
+        data: {
+          vehicleId: updated.vehicleId || null,
+          vehicleOther: updated.vehicleOther || null,
+          serviceId: updated.serviceId || null,
+          station: updated.station,
+          type: "REPAIR",
+          title: updated.service?.name ?? "Service Request",
+          description,
+          status: "OPEN",
+          priority: "MEDIUM",
+          laborHours: updated.serviceHours ?? 0,
+          laborCost: estimate,
+          cost: estimate,
+          odometerAt: updated.odometer ?? null,
+          poNumber: updated.poNumber || null,
+          invoiceUrl: updated.photoUrl || null,
+          assignedToId: requesterIsVendor ? updated.requestedById : null,
+          vendor: requesterIsVendor ? updated.requestedBy?.name ?? null : null,
+          scheduledFor: updated.expectedCompletion ?? updated.requestedDate ?? null,
+        },
+      });
+      await logActivity(auth.user, {
+        action: "created",
+        entity: "Work Order",
+        entityLabel: workOrder.poNumber ? `${workOrder.title} (PO ${workOrder.poNumber})` : workOrder.title,
+        station: workOrder.station,
+        detail: "from approved WO Request",
+      });
+    }
+  }
+
   return NextResponse.json(updated);
 }
 
