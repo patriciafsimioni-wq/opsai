@@ -440,54 +440,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         )}
       </Card>
 
-      {/* Recent activity — who changed what, and when */}
-      {isManager && (
-        <Card className="mb-6">
-          <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-3">
-            <div className="flex items-center gap-2">
-              <History size={18} className="text-blue-600" />
-              <h2 className="text-sm font-semibold">Recent Activity</h2>
-            </div>
-            <Link href="/activity" className="text-xs font-medium text-blue-600 hover:underline">View All</Link>
-          </div>
-          {recentActivity.length === 0 ? (
-            <p className="px-5 py-4 text-center text-sm text-slate-400">
-              No changes recorded yet. Activity will appear here as you and your team make changes.
-            </p>
-          ) : (
-            <div className="divide-y divide-[var(--color-border)]">
-              {recentActivity.map((a) => {
-                const style = ACTIVITY_ACTION_STYLE[a.action] ?? { bg: "#e2e8f0", fg: "#475569" };
-                return (
-                  <div key={a.id} className="flex items-center justify-between gap-3 px-5 py-2.5">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span
-                        className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize"
-                        style={{ backgroundColor: style.bg, color: style.fg }}
-                      >
-                        {a.action}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm">
-                          <span className="font-medium">{a.entity}</span>
-                          <span className="text-slate-500"> — {a.entityLabel}</span>
-                        </p>
-                        <p className="truncate text-xs text-slate-400">
-                          {a.userName}
-                          {a.station && <span> · {a.station}</span>}
-                          {a.detail && <span> · {a.detail}</span>}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="shrink-0 text-xs text-slate-400">{relativeTime(a.createdAt)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </Card>
-      )}
-
       {/* KPI cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-6">
         <StatCard
@@ -1077,6 +1029,54 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </Card>
         )}
       </div>
+
+      {/* Recent activity — who changed what, and when (kept at the bottom) */}
+      {isManager && (
+        <Card className="mt-6">
+          <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-3">
+            <div className="flex items-center gap-2">
+              <History size={18} className="text-blue-600" />
+              <h2 className="text-sm font-semibold">Recent Activity</h2>
+            </div>
+            <Link href="/activity" className="text-xs font-medium text-blue-600 hover:underline">View All</Link>
+          </div>
+          {recentActivity.length === 0 ? (
+            <p className="px-5 py-4 text-center text-sm text-slate-400">
+              No changes recorded yet. Activity will appear here as you and your team make changes.
+            </p>
+          ) : (
+            <div className="divide-y divide-[var(--color-border)]">
+              {recentActivity.map((a) => {
+                const style = ACTIVITY_ACTION_STYLE[a.action] ?? { bg: "#e2e8f0", fg: "#475569" };
+                return (
+                  <div key={a.id} className="flex items-center justify-between gap-3 px-5 py-2.5">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span
+                        className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize"
+                        style={{ backgroundColor: style.bg, color: style.fg }}
+                      >
+                        {a.action}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm">
+                          <span className="font-medium">{a.entity}</span>
+                          <span className="text-slate-500"> — {a.entityLabel}</span>
+                        </p>
+                        <p className="truncate text-xs text-slate-400">
+                          {a.userName}
+                          {a.station && <span> · {a.station}</span>}
+                          {a.detail && <span> · {a.detail}</span>}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-xs text-slate-400">{relativeTime(a.createdAt)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   );
 }
