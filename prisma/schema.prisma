@@ -702,10 +702,11 @@ model RentalVehicle {
   vehicleName   String
   rentalCompany String?
   station       String?
+  status        String   @default("ACTIVE") // ACTIVE | RETURNED
   pickupDate    DateTime?
   returnDate    DateTime?
-  cost          Float?
-  invoiceUrls   String?  // JSON array of invoice photo/PDF URLs
+  cost          Float?   // total cost = sum of invoice amounts
+  invoices      String?  // JSON array of { amount, url, note } — one per charge
   notes         String?
 
   @@index([station])

@@ -16,16 +16,28 @@ export async function GET() {
   return NextResponse.json(rentals);
 }
 
+const invoiceSchema = z.object({
+  amount: z.coerce.number().min(0).optional().nullable(),
+  url: z.string().optional().nullable(),
+  note: z.string().optional().nullable(),
+});
+
 const schema = z.object({
   vehicleName: z.string().min(1),
   rentalCompany: z.string().optional().nullable(),
   station: z.string().min(1),
+  status: z.enum(["ACTIVE", "RETURNED"]).optional(),
   pickupDate: z.string().optional().nullable(),
   returnDate: z.string().optional().nullable(),
-  cost: z.coerce.number().min(0).optional().nullable(),
-  invoiceUrls: z.array(z.string()).optional().nullable(),
+  invoices: z.array(invoiceSchema).optional().nullable(),
   notes: z.string().optional().nullable(),
 });
+
+function totalCost(invoices: { amount?: number | null }[] | null | undefined): number | null {
+  if (!invoices || invoices.length === 0) return null;
+  const sum = invoices.reduce((s, i) => s + (i.amount ?? 0), 0);
+  return sum;
+}
 
 export async function POST(req: Request) {
   const auth = await requireManager();
@@ -34,15 +46,17 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Invalid input");
   const d = parsed.data;
+  const invoices = (d.invoices ?? []).map((i) => ({ amount: i.amount ?? null, url: i.url || null, note: i.note || null }));
   const rental = await prisma.rentalVehicle.create({
     data: {
       vehicleName: d.vehicleName,
       rentalCompany: d.rentalCompany || null,
       station: d.station,
+      status: d.status ?? "ACTIVE",
       pickupDate: d.pickupDate ? new Date(d.pickupDate) : null,
       returnDate: d.returnDate ? new Date(d.returnDate) : null,
-      cost: d.cost ?? null,
-      invoiceUrls: d.invoiceUrls && d.invoiceUrls.length > 0 ? JSON.stringify(d.invoiceUrls) : null,
+      cost: totalCost(invoices),
+      invoices: invoices.length > 0 ? JSON.stringify(invoices) : null,
       notes: d.notes || null,
     },
   });
