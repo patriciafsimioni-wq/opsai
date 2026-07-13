@@ -3,9 +3,10 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { Bell, LogOut, ChevronDown, Eye, GraduationCap, MessageSquare } from "lucide-react";
+import { Bell, LogOut, ChevronDown, Eye, GraduationCap, MessageSquare, KeyRound } from "lucide-react";
 import { MobileMenuButton } from "@/components/Sidebar";
 import { Avatar } from "@/components/ui";
+import { ChangePasswordModal } from "@/components/ChangePasswordModal";
 import { BRAND } from "@/lib/brand";
 import type { Role } from "@prisma/client";
 
@@ -33,6 +34,7 @@ export function Topbar({
 }) {
   const router = useRouter();
   const [menu, setMenu] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const isAdmin = user.role === "ADMIN" || user.role === "GENERAL_MANAGER" || user.role === "FLEET_MANAGER";
 
   function setViewAs(role: string) {
@@ -157,6 +159,15 @@ export function Topbar({
                 </div>
                 <div className="my-1 border-t border-[var(--color-border)]" />
                 <button
+                  onClick={() => {
+                    setMenu(false);
+                    setShowChangePassword(true);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                >
+                  <KeyRound size={16} /> Change password
+                </button>
+                <button
                   onClick={logout}
                   className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                 >
@@ -167,6 +178,9 @@ export function Topbar({
           )}
         </div>
       </div>
+      {showChangePassword && (
+        <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
+      )}
     </header>
   );
 }
