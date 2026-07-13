@@ -16,7 +16,6 @@ type RentalVehicle = {
   station: string | null;
   pickupDate: string | null;
   returnDate: string | null;
-  amount: number | null;
   cost: number | null;
   invoiceUrls: string | null;
   notes: string | null;
@@ -28,7 +27,6 @@ const emptyForm = {
   station: "",
   pickupDate: "",
   returnDate: "",
-  amount: "",
   cost: "",
   notes: "",
   invoiceUrls: [] as string[],
@@ -55,14 +53,13 @@ export function RentalVehiclesClient({ canManage }: { canManage: boolean }) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const sort = useTableSort<RentalVehicle, "vehicle" | "company" | "station" | "pickup" | "return" | "amount" | "cost">(
+  const sort = useTableSort<RentalVehicle, "vehicle" | "company" | "station" | "pickup" | "return" | "cost">(
     {
       vehicle: (r) => r.vehicleName.toLowerCase(),
       company: (r) => (r.rentalCompany ?? "").toLowerCase(),
       station: (r) => r.station ?? "",
       pickup: (r) => (r.pickupDate ? new Date(r.pickupDate).getTime() : 0),
       return: (r) => (r.returnDate ? new Date(r.returnDate).getTime() : 0),
-      amount: (r) => r.amount ?? 0,
       cost: (r) => r.cost ?? 0,
     },
     "pickup",
@@ -105,7 +102,6 @@ export function RentalVehiclesClient({ canManage }: { canManage: boolean }) {
       station: r.station ?? "",
       pickupDate: r.pickupDate ? r.pickupDate.slice(0, 10) : "",
       returnDate: r.returnDate ? r.returnDate.slice(0, 10) : "",
-      amount: r.amount != null ? String(r.amount) : "",
       cost: r.cost != null ? String(r.cost) : "",
       notes: r.notes ?? "",
       invoiceUrls: parseInvoices(r.invoiceUrls),
@@ -124,7 +120,6 @@ export function RentalVehiclesClient({ canManage }: { canManage: boolean }) {
       station: form.station,
       pickupDate: form.pickupDate || null,
       returnDate: form.returnDate || null,
-      amount: form.amount === "" ? null : form.amount,
       cost: form.cost === "" ? null : form.cost,
       invoiceUrls: form.invoiceUrls,
       notes: form.notes,
@@ -211,8 +206,7 @@ export function RentalVehiclesClient({ canManage }: { canManage: boolean }) {
                 <SortTh label="Station" col="station" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
                 <SortTh label="Pickup" col="pickup" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
                 <SortTh label="Return" col="return" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
-                <SortTh label="Amount" col="amount" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
-                <SortTh label="Cost" col="cost" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Total Cost" col="cost" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
                 <Th>Invoices</Th>
                 <Th />
               </tr>
@@ -230,7 +224,6 @@ export function RentalVehiclesClient({ canManage }: { canManage: boolean }) {
                     <Td className="text-xs font-medium text-slate-600">{r.station || "—"}</Td>
                     <Td className="text-slate-600">{r.pickupDate ? formatDate(r.pickupDate) : "—"}</Td>
                     <Td className="text-slate-600">{r.returnDate ? formatDate(r.returnDate) : "—"}</Td>
-                    <Td className="text-slate-700">{r.amount != null ? `$${r.amount.toLocaleString()}` : "—"}</Td>
                     <Td className="font-semibold text-slate-800">{r.cost != null ? `$${r.cost.toLocaleString()}` : "—"}</Td>
                     <Td>
                       {invoices.length > 0 ? (
@@ -292,9 +285,6 @@ export function RentalVehiclesClient({ canManage }: { canManage: boolean }) {
           </Field>
           <Field label="Return Date">
             <Input type="date" value={form.returnDate} onChange={(e) => setForm({ ...form, returnDate: e.target.value })} />
-          </Field>
-          <Field label="Amount ($)">
-            <Input type="number" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="Rental rate / charge" />
           </Field>
           <Field label="Total Cost ($)">
             <Input type="number" step="0.01" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} placeholder="Total cost of rental" />

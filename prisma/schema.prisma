@@ -704,7 +704,6 @@ model RentalVehicle {
   station       String?
   pickupDate    DateTime?
   returnDate    DateTime?
-  amount        Float?
   cost          Float?
   invoiceUrls   String?  // JSON array of invoice photo/PDF URLs
   notes         String?
