@@ -172,6 +172,61 @@ export async function sendEmail(payload: EmailPayload): Promise<{ success: boole
   }
 }
 
+// A getting-started / guide email. Unlike the invite, this does NOT reset or
+// include a password — it just points the user to the login page and the
+// interactive guide, with a short note on what their role can do.
+export function buildGuideEmail(params: {
+  name: string;
+  role: string;
+  appUrl: string;
+}): { subject: string; html: string } {
+  const { name, role, appUrl } = params;
+  const roleBlurbs: Record<string, string> = {
+    ADMIN: "You have full access — manage users, vehicles, work orders, finance, and settings across every station.",
+    GENERAL_MANAGER: "You can oversee the whole fleet across all stations — vehicles, work orders, finance, and reports.",
+    FLEET_MANAGER: "You can manage vehicles, maintenance, work orders, and reports across all stations.",
+    STATION_MANAGER: "You'll see and manage everything for your assigned station — vehicles, services, work orders, and drivers.",
+    MANAGER: "You can manage day-to-day operations — vehicles, work orders, and services.",
+    MECHANIC: "You can view assigned work orders and log completed services.",
+    VENDOR: "You can view the fleet and submit work order requests for any vehicle.",
+    DRIVER: "You can complete DVIRs and see your assigned vehicle and routes — best used from your phone.",
+  };
+  const blurb = roleBlurbs[role] || "Here's how to get started.";
+
+  const subject = `Getting started with ${BRAND}`;
+
+  const html = shell(
+    "Getting Started",
+    "#2563eb",
+    `
+  <p style="font-size: 14px; line-height: 1.6;">Hi ${escapeHtml(name)},</p>
+  <p style="font-size: 14px; line-height: 1.6;">
+    Welcome to <strong>${BRAND}</strong>, our fleet management portal. ${escapeHtml(blurb)}
+  </p>
+  <p style="font-size: 14px; line-height: 1.6;">
+    Log in with the email and temporary password from your invitation. If you don't have it,
+    use <strong>"Change password"</strong> after logging in, or ask your administrator to resend it.
+  </p>
+
+  <div style="text-align: center; margin: 24px 0;">
+    <a href="${appUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; margin: 4px;">Log In</a>
+    <a href="${appUrl}/guide" style="display: inline-block; background: #0f172a; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; margin: 4px;">Open the Guide</a>
+  </div>
+
+  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+    <p style="margin: 0 0 8px; font-size: 14px; font-weight: 600; color: #0f172a;">Add it to your phone like an app</p>
+    <p style="margin: 0 0 4px; font-size: 13px; line-height: 1.6;">
+      <strong>iPhone (Safari):</strong> open ${appUrl} → tap the Share button → <strong>Add to Home Screen</strong>.
+    </p>
+    <p style="margin: 0; font-size: 13px; line-height: 1.6;">
+      <strong>Android (Chrome):</strong> open ${appUrl} → tap the ⋮ menu → <strong>Add to Home screen</strong>.
+    </p>
+  </div>`,
+  );
+
+  return { subject, html };
+}
+
 export function buildInviteEmail(params: {
   name: string;
   email: string;

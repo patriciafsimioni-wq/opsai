@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Shield, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Shield, Pencil, Trash2, Search, BookOpen } from "lucide-react";
 import { Card, Button, Table, Th, Td, SortTh, Badge } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { apiSend } from "@/lib/use-data";
@@ -90,6 +90,9 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
   const [deleteError, setDeleteError] = useState("");
   const [resending, setResending] = useState(false);
   const [resendResult, setResendResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [sendingGuide, setSendingGuide] = useState(false);
+  const [bulkGuide, setBulkGuide] = useState(false);
+  const [bulkGuideResult, setBulkGuideResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -193,6 +196,43 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
     }
   }
 
+  async function sendGuide() {
+    if (!editingUser) return;
+    setSendingGuide(true);
+    setResendResult(null);
+    const res = await apiSend(`/api/users/${editingUser.id}/send-guide`, "POST", {});
+    setSendingGuide(false);
+    if (res.ok) {
+      const d = res.data as { emailSent: boolean; emailError?: string | null };
+      setResendResult({
+        ok: d.emailSent,
+        msg: d.emailSent
+          ? `Guide email sent to ${editingUser.email}.`
+          : `Failed to send the guide email${d.emailError ? ` (${d.emailError})` : ""}.`,
+      });
+    } else {
+      setResendResult({ ok: false, msg: res.error ?? "Failed to send guide email" });
+    }
+  }
+
+  async function sendGuideToEveryone() {
+    setBulkGuide(true);
+    setBulkGuideResult(null);
+    const res = await apiSend(`/api/users/send-guide`, "POST", {});
+    setBulkGuide(false);
+    if (res.ok) {
+      const d = res.data as { total: number; sent: number; failed: { email: string }[] };
+      setBulkGuideResult({
+        ok: d.failed.length === 0,
+        msg: d.failed.length === 0
+          ? `Guide email sent to all ${d.sent} user${d.sent === 1 ? "" : "s"}.`
+          : `Sent ${d.sent} of ${d.total}. Failed: ${d.failed.map((f) => f.email).join(", ")}.`,
+      });
+    } else {
+      setBulkGuideResult({ ok: false, msg: res.error ?? "Failed to send guide emails" });
+    }
+  }
+
   function openEdit(u: UserRow) {
     setEditingUser(u);
     setResendResult(null);
@@ -220,11 +260,27 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
           </p>
         </div>
         {canCreate && (
-          <Button onClick={() => { setEditingUser(null); setForm(emptyForm); setError(""); setModalOpen(true); }}>
-            <Plus size={16} /> Add User
-          </Button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={sendGuideToEveryone}
+              disabled={bulkGuide}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+            >
+              <BookOpen size={16} /> {bulkGuide ? "Sending…" : "Send guide to everyone"}
+            </button>
+            <Button onClick={() => { setEditingUser(null); setForm(emptyForm); setError(""); setModalOpen(true); }}>
+              <Plus size={16} /> Add User
+            </Button>
+          </div>
         )}
       </div>
+
+      {bulkGuideResult && (
+        <div className={`mb-4 rounded-lg border px-3 py-2 text-sm ${bulkGuideResult.ok ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>
+          {bulkGuideResult.msg}
+        </div>
+      )}
 
       {/* Role legend */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -437,6 +493,17 @@ export function UsersClient({ users: initialUsers, currentRole }: { users: UserR
               </button>
               <p className="mt-1 text-[10px] text-slate-400">
                 Resets the password to a new temporary one and emails the login details.
+              </p>
+              <button
+                type="button"
+                onClick={sendGuide}
+                disabled={sendingGuide}
+                className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              >
+                {sendingGuide ? "Sending…" : "Send guide"}
+              </button>
+              <p className="mt-1 text-[10px] text-slate-400">
+                Emails a getting-started guide with the login and guide links. Does not change the password.
               </p>
               {resendResult && (
                 <p className={`mt-2 text-xs ${resendResult.ok ? "text-green-700" : "text-red-600"}`}>
