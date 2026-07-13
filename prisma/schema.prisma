@@ -692,3 +692,22 @@ model ServiceProvider {
   name      String   @unique
   createdAt DateTime @default(now())
 }
+
+// Rental vehicles: track short-term rented vehicles per station, the rental
+// window (pickup/return), the amount/cost, and photos of the charged invoices.
+model RentalVehicle {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  vehicleName   String
+  rentalCompany String?
+  station       String?
+  pickupDate    DateTime?
+  returnDate    DateTime?
+  amount        Float?
+  cost          Float?
+  invoiceUrls   String?  // JSON array of invoice photo/PDF URLs
+  notes         String?
+
+  @@index([station])
+}
