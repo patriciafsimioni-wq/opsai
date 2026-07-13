@@ -77,7 +77,6 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/maintenance-schedule", label: "PM Schedule", icon: CalendarClock },
       { href: "/dvir", label: "DVIR", icon: ClipboardCheck },
       { href: "/work-order-requests", label: "WO Requests", icon: ClipboardList },
-      { href: "/log-service", label: "Log Service", icon: ClipboardCheck },
       { href: "/services", label: "Service Catalog", icon: ListChecks },
     ],
   },
