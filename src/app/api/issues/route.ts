@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   if (sw) where.station = sw.station;
 
   // Issues are private: only visible to creator, assignee, or admins/managers
-  const adminRoles = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"];
+  const adminRoles = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "DATA_ENTRY"];
   if (!adminRoles.includes(auth.user.role)) {
     where.OR = [
       { createdById: auth.user.id },

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireManager, badRequest } from "@/lib/api";
+import { requireUserAdmin, badRequest } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
 import { hashPassword } from "@/lib/auth";
 
@@ -9,7 +9,7 @@ const updateSchema = z.object({
   name: z.string().min(1).optional(),
   email: z.string().email().optional(),
   password: z.string().min(6).optional(),
-  role: z.enum(["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MECHANIC", "VENDOR", "MANAGER", "DRIVER"]).optional(),
+  role: z.enum(["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MECHANIC", "VENDOR", "MANAGER", "DRIVER", "DATA_ENTRY"]).optional(),
   station: z.string().optional().nullable(),
 });
 
@@ -17,7 +17,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireManager();
+  const auth = await requireUserAdmin();
   if ("error" in auth) return auth.error;
 
   const { id } = await params;
@@ -63,7 +63,7 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireManager();
+  const auth = await requireUserAdmin();
   if ("error" in auth) return auth.error;
 
   const { id } = await params;

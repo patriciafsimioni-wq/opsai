@@ -13,6 +13,7 @@ const ROLES = [
   { value: "GENERAL_MANAGER", label: "General Manager" },
   { value: "FLEET_MANAGER", label: "Fleet Manager" },
   { value: "STATION_MANAGER", label: "Station Manager" },
+  { value: "DATA_ENTRY", label: "Data Entry" },
   { value: "MECHANIC", label: "Mechanic" },
   { value: "VENDOR", label: "Vendor" },
   { value: "DRIVER", label: "Driver" },
@@ -27,6 +28,7 @@ const ROLE_COLORS: Record<string, { bg: string; fg: string }> = {
   VENDOR: { bg: "#f3e8ff", fg: "#7c2d12" },
   MANAGER: { bg: "#dbeafe", fg: "#1e40af" },
   DRIVER: { bg: "#e2e8f0", fg: "#475569" },
+  DATA_ENTRY: { bg: "#ccfbf1", fg: "#115e59" },
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -38,6 +40,7 @@ const ROLE_LABELS: Record<string, string> = {
   VENDOR: "Vendor",
   MANAGER: "Manager",
   DRIVER: "Driver",
+  DATA_ENTRY: "Data Entry",
 };
 
 // A user is considered "online now" if they pinged within the last 5 minutes.

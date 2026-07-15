@@ -23,7 +23,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (!issue) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Private: only creator, assignee, or admins can view
-  const adminRoles = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"];
+  const adminRoles = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "DATA_ENTRY"];
   if (!adminRoles.includes(auth.user.role) && issue.createdBy.id !== auth.user.id && issue.assignedTo?.id !== auth.user.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

@@ -95,12 +95,19 @@ export async function requireUser(): Promise<SessionUser> {
 }
 
 // Role hierarchy — higher roles include lower-tier permissions
-const MANAGEMENT_ROLES: Role[] = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "MECHANIC"];
-const APPROVAL_ROLES: Role[] = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "MANAGER"];
+const MANAGEMENT_ROLES: Role[] = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "MECHANIC", "DATA_ENTRY"];
+const APPROVAL_ROLES: Role[] = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "MANAGER", "DATA_ENTRY"];
 const SERVICE_ROLES: Role[] = [...MANAGEMENT_ROLES, "MECHANIC", "VENDOR"];
+
+// User account management is restricted to true admins/managers — NOT Data Entry.
+const USER_ADMIN_ROLES: Role[] = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "MECHANIC"];
 
 export function canManage(role: Role) {
   return MANAGEMENT_ROLES.includes(role);
+}
+
+export function canManageUsers(role: Role) {
+  return USER_ADMIN_ROLES.includes(role);
 }
 
 export function canApprove(role: Role) {
@@ -120,7 +127,7 @@ export function canViewSafety(role: Role) {
 }
 
 // Roles that see ALL stations vs only their assigned station
-const ALL_STATION_ROLES: Role[] = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"];
+const ALL_STATION_ROLES: Role[] = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "DATA_ENTRY"];
 
 export function isStationScoped(role: Role): boolean {
   return !ALL_STATION_ROLES.includes(role);
@@ -147,6 +154,7 @@ export function getRoleLabel(role: Role): string {
     VENDOR: "Vendor",
     MANAGER: "Manager",
     DRIVER: "Driver",
+    DATA_ENTRY: "Data Entry",
   };
   return labels[role] || role;
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireManager } from "@/lib/api";
+import { requireUserAdmin } from "@/lib/api";
 import { sendEmail, buildGuideEmail, getAppUrl } from "@/lib/email";
 
 // Send the getting-started / guide email to a single user. Does NOT touch
@@ -9,7 +9,7 @@ export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireManager();
+  const auth = await requireUserAdmin();
   if ("error" in auth) return auth.error;
 
   const { id } = await params;

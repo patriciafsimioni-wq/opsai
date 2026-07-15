@@ -16,6 +16,7 @@ const ALL_ROLES: { value: Role; label: string }[] = [
   { value: "FLEET_MANAGER", label: "Fleet Manager" },
   { value: "STATION_MANAGER", label: "Station Manager" },
   { value: "MANAGER", label: "Manager" },
+  { value: "DATA_ENTRY", label: "Data Entry" },
   { value: "MECHANIC", label: "Mechanic" },
   { value: "VENDOR", label: "Vendor" },
   { value: "DRIVER", label: "Driver" },
@@ -61,6 +62,7 @@ export function Topbar({
     VENDOR: "Vendor",
     MANAGER: "Manager",
     DRIVER: "Driver",
+    DATA_ENTRY: "Data Entry",
   };
   const roleLabel = ROLE_MAP[user.role] ?? user.role;
   const stationLabel = user.station ? ` — ${user.station}` : "";

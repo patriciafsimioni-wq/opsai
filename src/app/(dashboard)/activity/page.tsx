@@ -9,7 +9,7 @@ export default async function ActivityPage() {
   const user = await getSession();
   if (!user) redirect("/login");
   // Service roles (mechanic/vendor/driver) don't get the audit log.
-  const allowed = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER"];
+  const allowed = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "DATA_ENTRY"];
   if (!allowed.includes(user.role)) redirect("/");
 
   const stations = getUserStationFilter(user);

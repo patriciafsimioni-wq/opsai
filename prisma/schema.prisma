@@ -18,6 +18,7 @@ enum Role {
   VENDOR
   MANAGER
   DRIVER
+  DATA_ENTRY
 }
 
 enum VehicleType {

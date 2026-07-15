@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession, canManage, canLogService, canApprove, getUserStationFilter } from "@/lib/auth";
+import { getSession, canManage, canManageUsers, canLogService, canApprove, getUserStationFilter } from "@/lib/auth";
 import type { SessionUser } from "@/lib/auth";
 import type { Station } from "@prisma/client";
 
@@ -32,6 +32,22 @@ export async function requireManager(): Promise<
     return {
       error: NextResponse.json(
         { error: "Forbidden — manager or admin role required" },
+        { status: 403 },
+      ),
+    };
+  }
+  return res;
+}
+
+export async function requireUserAdmin(): Promise<
+  { user: SessionUser } | { error: NextResponse }
+> {
+  const res = await requireApiUser();
+  if ("error" in res) return res;
+  if (!canManageUsers(res.user.role)) {
+    return {
+      error: NextResponse.json(
+        { error: "You don't have permission to manage users" },
         { status: 403 },
       ),
     };

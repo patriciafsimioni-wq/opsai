@@ -31,6 +31,7 @@ const ROLE_LABEL: Record<string, string> = {
   VENDOR: "Vendor",
   MANAGER: "Manager",
   DRIVER: "Driver",
+  DATA_ENTRY: "Data Entry",
 };
 
 export function MessagesClient({

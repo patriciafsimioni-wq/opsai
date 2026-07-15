@@ -39,11 +39,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const user = await getSession();
   const cookieStore = await cookies();
   const viewAsRoleCookie = cookieStore.get("viewAsRole")?.value || null;
-  const isRealAdmin = user && (user.role === "ADMIN" || user.role === "GENERAL_MANAGER" || user.role === "FLEET_MANAGER");
+  const isRealAdmin = user && (user.role === "ADMIN" || user.role === "GENERAL_MANAGER" || user.role === "FLEET_MANAGER" || user.role === "DATA_ENTRY");
   const role = (isRealAdmin && viewAsRoleCookie) ? viewAsRoleCookie : (user?.role ?? "DRIVER");
 
-  const isAdmin = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"].includes(role);
-  const isManager = [...["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"], "STATION_MANAGER", "MANAGER"].includes(role);
+  const isAdmin = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "DATA_ENTRY"].includes(role);
+  const isManager = [...["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "DATA_ENTRY"], "STATION_MANAGER", "MANAGER"].includes(role);
   const isMechanic = role === "MECHANIC";
   const isVendor = role === "VENDOR";
   const isDriver = role === "DRIVER";
@@ -72,7 +72,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       prisma.partsExpense.findMany({ where: station ? { station } : {} }),
       (async () => {
         const user = await getSession();
-        const adminRoles = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"];
+        const adminRoles = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "DATA_ENTRY"];
         const issueWhere: Record<string, unknown> = { status: { in: ["OPEN", "IN_PROGRESS"] }, ...(station ? { station } : {}) };
         if (user && !adminRoles.includes(user.role)) {
           issueWhere.OR = [{ createdById: user.id }, { assignedToId: user.id }];

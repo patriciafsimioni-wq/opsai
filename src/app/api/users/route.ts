@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireManager, badRequest } from "@/lib/api";
+import { requireManager, requireUserAdmin, badRequest } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
 import { hashPassword } from "@/lib/auth";
 import { sendEmail, buildInviteEmail } from "@/lib/email";
 
 export async function GET() {
+  // Managers (incl. Data Entry) may read the user list for messaging recipients;
+  // creating/editing accounts below is still restricted to requireUserAdmin.
   const auth = await requireManager();
   if ("error" in auth) return auth.error;
 
@@ -30,12 +32,12 @@ const createSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
   password: z.string().min(6),
-  role: z.enum(["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MECHANIC", "VENDOR", "MANAGER", "DRIVER"]),
+  role: z.enum(["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MECHANIC", "VENDOR", "MANAGER", "DRIVER", "DATA_ENTRY"]),
   station: z.string().optional().nullable(),
 });
 
 export async function POST(req: Request) {
-  const auth = await requireManager();
+  const auth = await requireUserAdmin();
   if ("error" in auth) return auth.error;
 
   const body = await req.json().catch(() => null);

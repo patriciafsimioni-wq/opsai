@@ -190,6 +190,7 @@ export function buildGuideEmail(params: {
     MECHANIC: "You can view assigned work orders and log completed services.",
     VENDOR: "You can view the fleet and submit work order requests for any vehicle.",
     DRIVER: "You can complete DVIRs and see your assigned vehicle and routes — best used from your phone.",
+    DATA_ENTRY: "You can view and enter data across all stations — vehicles, work orders, fuel, finance, and reports.",
   };
   const blurb = roleBlurbs[role] || "Here's how to get started.";
 
@@ -245,6 +246,7 @@ export function buildInviteEmail(params: {
     VENDOR: "Vendor",
     MANAGER: "Manager",
     DRIVER: "Driver",
+    DATA_ENTRY: "Data Entry",
   };
   const roleLabel = roleLabels[role] || role;
 
