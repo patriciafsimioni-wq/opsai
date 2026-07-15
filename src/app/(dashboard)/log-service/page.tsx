@@ -1,9 +1,19 @@
-import { redirect } from "next/navigation";
+import { getSession, canLogService } from "@/lib/auth";
+import { PageHeader } from "@/components/ui";
+import { LogServiceClient } from "@/components/LogServiceClient";
 
 export const dynamic = "force-dynamic";
 
-// Direct service logging was retired: every work order must now start as a
-// Work Order Request and be approved before it becomes a work order.
-export default function LogServicePage() {
-  redirect("/work-order-requests");
+export default async function LogServicePage() {
+  const user = await getSession();
+  const manage = user ? canLogService(user.role) : false;
+  return (
+    <div>
+      <PageHeader
+        title="Log Service"
+        subtitle="Record a maintenance / repair service order — material + service cost per vehicle."
+      />
+      <LogServiceClient canManage={manage} performerName={user?.name ?? ""} />
+    </div>
+  );
 }

@@ -140,6 +140,7 @@ export function MaintenanceClient({
     }));
   }
 
+  function openCreate() { setEditingId(null); setForm(emptyForm); setError(""); setModalOpen(true); }
   function openEdit(o: WorkOrderDTO) {
     setEditingId(o.id);
     setForm({
@@ -305,6 +306,11 @@ export function MaintenanceClient({
               <option key={s} value={s}>{WO_STATUS[s].label}</option>
             ))}
           </select>
+          {canManage && (
+            <Button onClick={openCreate}>
+              <Plus size={16} /> New Work Order
+            </Button>
+          )}
         </div>
 
         {canManage && selectedIds.size > 0 && (
