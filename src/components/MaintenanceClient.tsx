@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Pencil, Trash2, Wrench, ClipboardList, AlertTriangle, CheckCircle2, Upload } from "lucide-react";
+import { Search, Pencil, Trash2, Wrench, ClipboardList, AlertTriangle, CheckCircle2, Upload } from "lucide-react";
 import { Card, Button, Badge, Table, Th, Td, SortTh, EmptyState, StatCard } from "@/components/ui";
 import { Field, Input, Select, Textarea, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
@@ -140,7 +140,6 @@ export function MaintenanceClient({
     }));
   }
 
-  function openCreate() { setEditingId(null); setForm(emptyForm); setError(""); setModalOpen(true); }
   function openEdit(o: WorkOrderDTO) {
     setEditingId(o.id);
     setForm({
@@ -306,11 +305,6 @@ export function MaintenanceClient({
               <option key={s} value={s}>{WO_STATUS[s].label}</option>
             ))}
           </select>
-          {canManage && (
-            <Button onClick={openCreate}>
-              <Plus size={16} /> New Work Order
-            </Button>
-          )}
         </div>
 
         {canManage && selectedIds.size > 0 && (
