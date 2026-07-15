@@ -38,12 +38,14 @@ const emptyForm = {
 
 const currentYear = new Date().getFullYear();
 const YEARS = [currentYear, currentYear - 1, currentYear - 2];
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 export function PartsSuppliesClient({ canManage }: { canManage: boolean }) {
   const [year, setYear] = useState(currentYear);
   const { data: expenses, loading, reload } = useData<PartsExpense[]>(`/api/parts-expenses?year=${year}`);
   const [search, setSearch] = useState("");
   const [stationFilter, setStationFilter] = useState("all");
+  const [monthFilter, setMonthFilter] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<PartsExpense | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -71,22 +73,26 @@ export function PartsSuppliesClient({ canManage }: { canManage: boolean }) {
       if (q && !e.vendor.toLowerCase().includes(q) && !(e.description ?? "").toLowerCase().includes(q) && !(e.poNumber ?? "").toLowerCase().includes(q)) return false;
       if (stationFilter === "shared" && e.station) return false;
       if (stationFilter !== "all" && stationFilter !== "shared" && e.station !== stationFilter) return false;
+      if (monthFilter !== "all" && new Date(e.date).getMonth() + 1 !== Number(monthFilter)) return false;
       return true;
     });
     return sort.sortRows(result);
-  }, [expenses, search, stationFilter, sort]);
+  }, [expenses, search, stationFilter, monthFilter, sort]);
 
   const summary = useMemo(() => {
     const byStation: Record<string, number> = {};
     let total = 0, parts = 0, supplies = 0;
     for (const e of expenses ?? []) {
+      if (monthFilter !== "all" && new Date(e.date).getMonth() + 1 !== Number(monthFilter)) continue;
+      if (stationFilter === "shared" && e.station) continue;
+      if (stationFilter !== "all" && stationFilter !== "shared" && e.station !== stationFilter) continue;
       const key = e.station || "Shared";
       byStation[key] = (byStation[key] || 0) + e.amount;
       total += e.amount;
       if (e.category === "SUPPLIES") supplies += e.amount; else parts += e.amount;
     }
     return { byStation, total, parts, supplies };
-  }, [expenses]);
+  }, [expenses, monthFilter, stationFilter]);
 
   function openCreate() {
     setEditing(null);
@@ -133,7 +139,7 @@ export function PartsSuppliesClient({ canManage }: { canManage: boolean }) {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <p className="text-xs font-medium text-slate-500">Total {year}</p>
+          <p className="text-xs font-medium text-slate-500">Total {monthFilter === "all" ? year : `${MONTHS[Number(monthFilter) - 1]} ${year}`}</p>
           <p className="mt-1 text-2xl font-bold text-slate-800">${summary.total.toLocaleString()}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -165,6 +171,10 @@ export function PartsSuppliesClient({ canManage }: { canManage: boolean }) {
           </div>
           <select value={year} onChange={(e) => setYear(Number(e.target.value))} className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm outline-none focus:border-blue-500">
             {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm outline-none focus:border-blue-500">
+            <option value="all">All Months</option>
+            {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
           </select>
           <select value={stationFilter} onChange={(e) => setStationFilter(e.target.value)} className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm outline-none focus:border-blue-500">
             <option value="all">All Stations</option>

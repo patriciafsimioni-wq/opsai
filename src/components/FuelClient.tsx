@@ -123,25 +123,25 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
     const rows = base.filter(
       (l) =>
         !q ||
-        l.vehicle.name.toLowerCase().includes(q) ||
+        (l.vehicle?.name ?? l.vehicleLabel ?? "").toLowerCase().includes(q) ||
         (l.location ?? "").toLowerCase().includes(q) ||
         (l.driverName ?? "").toLowerCase().includes(q),
     );
     const val = (l: FuelLogDTO): string | number => {
       switch (sortKey) {
         case "date": return new Date(l.date!).getTime();
-        case "vehicle": return l.vehicle.name.toLowerCase();
+        case "vehicle": return (l.vehicle?.name ?? l.vehicleLabel ?? "").toLowerCase();
         case "driver": return (l.driverName || (l.driver ? `${l.driver.firstName} ${l.driver.lastName}` : "")).toLowerCase();
         case "type": return (PURCHASE_TYPE_LABEL[l.purchaseType] ?? l.purchaseType).toLowerCase();
-        case "station": return (l.vehicle.station ?? "").toLowerCase();
+        case "station": return (l.vehicle?.station ?? "").toLowerCase();
         case "volume": return l.liters;
         case "price": return l.pricePerLiter;
         case "total": return l.totalCost;
         case "location": return (l.location ?? "").toLowerCase();
         case "time": return (l.transactionTime ?? "");
         case "status": {
-          const key = `${l.vehicleId}|${new Date(l.date!).toISOString().slice(0, 10)}`;
-          return (inactiveCardSet.has(l.vehicleId) ? 2 : 0) + (duplicateSet.has(key) ? 1 : 0);
+          const key = `${l.vehicleId ?? ""}|${new Date(l.date!).toISOString().slice(0, 10)}`;
+          return (l.vehicleId && inactiveCardSet.has(l.vehicleId) ? 2 : 0) + (duplicateSet.has(key) ? 1 : 0);
         }
       }
     };
@@ -344,13 +344,13 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
             </thead>
             <tbody>
               {filtered.map((l) => {
-                const dateKey = `${l.vehicleId}|${new Date(l.date!).toISOString().slice(0, 10)}`;
+                const dateKey = `${l.vehicleId ?? ""}|${new Date(l.date!).toISOString().slice(0, 10)}`;
                 const isDuplicate = duplicateSet.has(dateKey);
-                const isInactiveCard = inactiveCardSet.has(l.vehicleId);
+                const isInactiveCard = !!l.vehicleId && inactiveCardSet.has(l.vehicleId);
                 return (
                   <tr key={l.id} className={`hover:bg-slate-50 ${isDuplicate ? "bg-amber-50/50" : ""}`}>
                     <Td className="text-slate-600">{formatDate(l.date)}</Td>
-                    <Td className="font-medium">{l.vehicle.name}</Td>
+                    <Td className="font-medium">{l.vehicle?.name ?? l.vehicleLabel ?? "\u2014"}</Td>
                     <Td className="text-slate-600">{l.driverName || (l.driver ? `${l.driver.firstName} ${l.driver.lastName}` : "—")}</Td>
                     <Td>
                       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -362,7 +362,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
                         {PURCHASE_TYPE_LABEL[l.purchaseType] ?? l.purchaseType}
                       </span>
                     </Td>
-                    <Td className="text-slate-600">{l.vehicle.station ?? "—"}</Td>
+                    <Td className="text-slate-600">{l.vehicle?.station ?? "—"}</Td>
                     <Td className="text-slate-600">{l.location ?? "—"}</Td>
                     <Td className="text-slate-600">{l.transactionTime ?? "—"}</Td>
                     <Td>{formatNumber(l.liters, 1)} Gal</Td>

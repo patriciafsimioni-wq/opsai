@@ -153,7 +153,7 @@ export async function GET(req: NextRequest) {
   // Fuel spend by station (in period)
   const fuelByStation: Record<string, number> = {};
   for (const f of fuelLogs) {
-    const st = f.vehicle.station ?? "Unknown";
+    const st = f.vehicle?.station ?? "Unknown";
     fuelByStation[st] = (fuelByStation[st] ?? 0) + f.totalCost;
   }
   const fuelStationData = Object.entries(fuelByStation)

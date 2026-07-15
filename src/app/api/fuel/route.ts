@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
   });
   const inactiveCards: string[] = [];
   for (const entry of latestPerVehicle) {
-    if (entry._max.date) {
+    if (entry.vehicleId && entry._max.date) {
       const diff = now.getTime() - new Date(entry._max.date).getTime();
       if (diff > inactiveThreshold) {
         inactiveCards.push(entry.vehicleId);

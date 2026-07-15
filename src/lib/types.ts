@@ -50,7 +50,7 @@ export type ServiceDTO = Json<Service> & {
 };
 
 export type FuelLogDTO = Json<FuelLog> & {
-  vehicle: Json<Vehicle>;
+  vehicle: Json<Vehicle> | null;
   driver: Json<Driver> | null;
 };
 
