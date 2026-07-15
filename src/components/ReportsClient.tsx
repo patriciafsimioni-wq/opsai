@@ -40,7 +40,7 @@ type ReportsApiResponse = {
     avgMileage: number;
     totalCost: number;
   };
-  costTrend: { label: string; Fuel: number; Maintenance: number; Total: number }[];
+  costTrend: { label: string; Fuel: number; Maintenance: number; Parts: number; Total: number }[];
   fuelTrend: { label: string; spend: number; volume: number; fillUps: number }[];
   avgPriceTrend: { label: string; value: number }[];
   statusCounts: Record<string, number>;
@@ -128,6 +128,7 @@ export function ReportsClient() {
     Month: r.label,
     "Fuel Cost": r.Fuel,
     "Maintenance Cost": r.Maintenance,
+    "Parts & Supplies": r.Parts,
     "Total Cost": r.Total,
   }));
 
@@ -279,6 +280,7 @@ export function ReportsClient() {
                   lines={[
                     { key: "Fuel", color: "#0891b2", name: "Fuel" },
                     { key: "Maintenance", color: "#d97706", name: "Maintenance" },
+                    { key: "Parts", color: "#7c3aed", name: "Parts & Supplies" },
                     { key: "Total", color: "#dc2626", name: "Total" },
                   ]}
                 />

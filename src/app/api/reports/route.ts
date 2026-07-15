@@ -45,8 +45,13 @@ export async function GET(req: NextRequest) {
   };
   if (station) woWhere.vehicleId = { in: vehicleIds };
 
+  const partsWhere: Record<string, unknown> = {
+    date: { gte: dateStart, lte: dateEnd },
+  };
+  if (station) partsWhere.station = station;
+
   // Get all data
-  const [vehicles, fuelLogs, workOrders, allFuelLogs, allWorkOrders] = await Promise.all([
+  const [vehicles, fuelLogs, workOrders, allFuelLogs, allWorkOrders, partsExpenses, allPartsExpenses] = await Promise.all([
     prisma.vehicle.findMany({ where: vehicleWhere, include: { assignedDriver: true } }),
     prisma.fuelLog.findMany({ where: fuelWhere, include: { vehicle: true } }),
     prisma.workOrder.findMany({ where: woWhere, include: { vehicle: true, service: true } }),
@@ -62,6 +67,8 @@ export async function GET(req: NextRequest) {
       },
       include: { vehicle: true, service: true },
     }),
+    prisma.partsExpense.findMany({ where: partsWhere }),
+    prisma.partsExpense.findMany({ where: station ? { station } : {} }),
   ]);
 
   // Get available stations
@@ -71,6 +78,7 @@ export async function GET(req: NextRequest) {
   // Period stats
   const totalFuel = fuelLogs.reduce((s, f) => s + f.totalCost, 0);
   const totalMaint = workOrders.reduce((s, w) => s + w.cost, 0);
+  const totalParts = partsExpenses.reduce((s, e) => s + e.amount, 0);
   const totalVolume = fuelLogs.reduce((s, f) => s + f.liters, 0);
   const fillUps = fuelLogs.length;
   const completedWOs = workOrders.length;
@@ -98,6 +106,7 @@ export async function GET(req: NextRequest) {
 
   const fuelByMonth = new Array(6).fill(0);
   const maintByMonth = new Array(6).fill(0);
+  const partsByMonth = new Array(6).fill(0);
   const fuelVolumeByMonth = new Array(6).fill(0);
   const fillUpsByMonth = new Array(6).fill(0);
   for (const f of allFuelLogs) {
@@ -113,12 +122,17 @@ export async function GET(req: NextRequest) {
     const b = bucket(new Date(w.completedAt));
     if (b >= 0) maintByMonth[b] += w.cost;
   }
+  for (const e of allPartsExpenses) {
+    const b = bucket(new Date(e.date));
+    if (b >= 0) partsByMonth[b] += e.amount;
+  }
 
   const costTrend = monthLabels.map((label, i) => ({
     label,
     Fuel: Math.round(fuelByMonth[i]),
     Maintenance: Math.round(maintByMonth[i]),
-    Total: Math.round(fuelByMonth[i] + maintByMonth[i]),
+    Parts: Math.round(partsByMonth[i]),
+    Total: Math.round(fuelByMonth[i] + maintByMonth[i] + partsByMonth[i]),
   }));
 
   const fuelTrend = monthLabels.map((label, i) => ({
@@ -205,7 +219,8 @@ export async function GET(req: NextRequest) {
       totalVehicles,
       activeVehicles,
       avgMileage,
-      totalCost: totalFuel + totalMaint,
+      totalParts: Math.round(totalParts),
+      totalCost: totalFuel + totalMaint + totalParts,
     },
     costTrend,
     fuelTrend,

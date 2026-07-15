@@ -28,6 +28,12 @@ const SERVICE_INTERVALS: [number, string, number][] = [
 
 const UPCOMING_WINDOW = 2000; // miles before due to flag as upcoming
 
+// High-mileage milestone services (first due at or above this mileage) were not
+// tracked historically, so a missing record shouldn't raise a "never performed"
+// alert. Instead we start their clock fresh from the vehicle's current odometer
+// (a fair catch-up point). Lower-mileage services still alert when never done.
+const CATCH_UP_MILEAGE = 40000;
+
 /** Normalize a work order title into a canonical service name for matching. */
 function matchService(woTitle: string): string | null {
   const lower = woTitle.toLowerCase();
@@ -185,10 +191,15 @@ export async function GET(req: NextRequest) {
         let lastPerformedDate: string | null = null;
         let status: ServiceStatus["status"];
 
+        const catchUp = !last && firstDue >= CATCH_UP_MILEAGE;
+
         if (last) {
           lastPerformedAt = Math.round(last.odometerAt);
           lastPerformedDate = last.completedAt.toISOString().slice(0, 10);
           nextDue = lastPerformedAt + interval;
+        } else if (catchUp) {
+          // Never tracked, high-mileage milestone: start fresh from current odometer.
+          nextDue = odo + interval;
         } else {
           nextDue = firstDue;
         }
@@ -197,7 +208,7 @@ export async function GET(req: NextRequest) {
 
         if (dismissed) {
           status = "dismissed";
-        } else if (!last && odo >= firstDue) {
+        } else if (!last && !catchUp && odo >= firstDue) {
           status = "never_performed";
         } else if (milesUntil < 0) {
           status = "overdue";

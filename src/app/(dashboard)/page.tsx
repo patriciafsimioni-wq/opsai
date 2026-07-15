@@ -56,7 +56,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const canSeeFinance = isManager;
 
   const vehicleWhere = station ? { station } : {};
-  const [allVehicles, drivers, fareyeRoutes, alerts, workOrders, fuelLogs, issues] =
+  const [allVehicles, drivers, fareyeRoutes, alerts, workOrders, fuelLogs, partsExpenses, issues] =
     await Promise.all([
       prisma.vehicle.findMany({ where: vehicleWhere }),
       prisma.driver.findMany({ where: station ? { station } : {}, orderBy: { safetyScore: "desc" } }),
@@ -69,6 +69,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       }),
       prisma.workOrder.findMany({ include: { vehicle: true }, where: station ? { vehicle: { station } } : {} }),
       prisma.fuelLog.findMany({ where: station ? { vehicle: { station } } : {} }),
+      prisma.partsExpense.findMany({ where: station ? { station } : {} }),
       (async () => {
         const user = await getSession();
         const adminRoles = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER"];
@@ -181,6 +182,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         now - new Date(w.completedAt).getTime() < 90 * 86400000,
     )
     .reduce((s, w) => s + w.cost, 0);
+
+  // parts & supplies spend (year to date)
+  const currentYearStart = new Date(new Date().getFullYear(), 0, 1).getTime();
+  const partsYtd = partsExpenses
+    .filter((e) => new Date(e.date).getTime() >= currentYearStart)
+    .reduce((s, e) => s + e.amount, 0);
 
   // donut data
   const donut = (
@@ -1016,6 +1023,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <div className="bg-white p-5">
                 <p className="text-xs text-slate-400">Maintenance · 90 days</p>
                 <p className="mt-1 text-xl font-bold">{formatCurrency(maint90)}</p>
+              </div>
+              <div className="bg-white p-5">
+                <p className="text-xs text-slate-400">Parts &amp; Supplies · YTD</p>
+                <p className="mt-1 text-xl font-bold">{formatCurrency(partsYtd)}</p>
               </div>
               <div className="bg-white p-5">
                 <p className="text-xs text-slate-400">Today&apos;s Routes</p>
