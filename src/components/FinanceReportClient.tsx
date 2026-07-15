@@ -451,13 +451,8 @@ export function FinanceReportClient() {
 
   const allStation = data.stations["ALL"];
   const totalYtdActual = allStation?.rows.reduce((s, r) => s + r.ytdCurrent, 0) ?? 0;
-  const totalPeriodActual = allStation?.rows.reduce((s, r) => s + r.actualCurrent, 0) ?? 0;
   const totalYtdBudget = allStation?.rows.reduce((s, r) => s + r.ytdBudget, 0) ?? 0;
   const totalAnnualBudget = allStation?.rows.reduce((s, r) => s + r.annualBudget, 0) ?? 0;
-  const partsYtd = data.partsSupplies?.ytd ?? 0;
-  const partsPeriod = data.partsSupplies?.monthly ?? 0;
-  const grandYtdSpend = totalYtdActual + partsYtd;
-  const grandPeriodSpend = totalPeriodActual + partsPeriod;
   const totalRemainder = totalAnnualBudget - totalYtdActual;
   const budgetUtilPct = totalAnnualBudget > 0 ? Math.round((totalYtdActual / totalAnnualBudget) * 100) : 0;
 
@@ -614,28 +609,6 @@ export function FinanceReportClient() {
           <p className={`mt-1 text-xl font-bold ${totalRemainder < 0 ? "text-red-700" : "text-green-700"}`}>${totalRemainder.toLocaleString()}</p>
         </div>
       </div>
-
-      {/* Grand total spend — maintenance actual + Parts & Supplies (budget tables above are unchanged) */}
-      {data.partsSupplies && (
-        <div className="rounded-xl border border-slate-300 bg-slate-900 p-4 text-white">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-sm font-semibold">Total Spend (incl. Parts &amp; Supplies)</p>
-              <p className="mt-0.5 text-xs text-slate-300">{reportLabel} ${totalYtdActual.toLocaleString()} + Parts &amp; Supplies ${partsYtd.toLocaleString()} (YTD)</p>
-            </div>
-            <div className="flex gap-6">
-              <div>
-                <p className="text-xs font-medium text-slate-300">{viewMode === "week" ? "This week" : MONTHS[month - 1]}</p>
-                <p className="text-lg font-bold">${grandPeriodSpend.toLocaleString()}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-slate-300">YTD ({MONTHS[month - 1]})</p>
-                <p className="text-lg font-bold">${grandYtdSpend.toLocaleString()}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Parts & Supplies (separate category, not tied to a vehicle) */}
       {data.partsSupplies && (

@@ -132,7 +132,7 @@ export async function GET(req: NextRequest) {
     Fuel: Math.round(fuelByMonth[i]),
     Maintenance: Math.round(maintByMonth[i]),
     Parts: Math.round(partsByMonth[i]),
-    Total: Math.round(fuelByMonth[i] + maintByMonth[i] + partsByMonth[i]),
+    Total: Math.round(fuelByMonth[i] + maintByMonth[i]),
   }));
 
   const fuelTrend = monthLabels.map((label, i) => ({
@@ -220,7 +220,7 @@ export async function GET(req: NextRequest) {
       activeVehicles,
       avgMileage,
       totalParts: Math.round(totalParts),
-      totalCost: totalFuel + totalMaint + totalParts,
+      totalCost: totalFuel + totalMaint,
     },
     costTrend,
     fuelTrend,
