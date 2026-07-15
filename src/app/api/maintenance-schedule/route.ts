@@ -28,10 +28,10 @@ const SERVICE_INTERVALS: [number, string, number][] = [
 
 const UPCOMING_WINDOW = 2000; // miles before due to flag as upcoming
 
-// High-mileage milestone services (first due at or above this mileage) were not
-// tracked historically, so a missing record shouldn't raise a "never performed"
-// alert. Instead we start their clock fresh from the vehicle's current odometer
-// (a fair catch-up point). Lower-mileage services still alert when never done.
+// High-mileage vehicles (at or above this odometer) were not tracked historically,
+// so a missing service record shouldn't raise a "never performed" alert. Instead we
+// start each such service fresh from the vehicle's current odometer (a fair catch-up
+// point). Lower-mileage vehicles still alert on never-performed services.
 const CATCH_UP_MILEAGE = 40000;
 
 /** Normalize a work order title into a canonical service name for matching. */
@@ -191,14 +191,14 @@ export async function GET(req: NextRequest) {
         let lastPerformedDate: string | null = null;
         let status: ServiceStatus["status"];
 
-        const catchUp = !last && firstDue >= CATCH_UP_MILEAGE;
+        const catchUp = !last && odo >= CATCH_UP_MILEAGE;
 
         if (last) {
           lastPerformedAt = Math.round(last.odometerAt);
           lastPerformedDate = last.completedAt.toISOString().slice(0, 10);
           nextDue = lastPerformedAt + interval;
         } else if (catchUp) {
-          // Never tracked, high-mileage milestone: start fresh from current odometer.
+          // Never tracked on a high-mileage vehicle: start fresh from current odometer.
           nextDue = odo + interval;
         } else {
           nextDue = firstDue;
@@ -252,12 +252,19 @@ export async function GET(req: NextRequest) {
           status = dismissed ? "dismissed" : daysUntil < 0 ? "overdue" : daysUntil <= 30 ? "upcoming" : "on_track";
         } else if (onboarded) {
           const monthsSinceOnboard = (now.getFullYear() - onboarded.getFullYear()) * 12 + (now.getMonth() - onboarded.getMonth());
-          if (monthsSinceOnboard >= intervalMonths) {
+          if (monthsSinceOnboard >= intervalMonths && odo < CATCH_UP_MILEAGE) {
             const shouldHaveDone = new Date(onboarded);
             shouldHaveDone.setMonth(shouldHaveDone.getMonth() + intervalMonths);
             nextDueDate = shouldHaveDone.toISOString().slice(0, 10);
             daysUntil = Math.round((shouldHaveDone.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
             status = dismissed ? "dismissed" : "never_performed";
+          } else if (monthsSinceOnboard >= intervalMonths) {
+            // High-mileage vehicle, never tracked: start fresh from now (fair catch-up).
+            const nextDue = new Date(now);
+            nextDue.setMonth(nextDue.getMonth() + intervalMonths);
+            nextDueDate = nextDue.toISOString().slice(0, 10);
+            daysUntil = Math.round((nextDue.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            status = dismissed ? "dismissed" : "on_track";
           } else {
             const nextDue = new Date(onboarded);
             nextDue.setMonth(nextDue.getMonth() + intervalMonths);
