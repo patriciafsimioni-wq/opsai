@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Pencil, Trash2, Truck, RefreshCw, Camera, FileDown, ArrowRightLeft, X, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Plus, Search, Pencil, Truck, RefreshCw, Camera, FileDown, ArrowRightLeft, X, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import {
   Card,
   Button,
@@ -225,13 +225,6 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
     } else {
       setError(res.error ?? "Failed to save");
     }
-  }
-
-  async function remove(v: VehicleDTO) {
-    if (!confirm(`Delete ${v.name}? This cannot be undone.`)) return;
-    const res = await apiSend(`/api/vehicles/${v.id}`, "DELETE");
-    if (res.ok) reload();
-    else alert(res.error);
   }
 
   function openTransfer() {
@@ -510,12 +503,6 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
                         className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                       >
                         <Pencil size={15} />
-                      </button>
-                      <button
-                        onClick={() => remove(v)}
-                        className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                      >
-                        <Trash2 size={15} />
                       </button>
                     </div>
                   )}

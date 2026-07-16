@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { requireApiUser, badRequest } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
 
 export async function GET(
@@ -105,20 +105,12 @@ export async function PATCH(
   return NextResponse.json(vehicle);
 }
 
-export async function DELETE(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const auth = await requireManager();
-  if ("error" in auth) return auth.error;
-  const { id } = await params;
-  const existing = await prisma.vehicle.findUnique({ where: { id }, select: { name: true, station: true } });
-  await prisma.vehicle.delete({ where: { id } });
-  await logActivity(auth.user, {
-    action: "deleted",
-    entity: "Vehicle",
-    entityLabel: existing?.name ?? id,
-    station: existing?.station ?? null,
-  });
-  return NextResponse.json({ ok: true });
+// Vehicle deletion is intentionally disabled — vehicles are retired via the
+// Offboard flow (which preserves the record and its history) instead of being
+// permanently destroyed.
+export async function DELETE() {
+  return NextResponse.json(
+    { error: "Deleting vehicles is disabled. Use Offboard to retire a vehicle instead." },
+    { status: 405 },
+  );
 }
