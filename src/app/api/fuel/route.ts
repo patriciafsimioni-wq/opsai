@@ -85,17 +85,22 @@ export async function GET(req: NextRequest) {
     totalLiters: Math.round((t._sum.liters ?? 0) * 100) / 100,
   }));
 
-  // Detect duplicate charges: same vehicle + same date with multiple transactions
-  const duplicateKeys = new Set<string>();
-  const seenKeys = new Map<string, number>();
+  // Detect true duplicate charges: identical transactions imported twice —
+  // same vehicle/card, date, amount, gallons, and time. Two legitimate
+  // fill-ups on the same day differ in amount/gallons/time and are NOT flagged.
+  const duplicateGroups = new Map<string, string[]>();
   for (const l of logs) {
-    const key = `${l.vehicleId}|${new Date(l.date).toISOString().slice(0, 10)}`;
-    seenKeys.set(key, (seenKeys.get(key) || 0) + 1);
+    const who = l.vehicleId ?? l.vehicleLabel ?? l.cardNumber ?? "?";
+    const day = new Date(l.date).toISOString().slice(0, 10);
+    const key = `${who}|${day}|${l.totalCost.toFixed(2)}|${l.liters.toFixed(2)}|${l.transactionTime ?? ""}`;
+    const arr = duplicateGroups.get(key);
+    if (arr) arr.push(l.id);
+    else duplicateGroups.set(key, [l.id]);
   }
-  for (const [key, count] of seenKeys) {
-    if (count > 1) duplicateKeys.add(key);
+  const duplicates: string[] = [];
+  for (const ids of duplicateGroups.values()) {
+    if (ids.length > 1) duplicates.push(...ids);
   }
-  const duplicates = Array.from(duplicateKeys);
 
   // Card status: check each vehicle's last fuel date to flag inactive cards (15+ days)
   const now = new Date();

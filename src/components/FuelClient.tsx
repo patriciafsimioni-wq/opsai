@@ -116,10 +116,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
   const inactiveCardSet = useMemo(() => new Set(data?.inactiveCards ?? []), [data]);
 
   const duplicateOnlyLogs = useMemo(() => {
-    return logs.filter((l) => {
-      const dateKey = `${l.vehicleId}|${new Date(l.date!).toISOString().slice(0, 10)}`;
-      return duplicateSet.has(dateKey);
-    });
+    return logs.filter((l) => duplicateSet.has(l.id));
   }, [logs, duplicateSet]);
 
   const filtered = useMemo(() => {
@@ -145,8 +142,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
         case "location": return (l.location ?? "").toLowerCase();
         case "time": return (l.transactionTime ?? "");
         case "status": {
-          const key = `${l.vehicleId ?? ""}|${new Date(l.date!).toISOString().slice(0, 10)}`;
-          return (l.vehicleId && inactiveCardSet.has(l.vehicleId) ? 2 : 0) + (duplicateSet.has(key) ? 1 : 0);
+          return (l.vehicleId && inactiveCardSet.has(l.vehicleId) ? 2 : 0) + (duplicateSet.has(l.id) ? 1 : 0);
         }
       }
     };
@@ -434,8 +430,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
             </thead>
             <tbody>
               {filtered.map((l) => {
-                const dateKey = `${l.vehicleId ?? ""}|${new Date(l.date!).toISOString().slice(0, 10)}`;
-                const isDuplicate = duplicateSet.has(dateKey);
+                const isDuplicate = duplicateSet.has(l.id);
                 const isInactiveCard = !!l.vehicleId && inactiveCardSet.has(l.vehicleId);
                 return (
                   <tr key={l.id} className={`hover:bg-slate-50 ${selected.has(l.id) ? "bg-blue-50/60" : isDuplicate ? "bg-amber-50/50" : ""}`}>
@@ -471,7 +466,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
                     <Td>
                       <div className="flex items-center gap-1">
                         {isDuplicate && (
-                          <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700" title="Multiple charges same day">
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700" title="Identical charge appears more than once">
                             <AlertTriangle size={11} /> Duplicate
                           </span>
                         )}
