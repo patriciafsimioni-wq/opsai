@@ -68,7 +68,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         take: 20,
       }),
       prisma.workOrder.findMany({ include: { vehicle: true }, where: station ? { vehicle: { station } } : {} }),
-      prisma.fuelLog.findMany({ where: station ? { vehicle: { station } } : {} }),
+      prisma.fuelLog.findMany({ where: station ? { station } : {} }),
       prisma.partsExpense.findMany({ where: station ? { station } : {} }),
       (async () => {
         const user = await getSession();

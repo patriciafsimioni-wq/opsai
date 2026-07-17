@@ -513,6 +513,7 @@ model FuelLog {
   driver        Driver?      @relation(fields: [driverId], references: [id])
   driverId      String?
   driverName    String?
+  station       String?
   date          DateTime     @default(now())
   liters        Float
   pricePerLiter Float
@@ -523,6 +524,8 @@ model FuelLog {
   purchaseType  PurchaseType @default(DIESEL)
   cardNumber    String?
   createdAt     DateTime     @default(now())
+
+  @@index([station])
 }
 
 model Geofence {

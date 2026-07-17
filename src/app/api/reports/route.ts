@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
   const fuelWhere: Record<string, unknown> = {
     date: { gte: dateStart, lte: dateEnd },
   };
-  if (station) fuelWhere.vehicleId = { in: vehicleIds };
+  if (station) fuelWhere.station = station;
 
   const woWhere: Record<string, unknown> = {
     status: "COMPLETED",
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
     prisma.workOrder.findMany({ where: woWhere, include: { vehicle: true, service: true } }),
     // For trend data, get last 6 months regardless of current filter window
     prisma.fuelLog.findMany({
-      where: station ? { vehicleId: { in: vehicleIds } } : {},
+      where: station ? { station } : {},
       include: { vehicle: true },
     }),
     prisma.workOrder.findMany({
@@ -167,7 +167,7 @@ export async function GET(req: NextRequest) {
   // Fuel spend by station (in period)
   const fuelByStation: Record<string, number> = {};
   for (const f of fuelLogs) {
-    const st = f.vehicle?.station ?? "Unknown";
+    const st = f.station ?? f.vehicle?.station ?? "Unknown";
     fuelByStation[st] = (fuelByStation[st] ?? 0) + f.totalCost;
   }
   const fuelStationData = Object.entries(fuelByStation)

@@ -1,18 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Search, Trash2, Fuel, ChevronLeft, ChevronRight, AlertTriangle, CreditCard, Flag, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Plus, Search, Trash2, Pencil, Fuel, ChevronLeft, ChevronRight, AlertTriangle, CreditCard, Flag, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, Button, Table, Th, Td, EmptyState, StatCard } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
 import type { FuelLogDTO, VehicleDTO, DriverDTO } from "@/lib/types";
 import { formatCurrency, formatDate, formatNumber, todayInputDate } from "@/lib/utils";
-import { STATION_LABEL } from "@/lib/constants";
+import { STATION_LABEL, FORM_STATIONS } from "@/lib/constants";
 
 const emptyForm = {
   vehicleId: "",
   driverId: "",
+  station: "",
   date: todayInputDate(),
   liters: "",
   pricePerLiter: "1.20",
@@ -89,6 +90,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
     else { setSortKey(key); setSortDir("asc"); }
   }
   const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -133,7 +135,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
         case "vehicle": return (l.vehicle?.name ?? l.vehicleLabel ?? "").toLowerCase();
         case "driver": return (l.driverName || (l.driver ? `${l.driver.firstName} ${l.driver.lastName}` : "")).toLowerCase();
         case "type": return (PURCHASE_TYPE_LABEL[l.purchaseType] ?? l.purchaseType).toLowerCase();
-        case "station": return (l.vehicle?.station ?? "").toLowerCase();
+        case "station": return (l.station ?? l.vehicle?.station ?? "").toLowerCase();
         case "volume": return l.liters;
         case "price": return l.pricePerLiter;
         case "total": return l.totalCost;
@@ -169,14 +171,40 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
     };
   }, [logs]);
 
+  function openAdd() {
+    setEditingId(null);
+    setForm({ ...emptyForm, station });
+    setError("");
+    setModalOpen(true);
+  }
+  function openEdit(l: FuelLogDTO) {
+    setEditingId(l.id);
+    setForm({
+      vehicleId: l.vehicleId ?? "",
+      driverId: l.driverId ?? "",
+      station: l.station ?? l.vehicle?.station ?? "",
+      date: l.date ? new Date(l.date).toISOString().slice(0, 10) : todayInputDate(),
+      liters: String(l.liters ?? ""),
+      pricePerLiter: String(l.pricePerLiter ?? ""),
+      odometer: l.odometer != null ? String(l.odometer) : "",
+      location: l.location ?? "",
+      transactionTime: l.transactionTime ?? "",
+      purchaseType: l.purchaseType ?? "UNLEADED",
+    });
+    setError("");
+    setModalOpen(true);
+  }
   async function save() {
     setSaving(true);
     setError("");
-    const res = await apiSend("/api/fuel", "POST", form);
+    const res = editingId
+      ? await apiSend(`/api/fuel/${editingId}`, "PATCH", form)
+      : await apiSend("/api/fuel", "POST", form);
     setSaving(false);
     if (res.ok) {
       setModalOpen(false);
       setForm(emptyForm);
+      setEditingId(null);
       reload();
     } else setError(res.error ?? "Failed");
   }
@@ -314,7 +342,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
             />
           </div>
           {canManage && (
-            <Button onClick={() => { setForm(emptyForm); setError(""); setModalOpen(true); }}>
+            <Button onClick={openAdd}>
               <Plus size={16} /> Log Fuel
             </Button>
           )}
@@ -362,7 +390,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
                         {PURCHASE_TYPE_LABEL[l.purchaseType] ?? l.purchaseType}
                       </span>
                     </Td>
-                    <Td className="text-slate-600">{l.vehicle?.station ?? "—"}</Td>
+                    <Td className="text-slate-600">{l.station ?? l.vehicle?.station ?? "—"}</Td>
                     <Td className="text-slate-600">{l.location ?? "—"}</Td>
                     <Td className="text-slate-600">{l.transactionTime ?? "—"}</Td>
                     <Td>{formatNumber(l.liters, 1)} Gal</Td>
@@ -387,12 +415,22 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
                     </Td>
                     <Td>
                       {canManage && (
-                        <button
-                          onClick={() => remove(l)}
-                          className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => openEdit(l)}
+                            className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                            title="Edit"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            onClick={() => remove(l)}
+                            className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                            title="Delete"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       )}
                     </Td>
                   </tr>
@@ -406,7 +444,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="Log Fuel Purchase"
+        title={editingId ? "Edit Fuel Transaction" : "Log Fuel Purchase"}
         footer={
           <>
             <Button variant="secondary" onClick={() => setModalOpen(false)}>Cancel</Button>
@@ -415,13 +453,23 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
         }
       >
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Vehicle" required className="col-span-2">
+          <Field label="Vehicle" required={!editingId}>
             <Select
               value={form.vehicleId}
               onChange={(e) => setForm({ ...form, vehicleId: e.target.value })}
               options={[
-                { value: "", label: "Select vehicle…" },
-                ...(vehicles ?? []).filter((v) => !station || (v as Record<string, unknown>).station === station).map((v) => ({ value: v.id, label: v.name })),
+                { value: "", label: editingId ? "— No vehicle —" : "Select vehicle…" },
+                ...(vehicles ?? []).filter((v) => editingId || !station || (v as Record<string, unknown>).station === station).map((v) => ({ value: v.id, label: v.name })),
+              ]}
+            />
+          </Field>
+          <Field label="Station">
+            <Select
+              value={form.station}
+              onChange={(e) => setForm({ ...form, station: e.target.value })}
+              options={[
+                { value: "", label: "— Unassigned —" },
+                ...FORM_STATIONS.map((s) => ({ value: s, label: STATION_LABEL[s] ?? s })),
               ]}
             />
           </Field>

@@ -42,9 +42,9 @@ export async function GET(req: NextRequest) {
     date: { gte: dateStart, lte: dateEnd },
   };
   if (userStations !== null) {
-    where.vehicle = { station: { in: userStations } };
+    where.station = { in: userStations };
   } else if (station) {
-    where.vehicle = { station };
+    where.station = station;
   }
   if (purchaseType) {
     where.purchaseType = purchaseType;
@@ -67,8 +67,10 @@ export async function GET(req: NextRequest) {
   const typeWhere: Record<string, unknown> = {
     date: { gte: dateStart, lte: dateEnd },
   };
-  if (station) {
-    typeWhere.vehicle = { station };
+  if (userStations !== null) {
+    typeWhere.station = { in: userStations };
+  } else if (station) {
+    typeWhere.station = station;
   }
   const typeCounts = await prisma.fuelLog.groupBy({
     by: ["purchaseType"],
@@ -101,7 +103,11 @@ export async function GET(req: NextRequest) {
   const latestPerVehicle = await prisma.fuelLog.groupBy({
     by: ["vehicleId"],
     _max: { date: true },
-    ...(station ? { where: { vehicle: { station: station as never } } } : {}),
+    ...(userStations !== null
+      ? { where: { station: { in: userStations } } }
+      : station
+        ? { where: { station } }
+        : {}),
   });
   const inactiveCards: string[] = [];
   for (const entry of latestPerVehicle) {
@@ -127,6 +133,7 @@ export async function GET(req: NextRequest) {
 const schema = z.object({
   vehicleId: z.string().min(1),
   driverId: z.string().optional().nullable(),
+  station: z.string().optional().nullable(),
   date: z.string().min(1),
   liters: z.coerce.number().min(0),
   pricePerLiter: z.coerce.number().min(0),
@@ -143,10 +150,12 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Invalid input");
   const d = parsed.data;
+  const veh = await prisma.vehicle.findUnique({ where: { id: d.vehicleId }, select: { name: true, station: true } });
   const log = await prisma.fuelLog.create({
     data: {
       vehicleId: d.vehicleId,
       driverId: d.driverId || null,
+      station: d.station || veh?.station || null,
       date: new Date(d.date),
       liters: d.liters,
       pricePerLiter: d.pricePerLiter,
@@ -157,12 +166,11 @@ export async function POST(req: Request) {
       purchaseType: d.purchaseType ?? "DIESEL",
     },
   });
-  const veh = await prisma.vehicle.findUnique({ where: { id: d.vehicleId }, select: { name: true, station: true } });
   await logActivity(auth.user, {
     action: "logged",
     entity: "Fuel Log",
     entityLabel: veh?.name ?? d.vehicleId,
-    station: veh?.station ?? null,
+    station: log.station ?? null,
     detail: `$${log.totalCost.toFixed(2)}`,
   });
   return NextResponse.json(log, { status: 201 });

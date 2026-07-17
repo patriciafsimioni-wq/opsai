@@ -128,6 +128,56 @@ export function buildAlertDigestEmail(params: {
   return { subject, html };
 }
 
+export function buildIssueEmail(params: {
+  recipientName: string;
+  kind: "assigned" | "comment" | "status";
+  actorName: string;
+  issueTitle: string;
+  issueStatus?: string;
+  priority?: string;
+  body?: string;
+  appUrl: string;
+}): { subject: string; html: string } {
+  const { recipientName, kind, actorName, issueTitle, issueStatus, priority, body, appUrl } = params;
+
+  let title: string;
+  let subject: string;
+  let lead: string;
+  if (kind === "assigned") {
+    title = "Issue Assigned to You";
+    subject = `You've been assigned an issue — ${issueTitle}`;
+    lead = `<strong>${escapeHtml(actorName)}</strong> assigned an issue to you${priority ? ` (${escapeHtml(priority)} priority)` : ""}.`;
+  } else if (kind === "status") {
+    title = "Issue Updated";
+    subject = `Issue updated — ${issueTitle}`;
+    lead = `<strong>${escapeHtml(actorName)}</strong> updated the status${issueStatus ? ` to <strong>${escapeHtml(issueStatus)}</strong>` : ""}.`;
+  } else {
+    title = "New Reply on Issue";
+    subject = `New reply on issue — ${issueTitle}`;
+    lead = `<strong>${escapeHtml(actorName)}</strong> replied on an issue you're following.`;
+  }
+
+  const html = shell(
+    title,
+    "#dc2626",
+    `
+  <p style="font-size: 14px; line-height: 1.6;">Hi ${escapeHtml(recipientName)},</p>
+  <p style="font-size: 14px; line-height: 1.6;">${lead}</p>
+  <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin: 16px 0;">
+    <p style="margin: 0; font-size: 15px; font-weight: 600; color: #0f172a;">${escapeHtml(issueTitle)}</p>
+    ${issueStatus ? `<p style="margin: 6px 0 0; font-size: 13px; color: #64748b;">Status: ${escapeHtml(issueStatus)}</p>` : ""}
+  </div>
+  ${body ? `<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(body)}</div>` : ""}
+  <div style="text-align: center; margin: 24px 0;">
+    <a href="${appUrl}/issues" style="display: inline-block; background: #dc2626; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Open the Issue</a>
+  </div>
+  <p style="font-size: 13px; color: #64748b; line-height: 1.6;">
+    Reply directly in the portal to keep the conversation going until the issue is resolved.
+  </p>`,
+  );
+  return { subject, html };
+}
+
 export async function sendEmail(payload: EmailPayload): Promise<{ success: boolean; error?: string }> {
   // Prefer SMTP (Google Workspace) when configured; no DNS changes required.
   if (smtpTransport) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiUser } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
+import { sendEmail, buildIssueEmail, getAppUrl } from "@/lib/email";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireApiUser();
@@ -39,6 +40,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = await req.json();
   const { status, priority, assignedToId, title, description } = body;
 
+  const prev = await prisma.issue.findUnique({
+    where: { id },
+    select: { assignedToId: true, status: true, createdById: true },
+  });
+
   const data: Record<string, unknown> = {};
   if (status) {
     data.status = status;
@@ -53,8 +59,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     where: { id },
     data,
     include: {
-      createdBy: { select: { id: true, name: true, role: true } },
-      assignedTo: { select: { id: true, name: true, role: true } },
+      createdBy: { select: { id: true, name: true, role: true, email: true } },
+      assignedTo: { select: { id: true, name: true, role: true, email: true } },
     },
   });
 
@@ -65,6 +71,47 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     station: issue.station,
     detail: status ? `Status: ${status}` : undefined,
   });
+
+  const appUrl = getAppUrl();
+
+  // Notify a newly assigned user
+  if (
+    issue.assignedTo?.email &&
+    issue.assignedToId !== prev?.assignedToId &&
+    issue.assignedToId !== auth.user.id
+  ) {
+    const { subject, html } = buildIssueEmail({
+      recipientName: issue.assignedTo.name ?? "there",
+      kind: "assigned",
+      actorName: auth.user.name,
+      issueTitle: issue.title,
+      priority: issue.priority,
+      appUrl,
+    });
+    await sendEmail({ to: issue.assignedTo.email, subject, html });
+  }
+
+  // Notify creator + assignee when status changes (so they can follow up to resolution)
+  if (status && status !== prev?.status) {
+    const recipients = [issue.createdBy, issue.assignedTo].filter(
+      (u): u is NonNullable<typeof u> =>
+        !!u?.email && u.id !== auth.user.id,
+    );
+    const seen = new Set<string>();
+    for (const r of recipients) {
+      if (seen.has(r.id)) continue;
+      seen.add(r.id);
+      const { subject, html } = buildIssueEmail({
+        recipientName: r.name ?? "there",
+        kind: "status",
+        actorName: auth.user.name,
+        issueTitle: issue.title,
+        issueStatus: status,
+        appUrl,
+      });
+      await sendEmail({ to: r.email!, subject, html });
+    }
+  }
 
   return NextResponse.json(issue);
 }

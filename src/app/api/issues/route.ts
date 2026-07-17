@@ -2,6 +2,29 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiUser, stationWhere } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
+import { sendEmail, buildIssueEmail, getAppUrl } from "@/lib/email";
+
+async function notifyAssignee(
+  assigneeId: string,
+  actorName: string,
+  issueTitle: string,
+  priority: string,
+) {
+  const assignee = await prisma.user.findUnique({
+    where: { id: assigneeId },
+    select: { email: true, name: true },
+  });
+  if (!assignee?.email) return;
+  const { subject, html } = buildIssueEmail({
+    recipientName: assignee.name ?? "there",
+    kind: "assigned",
+    actorName,
+    issueTitle,
+    priority,
+    appUrl: getAppUrl(),
+  });
+  await sendEmail({ to: assignee.email, subject, html });
+}
 
 export async function GET(req: NextRequest) {
   const auth = await requireApiUser();
@@ -78,6 +101,10 @@ export async function POST(req: NextRequest) {
     station: issue.station,
     detail: issue.priority,
   });
+
+  if (issue.assignedToId && issue.assignedToId !== auth.user.id) {
+    await notifyAssignee(issue.assignedToId, auth.user.name ?? "A teammate", issue.title, issue.priority);
+  }
 
   return NextResponse.json(issue, { status: 201 });
 }
