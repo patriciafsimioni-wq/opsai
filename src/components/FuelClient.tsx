@@ -93,6 +93,9 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkStation, setBulkStation] = useState("");
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   const availableStations = data?.stations ?? [];
 
@@ -212,6 +215,28 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
     if (!confirm("Delete this fuel record?")) return;
     const res = await apiSend(`/api/fuel/${l.id}`, "DELETE");
     if (res.ok) reload();
+  }
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  async function applyBulkStation() {
+    if (selected.size === 0) return;
+    setBulkSaving(true);
+    const res = await apiSend("/api/fuel/bulk", "PATCH", {
+      ids: Array.from(selected),
+      station: bulkStation || null,
+    });
+    setBulkSaving(false);
+    if (res.ok) {
+      setSelected(new Set());
+      setBulkStation("");
+      reload();
+    } else alert(res.error ?? "Failed to update");
   }
 
   return (
@@ -348,6 +373,30 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
           )}
         </div>
 
+        {canManage && selected.size > 0 && (
+          <div className="flex flex-wrap items-center gap-3 border-b border-blue-100 bg-blue-50 px-4 py-3">
+            <span className="text-sm font-medium text-blue-800">{selected.size} selected</span>
+            <span className="text-sm text-slate-500">Set station to</span>
+            <Select
+              value={bulkStation}
+              onChange={(e) => setBulkStation(e.target.value)}
+              options={[
+                { value: "", label: "— Unassigned —" },
+                ...FORM_STATIONS.map((s) => ({ value: s, label: STATION_LABEL[s] ?? s })),
+              ]}
+            />
+            <Button onClick={applyBulkStation} disabled={bulkSaving}>
+              {bulkSaving ? "Applying…" : "Apply"}
+            </Button>
+            <button
+              onClick={() => setSelected(new Set())}
+              className="text-sm text-slate-500 hover:text-slate-700"
+            >
+              Clear
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <p className="p-8 text-center text-sm text-slate-400">Loading…</p>
         ) : filtered.length === 0 ? (
@@ -356,6 +405,19 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
           <Table>
             <thead>
               <tr>
+                {canManage && (
+                  <Th>
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 cursor-pointer rounded border-slate-300"
+                      checked={filtered.length > 0 && filtered.every((l) => selected.has(l.id))}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelected(new Set(filtered.map((l) => l.id)));
+                        else setSelected(new Set());
+                      }}
+                    />
+                  </Th>
+                )}
                 <Th><FuelSortHeader label="Date" col="date" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
                 <Th><FuelSortHeader label="Vehicle" col="vehicle" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
                 <Th><FuelSortHeader label="Driver" col="driver" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></Th>
@@ -376,7 +438,17 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
                 const isDuplicate = duplicateSet.has(dateKey);
                 const isInactiveCard = !!l.vehicleId && inactiveCardSet.has(l.vehicleId);
                 return (
-                  <tr key={l.id} className={`hover:bg-slate-50 ${isDuplicate ? "bg-amber-50/50" : ""}`}>
+                  <tr key={l.id} className={`hover:bg-slate-50 ${selected.has(l.id) ? "bg-blue-50/60" : isDuplicate ? "bg-amber-50/50" : ""}`}>
+                    {canManage && (
+                      <Td>
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 cursor-pointer rounded border-slate-300"
+                          checked={selected.has(l.id)}
+                          onChange={() => toggleSelect(l.id)}
+                        />
+                      </Td>
+                    )}
                     <Td className="text-slate-600">{formatDate(l.date)}</Td>
                     <Td className="font-medium">{l.vehicle?.name ?? l.vehicleLabel ?? "\u2014"}</Td>
                     <Td className="text-slate-600">{l.driverName || (l.driver ? `${l.driver.firstName} ${l.driver.lastName}` : "—")}</Td>
