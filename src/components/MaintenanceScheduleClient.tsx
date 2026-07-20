@@ -71,15 +71,28 @@ const STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> 
   upcoming: { bg: "bg-amber-100", text: "text-amber-700", label: "Upcoming" },
   on_track: { bg: "bg-green-100", text: "text-green-700", label: "On Track" },
   dismissed: { bg: "bg-slate-100", text: "text-slate-500", label: "Dismissed" },
+  assigned: { bg: "bg-blue-100", text: "text-blue-700", label: "Assigned" },
 };
 
-function StatusBadge({ status }: { status: string }) {
-  const s = STATUS_STYLE[status] ?? STATUS_STYLE.on_track;
+function StatusBadge({ status, action }: { status: string; action?: string | null }) {
+  const key = status === "dismissed" && action === "assigned" ? "assigned" : status;
+  const s = STATUS_STYLE[key] ?? STATUS_STYLE.on_track;
   return (
     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.bg} ${s.text}`}>
       {s.label}
     </span>
   );
+}
+
+// Shows who a service was assigned to (blue), or the dismissal reason (grey).
+function AssignmentNote({ action, note }: { action: string | null; note: string | null }) {
+  if (action === "assigned" && note) {
+    return <span className="ml-1 flex items-center gap-0.5 text-[10px] font-medium text-blue-600"><UserPlus size={10} /> Assigned to {note}</span>;
+  }
+  if (action) {
+    return <span className="ml-1 text-[10px] text-slate-400">({action}{note ? `: ${note}` : ""})</span>;
+  }
+  return null;
 }
 
 function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss }: {
@@ -137,8 +150,10 @@ function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss }: {
             {vehicle.timeServices.map((ts, i) => (
               <div key={i} className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-slate-50">
                 <div className="flex items-center gap-3">
-                  <StatusBadge status={ts.status} />
-                  <span className="text-sm font-medium text-slate-800">{ts.service}</span>
+                  <StatusBadge status={ts.status} action={ts.dismissedAction} />
+                  <span className="flex items-center text-sm font-medium text-slate-800">{ts.service}
+                    {ts.status === "dismissed" && <AssignmentNote action={ts.dismissedAction} note={ts.dismissedNote} />}
+                  </span>
                   <span className="text-xs text-slate-400">Every {ts.intervalMonths} months</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -192,12 +207,11 @@ function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss }: {
               <tbody>
                 {services.map((s, i) => (
                   <tr key={`${s.service}-${s.nextDue}-${i}`} className={`border-b border-slate-100 hover:bg-slate-50 ${s.status === "never_performed" ? "bg-red-50/50" : s.status === "dismissed" ? "opacity-50" : ""}`}>
-                    <td className="px-3 py-2"><StatusBadge status={s.status} /></td>
+                    <td className="px-3 py-2"><StatusBadge status={s.status} action={s.dismissedAction} /></td>
                     <td className="px-3 py-2 font-medium text-slate-700">
-                      {s.service}
-                      {s.status === "dismissed" && s.dismissedAction && (
-                        <span className="ml-1 text-[10px] text-slate-400">({s.dismissedAction}{s.dismissedNote ? `: ${s.dismissedNote}` : ""})</span>
-                      )}
+                      <span className="flex items-center">{s.service}
+                        {s.status === "dismissed" && <AssignmentNote action={s.dismissedAction} note={s.dismissedNote} />}
+                      </span>
                     </td>
                     <td className="px-3 py-2 text-right text-xs text-slate-400">Every {s.interval.toLocaleString()} mi</td>
                     <td className="px-3 py-2 text-right text-slate-600">
