@@ -27,6 +27,7 @@ import {
   UserCog,
   Landmark,
   Package,
+  HandCoins,
   Truck as TruckLogo,
   LogOut,
   Flag,
@@ -36,6 +37,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { IS_TROVA } from "@/lib/constants";
 import { BrandSwitcher } from "@/components/BrandSwitcher";
 
 const SidebarContext = createContext<{ open: boolean; toggle: () => void }>({ open: false, toggle: () => {} });
@@ -46,7 +48,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   return <SidebarContext.Provider value={{ open, toggle }}>{children}</SidebarContext.Provider>;
 }
 
-type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; roles?: string[] };
+type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; roles?: string[]; trovaOnly?: boolean };
 type NavSection = { title: string; items: NavItem[]; roles?: string[] };
 
 const NAV_SECTIONS: NavSection[] = [
@@ -88,6 +90,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/fleet-finance", label: "Fleet Finance", icon: Landmark, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "DATA_ENTRY"] },
       { href: "/finance-report", label: "Finance Report", icon: DollarSign },
       { href: "/service-costs", label: "Service Costs", icon: Receipt },
+      { href: "/vendor-payments", label: "Vendor Payments", icon: HandCoins, trovaOnly: true, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "DATA_ENTRY"] },
       { href: "/parts-supplies", label: "Parts & Supplies", icon: Package },
       { href: "/budget-editor", label: "PM Budgets", icon: Settings2, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "DATA_ENTRY"] },
     ],
@@ -132,7 +135,7 @@ export function Sidebar({ alertCount, messageCount, userRole }: { alertCount: nu
     .filter((section) => !section.roles || section.roles.includes(role))
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => !item.roles || item.roles.includes(role)),
+      items: section.items.filter((item) => (!item.roles || item.roles.includes(role)) && (!item.trovaOnly || IS_TROVA)),
     }))
     .filter((section) => section.items.length > 0);
 

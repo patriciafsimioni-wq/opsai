@@ -58,7 +58,17 @@ export const WO_TYPES = ["SCHEDULED_SERVICE", "REPAIR", "INSPECTION", "TIRE", "O
 
 // Station config is brand-aware so the same codebase serves SYNCTX (Texas/DHL
 // stations) and TROVA (Virginia — ORF / RNH), each pointed at its own database.
-const IS_TROVA = BRAND.toUpperCase() === "TROVA";
+export const IS_TROVA = BRAND.toUpperCase() === "TROVA";
+
+// Vendor payment methods (TROVA vendor payment tracking).
+export const PAYMENT_METHODS: readonly string[] = [
+  "Check",
+  "ACH/Bank Transfer",
+  "Zelle",
+  "Credit Card",
+  "Cash",
+  "Other",
+];
 
 export const STATIONS: readonly string[] = IS_TROVA
   ? ["ORF", "RNH"]

@@ -455,6 +455,10 @@ model WorkOrder {
   invoiceUrl   String?
   scheduledFor DateTime?
   completedAt  DateTime?
+  vendorPaid          Boolean   @default(false)
+  vendorPaidAt        DateTime?
+  vendorPaymentMethod String?
+  vendorPaymentRef    String?
   createdAt    DateTime        @default(now())
 }
 

@@ -30,6 +30,11 @@ const schema = z.object({
   invoiceUrl: z.string().optional().nullable(),
   performedBy: z.string().optional().nullable(),
   completedAt: z.string().optional().nullable(),
+  // Vendor payment tracking (manager-only)
+  vendorPaid: z.boolean().optional(),
+  vendorPaidAt: z.string().optional().nullable(),
+  vendorPaymentMethod: z.string().optional().nullable(),
+  vendorPaymentRef: z.string().optional().nullable(),
 });
 
 export async function PATCH(
@@ -82,12 +87,34 @@ export async function PATCH(
     completedAt = d.status === "COMPLETED" ? current.completedAt ?? new Date() : null;
   }
 
+  // Vendor payment fields are manager-only. When marking paid without an
+  // explicit date, default to now; clearing paid wipes the payment details.
+  let paymentFields: {
+    vendorPaid?: boolean;
+    vendorPaidAt?: Date | null;
+    vendorPaymentMethod?: string | null;
+    vendorPaymentRef?: string | null;
+  } = {};
+  if (canManage(auth.user.role) && d.vendorPaid !== undefined) {
+    if (d.vendorPaid) {
+      paymentFields = {
+        vendorPaid: true,
+        vendorPaidAt: d.vendorPaidAt ? new Date(d.vendorPaidAt) : current.vendorPaidAt ?? new Date(),
+        vendorPaymentMethod: d.vendorPaymentMethod ?? null,
+        vendorPaymentRef: d.vendorPaymentRef ?? null,
+      };
+    } else {
+      paymentFields = { vendorPaid: false, vendorPaidAt: null, vendorPaymentMethod: null, vendorPaymentRef: null };
+    }
+  }
+
   const order = await prisma.workOrder.update({
     where: { id },
     data: {
       status: d.status,
       priority: d.priority,
       ...costFields,
+      ...paymentFields,
       vendor: d.vendor === undefined ? undefined : d.vendor || null,
       vehicleId: d.vehicleId === undefined ? undefined : d.vehicleId || null,
       vehicleOther: d.vehicleOther === undefined ? undefined : d.vehicleOther || null,
@@ -105,11 +132,15 @@ export async function PATCH(
       completedAt,
     },
   });
+  const paidNow = paymentFields.vendorPaid;
   await logActivity(auth.user, {
-    action: "updated",
+    action: paidNow === true ? "marked paid" : paidNow === false ? "marked unpaid" : "updated",
     entity: "Work Order",
     entityLabel: order.poNumber ? `${order.title} (PO ${order.poNumber})` : order.title,
     station: order.station,
+    detail: paidNow === true
+      ? `Vendor ${order.vendor ?? ""} paid${order.vendorPaymentMethod ? ` via ${order.vendorPaymentMethod}` : ""}`
+      : undefined,
   });
   return NextResponse.json(order);
 }

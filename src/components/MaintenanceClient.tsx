@@ -18,6 +18,7 @@ import {
   STATION_LABEL,
   SERVICE_CATEGORY,
   titleCase,
+  IS_TROVA,
 } from "@/lib/constants";
 import { formatCurrency, todayInputDate } from "@/lib/utils";
 
@@ -429,6 +430,13 @@ export function MaintenanceClient({
                         >
                           {WO_STATUS[o.status as keyof typeof WO_STATUS].label}
                         </Badge>
+                      )}
+                      {IS_TROVA && o.status === "COMPLETED" && (o.vendor || o.assignedTo) && (
+                        <span className="mt-1 block">
+                          <Badge bg={o.vendorPaid ? "#dcfce7" : "#fef3c7"} fg={o.vendorPaid ? "#166534" : "#92400e"}>
+                            {o.vendorPaid ? "Vendor paid" : "Vendor unpaid"}
+                          </Badge>
+                        </span>
                       )}
                     </Td>
                     <Td>
