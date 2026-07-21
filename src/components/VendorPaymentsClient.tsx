@@ -3,18 +3,36 @@
 import { useMemo, useState } from "react";
 import { CheckCircle2, DollarSign, Clock } from "lucide-react";
 import { useData, apiSend } from "@/lib/use-data";
-import type { WorkOrderDTO } from "@/lib/types";
 import { Card, CardHeader, Badge, Button, EmptyState } from "@/components/ui";
 import { Field, Select, Input, Modal } from "@/components/form";
 import { formatCurrency, formatDate, todayInputDate } from "@/lib/utils";
 import { STATIONS, PAYMENT_METHODS } from "@/lib/constants";
 
-function vendorName(o: WorkOrderDTO): string {
+type VendorPaymentRow = {
+  id: string;
+  title: string;
+  station: string;
+  vendor: string | null;
+  laborCost: number;
+  poNumber: string | null;
+  invoiceNumber: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  vendorPaid: boolean;
+  vendorPaidAt: string | null;
+  vendorPaymentMethod: string | null;
+  vendorPaymentRef: string | null;
+  vehicleOther: string | null;
+  assignedTo: { name: string } | null;
+  vehicle: { dxNumber: string | null; name: string | null } | null;
+};
+
+function vendorName(o: VendorPaymentRow): string {
   return (o.vendor || o.assignedTo?.name || "").trim();
 }
 
 export function VendorPaymentsClient() {
-  const { data: orders, loading, reload } = useData<WorkOrderDTO[]>("/api/maintenance");
+  const { data: orders, loading, reload } = useData<VendorPaymentRow[]>("/api/vendor-payments");
 
   const [vendorFilter, setVendorFilter] = useState("");
   const [stationFilter, setStationFilter] = useState("");
@@ -23,7 +41,7 @@ export function VendorPaymentsClient() {
   const [search, setSearch] = useState("");
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [payTargets, setPayTargets] = useState<WorkOrderDTO[] | null>(null);
+  const [payTargets, setPayTargets] = useState<VendorPaymentRow[] | null>(null);
   const [payDate, setPayDate] = useState(todayInputDate());
   const [payMethod, setPayMethod] = useState(PAYMENT_METHODS[0]);
   const [payRef, setPayRef] = useState("");
@@ -32,7 +50,7 @@ export function VendorPaymentsClient() {
 
   // Only completed work orders that have a vendor are payable.
   const payable = useMemo(() => {
-    return (orders ?? []).filter((o) => o.status === "COMPLETED" && vendorName(o) !== "");
+    return (orders ?? []).filter((o) => vendorName(o) !== "");
   }, [orders]);
 
   const vendors = useMemo(
@@ -91,7 +109,7 @@ export function VendorPaymentsClient() {
     else setSelected(new Set(selectableUnpaid.map((o) => o.id)));
   }
 
-  function openPay(targets: WorkOrderDTO[]) {
+  function openPay(targets: VendorPaymentRow[]) {
     setError("");
     setPayDate(todayInputDate());
     setPayMethod(PAYMENT_METHODS[0]);
@@ -124,7 +142,7 @@ export function VendorPaymentsClient() {
     reload();
   }
 
-  async function markUnpaid(o: WorkOrderDTO) {
+  async function markUnpaid(o: VendorPaymentRow) {
     const res = await apiSend(`/api/maintenance/${o.id}`, "PATCH", { vendorPaid: false });
     if (res.ok) reload();
   }
