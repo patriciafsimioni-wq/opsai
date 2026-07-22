@@ -355,6 +355,9 @@ model Vehicle {
   offboardPickupRequested Boolean   @default(false)
   offboardPickupDate DateTime?
   offboardSoldAmount Float?
+  // Fleet grouping so a specialty fleet (tractor trucks + trailers) can be
+  // kept separate from the regular van fleet in views. "REGULAR" | "TRACTOR_TRAILER"
+  fleetGroup         String          @default("REGULAR")
   onboardPhotos      String?        // JSON array of photo URLs
   samsaraId          String?
   hasSamsaraCamera   Boolean         @default(false)

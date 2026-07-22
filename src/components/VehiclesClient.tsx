@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Pencil, Truck, RefreshCw, Camera, FileDown, ArrowRightLeft, X, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Plus, Search, Pencil, Truck, RefreshCw, Camera, FileDown, ArrowRightLeft, X, ChevronUp, ChevronDown, ChevronsUpDown, Boxes } from "lucide-react";
 import {
   Card,
   Button,
@@ -25,8 +25,12 @@ import {
   STATION_LABEL,
   STATIONS,
   SISTER_STATIONS,
+  FLEET_GROUPS,
+  FLEET_GROUP_LABEL,
+  IS_TROVA,
   titleCase,
 } from "@/lib/constants";
+import { useFleetView } from "@/lib/use-fleet-view";
 import { SISTER_BRAND } from "@/lib/brand";
 import { formatNumber, cn } from "@/lib/utils";
 
@@ -45,6 +49,7 @@ const emptyForm = {
   fuelLevel: "100",
   tankCapacity: "200",
   assignedDriverId: "",
+  fleetGroup: "REGULAR",
 };
 
 type SortKey = "name" | "station" | "type" | "status" | "leasing" | "odometer" | "fuel" | "camera";
@@ -65,7 +70,8 @@ function sortValue(v: VehicleDTO, key: SortKey): string | number {
 }
 
 export function VehiclesClient({ canManage }: { canManage: boolean }) {
-  const { data: vehicles, loading, reload } = useData<VehicleDTO[]>("/api/vehicles");
+  const fleetView = useFleetView();
+  const { data: vehicles, loading, reload } = useData<VehicleDTO[]>(`/api/vehicles?fv=${fleetView}`);
   const { data: drivers } = useData<DriverDTO[]>("/api/drivers");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -94,6 +100,10 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
   const [transferDest, setTransferDest] = useState("");
   const [transferring, setTransferring] = useState(false);
   const [transferError, setTransferError] = useState("");
+  const [fleetOpen, setFleetOpen] = useState(false);
+  const [fleetDest, setFleetDest] = useState("");
+  const [fleetMoving, setFleetMoving] = useState(false);
+  const [fleetError, setFleetError] = useState("");
 
   function toggleSelect(id: string) {
     setSelected((prev) => {
@@ -207,6 +217,7 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
       fuelLevel: String(v.fuelLevel),
       tankCapacity: String(v.tankCapacity),
       assignedDriverId: v.assignedDriverId ?? "",
+      fleetGroup: v.fleetGroup ?? "REGULAR",
     });
     setError("");
     setModalOpen(true);
@@ -231,6 +242,36 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
     setTransferDest("");
     setTransferError("");
     setTransferOpen(true);
+  }
+
+  function openFleet() {
+    setFleetDest("");
+    setFleetError("");
+    setFleetOpen(true);
+  }
+
+  async function submitFleet() {
+    if (!fleetDest) {
+      setFleetError("Choose a fleet.");
+      return;
+    }
+    setFleetMoving(true);
+    setFleetError("");
+    const res = await apiSend("/api/vehicles/fleet", "POST", {
+      ids: [...selected],
+      fleetGroup: fleetDest,
+    });
+    setFleetMoving(false);
+    if (res.ok) {
+      const d = res.data as { updated: number };
+      setFleetOpen(false);
+      setSelected(new Set());
+      reload();
+      setSyncResult(`Moved ${d.updated} vehicle(s) to ${FLEET_GROUP_LABEL[fleetDest] ?? fleetDest}.`);
+      setTimeout(() => setSyncResult(null), 6000);
+    } else {
+      setFleetError(res.error ?? "Move failed");
+    }
   }
 
   async function submitTransfer() {
@@ -381,6 +422,11 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
           <Button variant="secondary" onClick={openTransfer}>
             <ArrowRightLeft size={16} /> Transfer Station
           </Button>
+          {!IS_TROVA && (
+            <Button variant="secondary" onClick={openFleet}>
+              <Boxes size={16} /> Move to Fleet
+            </Button>
+          )}
           <button onClick={() => setSelected(new Set())} className="ml-auto inline-flex items-center gap-1 text-blue-700 hover:underline">
             <X size={14} /> Clear
           </button>
@@ -450,6 +496,9 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
                 </Td>
                 <Td className="text-slate-600">
                   <span>{titleCase(v.type)}</span>
+                  {v.fleetGroup === "TRACTOR_TRAILER" && (
+                    <span className="ml-1 inline-flex rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">Tractor/Trailer</span>
+                  )}
                   {v.branding === "YELLOW_DHL" && (
                     <span className="ml-1 inline-flex rounded-full bg-yellow-100 px-1.5 py-0.5 text-[10px] font-medium text-yellow-800">DHL</span>
                   )}
@@ -576,6 +625,15 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
               options={VEHICLE_TYPES.map((t) => ({ value: t, label: titleCase(t) }))}
             />
           </Field>
+          {!IS_TROVA && (
+            <Field label="Fleet">
+              <Select
+                value={form.fleetGroup}
+                onChange={(e) => setForm({ ...form, fleetGroup: e.target.value })}
+                options={FLEET_GROUPS.map((g) => ({ value: g, label: FLEET_GROUP_LABEL[g] ?? g }))}
+              />
+            </Field>
+          )}
           <Field label="Status">
             <Select
               value={form.status}
@@ -688,6 +746,45 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
         {transferError && (
           <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
             {transferError}
+          </p>
+        )}
+      </Modal>
+
+      <Modal
+        open={fleetOpen}
+        onClose={() => setFleetOpen(false)}
+        title={`Move ${selected.size} vehicle(s) to a fleet`}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setFleetOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={submitFleet} disabled={fleetMoving}>
+              {fleetMoving ? "Moving…" : "Move"}
+            </Button>
+          </>
+        }
+      >
+        <Field label="Fleet">
+          <select
+            value={fleetDest}
+            onChange={(e) => setFleetDest(e.target.value)}
+            className="h-10 w-full rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm"
+          >
+            <option value="">Select fleet…</option>
+            {FLEET_GROUPS.map((g) => (
+              <option key={g} value={g}>
+                {FLEET_GROUP_LABEL[g] ?? g}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+          The regular fleet and the Tractors &amp; Trailers fleet are shown separately via the Fleet selector in the top bar. Moving vehicles here only changes which fleet they belong to — no history is affected.
+        </p>
+        {fleetError && (
+          <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {fleetError}
           </p>
         )}
       </Modal>

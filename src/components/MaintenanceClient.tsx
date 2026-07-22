@@ -6,6 +6,7 @@ import { Search, Pencil, Trash2, Wrench, ClipboardList, AlertTriangle, CheckCirc
 import { Card, Button, Badge, Table, Th, Td, SortTh, EmptyState, StatCard } from "@/components/ui";
 import { Field, Input, Select, Textarea, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
+import { useFleetView } from "@/lib/use-fleet-view";
 import { useTableSort } from "@/lib/use-sort";
 import type { WorkOrderDTO, VehicleDTO, ServiceDTO, WorkOrderRequestDTO } from "@/lib/types";
 import {
@@ -49,8 +50,9 @@ export function MaintenanceClient({
   isVendor?: boolean;
   performerName?: string;
 }) {
-  const { data: orders, loading, reload } = useData<WorkOrderDTO[]>("/api/maintenance");
-  const { data: vehicles } = useData<VehicleDTO[]>(isVendor ? null : "/api/vehicles?fleet=1");
+  const fleetView = useFleetView();
+  const { data: orders, loading, reload } = useData<WorkOrderDTO[]>(`/api/maintenance?fv=${fleetView}`);
+  const { data: vehicles } = useData<VehicleDTO[]>(isVendor ? null : `/api/vehicles?fleet=1&fv=${fleetView}`);
   const { data: services } = useData<ServiceDTO[]>(isVendor ? null : "/api/services");
   const { data: woRequests } = useData<WorkOrderRequestDTO[]>(
     isVendor ? null : "/api/work-order-requests",

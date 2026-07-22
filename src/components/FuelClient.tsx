@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Card, Button, Table, Th, Td, EmptyState, StatCard } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
+import { useFleetView } from "@/lib/use-fleet-view";
 import type { FuelLogDTO, VehicleDTO, DriverDTO } from "@/lib/types";
 import { formatCurrency, formatDate, formatNumber, todayInputDate } from "@/lib/utils";
 import { STATION_LABEL, FORM_STATIONS } from "@/lib/constants";
@@ -76,9 +77,10 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
   const [purchaseType, setPurchaseType] = useState("");
   const [viewTab, setViewTab] = useState<"all" | "duplicates">("all");
 
-  const apiUrl = `/api/fuel?range=${range}&date=${refDate}${station ? `&station=${station}` : ""}${purchaseType ? `&purchaseType=${purchaseType}` : ""}`;
+  const fleetView = useFleetView();
+  const apiUrl = `/api/fuel?range=${range}&date=${refDate}${station ? `&station=${station}` : ""}${purchaseType ? `&purchaseType=${purchaseType}` : ""}&fv=${fleetView}`;
   const { data, loading, reload } = useData<FuelApiResponse>(apiUrl);
-  const { data: vehicles } = useData<VehicleDTO[]>("/api/vehicles?fleet=1");
+  const { data: vehicles } = useData<VehicleDTO[]>(`/api/vehicles?fleet=1&fv=${fleetView}`);
   const { data: drivers } = useData<DriverDTO[]>("/api/drivers");
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<FuelSortKey>("date");

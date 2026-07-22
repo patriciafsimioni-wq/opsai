@@ -3,11 +3,13 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { Bell, LogOut, ChevronDown, Eye, GraduationCap, MessageSquare, KeyRound } from "lucide-react";
+import { Bell, LogOut, ChevronDown, Eye, GraduationCap, MessageSquare, KeyRound, Truck } from "lucide-react";
 import { MobileMenuButton } from "@/components/Sidebar";
 import { Avatar } from "@/components/ui";
 import { ChangePasswordModal } from "@/components/ChangePasswordModal";
 import { BRAND } from "@/lib/brand";
+import { IS_TROVA } from "@/lib/constants";
+import { useFleetView, setFleetView, type FleetView } from "@/lib/use-fleet-view";
 import type { Role } from "@prisma/client";
 
 const ALL_ROLES: { value: Role; label: string }[] = [
@@ -37,6 +39,7 @@ export function Topbar({
   const [menu, setMenu] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const isAdmin = user.role === "ADMIN" || user.role === "GENERAL_MANAGER" || user.role === "FLEET_MANAGER";
+  const fleetView = useFleetView();
 
   function setViewAs(role: string) {
     if (role === "" || role === user.role) {
@@ -86,6 +89,21 @@ export function Topbar({
       </div>
 
       <div className="flex items-center gap-3">
+        {!IS_TROVA && (
+          <div className="flex items-center gap-1.5">
+            <Truck size={15} className={fleetView !== "REGULAR" ? "text-blue-600" : "text-slate-400"} />
+            <select
+              value={fleetView}
+              onChange={(e) => setFleetView(e.target.value as FleetView)}
+              title="Switch which fleet you're viewing"
+              className={`h-8 rounded-lg border px-2 text-xs font-medium ${fleetView !== "REGULAR" ? "border-blue-300 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-600"}`}
+            >
+              <option value="REGULAR">Regular Fleet</option>
+              <option value="TRACTOR_TRAILER">Tractors &amp; Trailers</option>
+              <option value="ALL">All Fleets</option>
+            </select>
+          </div>
+        )}
         {isAdmin && (
           <div className="flex items-center gap-1.5">
             <Eye size={15} className={viewAsRole ? "text-amber-600" : "text-slate-400"} />

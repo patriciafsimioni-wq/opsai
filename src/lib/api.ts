@@ -1,7 +1,22 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { getSession, canManage, canManageUsers, canLogService, canApprove, getUserStationFilter } from "@/lib/auth";
 import type { SessionUser } from "@/lib/auth";
 import type { Station } from "@prisma/client";
+import { IS_TROVA } from "@/lib/constants";
+
+/** Reads the global "fleet view" cookie (Sync Fleet only) and returns a Prisma
+ *  filter value for the vehicle `fleetGroup` field, or `null` when no filtering
+ *  applies (TROVA, or the "All Fleets" view). Defaults to the regular fleet so
+ *  the specialty tractor/trailer fleet stays out of the way unless selected. */
+export async function fleetGroupWhere(): Promise<string | null> {
+  if (IS_TROVA) return null;
+  const store = await cookies();
+  const v = store.get("fleetView")?.value;
+  if (v === "ALL") return null;
+  if (v === "TRACTOR_TRAILER") return "TRACTOR_TRAILER";
+  return "REGULAR";
+}
 
 /** Returns a Prisma `where` clause fragment to scope queries by the user's station(s).
  *  Returns `null` for users who can see all stations.

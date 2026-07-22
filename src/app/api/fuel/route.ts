@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { requireApiUser, requireManager, badRequest, fleetGroupWhere } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
 import { getUserStationFilter } from "@/lib/auth";
 
@@ -49,6 +49,11 @@ export async function GET(req: NextRequest) {
   if (purchaseType) {
     where.purchaseType = purchaseType;
   }
+  // Fleet grouping (Sync only): tractor/trailer view shows only that fleet's
+  // fuel; the regular view also keeps vehicle-less card charges visible.
+  const fg = await fleetGroupWhere();
+  if (fg === "TRACTOR_TRAILER") where.vehicle = { fleetGroup: "TRACTOR_TRAILER" };
+  else if (fg === "REGULAR") where.OR = [{ vehicle: { fleetGroup: "REGULAR" } }, { vehicleId: null }];
 
   const logs = await prisma.fuelLog.findMany({
     orderBy: { date: "desc" },

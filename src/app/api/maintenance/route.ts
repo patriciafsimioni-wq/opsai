@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireApiUser, requireManager, badRequest, stationWhere } from "@/lib/api";
+import { requireApiUser, requireManager, badRequest, stationWhere, fleetGroupWhere } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
 import { sendEmail, buildWorkOrderAssignmentEmail } from "@/lib/email";
 import { STATIONS } from "@/lib/constants";
@@ -22,11 +22,18 @@ export async function GET() {
     return NextResponse.json(mine);
   }
   const sw = stationWhere(auth.user);
+  const fg = await fleetGroupWhere();
+  const and: Record<string, unknown>[] = [];
+  // Match either the linked vehicle's station or the work order's own station,
+  // so services logged against "Other" (no vehicle) or a vehicle at another
+  // station still surface for station-scoped users.
+  if (sw) and.push({ OR: [{ vehicle: { is: sw } }, sw] });
+  // Fleet grouping: tractor/trailer view shows only that fleet's work orders;
+  // the regular view also keeps vehicle-less ("Other") work orders visible.
+  if (fg === "TRACTOR_TRAILER") and.push({ vehicle: { fleetGroup: "TRACTOR_TRAILER" } });
+  else if (fg === "REGULAR") and.push({ OR: [{ vehicle: { fleetGroup: "REGULAR" } }, { vehicleId: null }] });
   const orders = await prisma.workOrder.findMany({
-    // Match either the linked vehicle's station or the work order's own station,
-    // so services logged against "Other" (no vehicle) or a vehicle at another
-    // station still surface for station-scoped users.
-    where: sw ? { OR: [{ vehicle: { is: sw } }, sw] } : undefined,
+    where: and.length ? { AND: and } : undefined,
     orderBy: { createdAt: "desc" },
     include: { vehicle: true, service: true, assignedTo: ASSIGNEE_SELECT },
   });

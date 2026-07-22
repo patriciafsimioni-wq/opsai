@@ -8,6 +8,15 @@ export const VEHICLE_STATUS = {
 } as const;
 
 export const VEHICLE_TYPES = ["TRUCK", "VAN", "CAR", "BUS", "PICKUP", "TRAILER"] as const;
+
+// Fleet grouping — keeps the specialty tractor/trailer fleet separate from the
+// regular van fleet in views without splitting the system.
+export const FLEET_GROUPS = ["REGULAR", "TRACTOR_TRAILER"] as const;
+export type FleetGroup = (typeof FLEET_GROUPS)[number];
+export const FLEET_GROUP_LABEL: Record<string, string> = {
+  REGULAR: "Regular Fleet",
+  TRACTOR_TRAILER: "Tractors & Trailers",
+};
 export const VEHICLE_STATUSES = ["ACTIVE", "IDLE", "MAINTENANCE", "OUT_OF_SERVICE"] as const;
 export const FUEL_TYPES = ["DIESEL", "GASOLINE", "ELECTRIC", "HYBRID", "CNG"] as const;
 

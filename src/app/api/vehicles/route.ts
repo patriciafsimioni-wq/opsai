@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireApiUser, requireManager, badRequest, stationWhere } from "@/lib/api";
+import { requireApiUser, requireManager, badRequest, stationWhere, fleetGroupWhere } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
 
 export async function GET(req: Request) {
@@ -17,6 +17,8 @@ export async function GET(req: Request) {
   const sw = stationWhere(auth.user);
   const where: Record<string, unknown> = { ...(sw ?? {}) };
   if (fleetOnly) where.offboardStatus = null;
+  const fg = await fleetGroupWhere();
+  if (fg) where.fleetGroup = fg;
 
   const vehicles = await prisma.vehicle.findMany({
     where,
@@ -34,6 +36,7 @@ const createSchema = z.object({
   vin: z.string().min(1),
   licensePlate: z.string().min(1),
   type: z.enum(["TRUCK", "VAN", "CAR", "BUS", "PICKUP", "TRAILER"]),
+  fleetGroup: z.enum(["REGULAR", "TRACTOR_TRAILER"]).optional(),
   status: z.enum(["ACTIVE", "IDLE", "MAINTENANCE", "OUT_OF_SERVICE"]),
   fuelType: z.enum(["DIESEL", "GASOLINE", "ELECTRIC", "HYBRID", "CNG"]),
   odometer: z.coerce.number().min(0),
@@ -62,6 +65,7 @@ export async function POST(req: Request) {
       vin: d.vin,
       licensePlate: d.licensePlate,
       type: d.type,
+      fleetGroup: d.fleetGroup ?? "REGULAR",
       status: d.status,
       fuelType: d.fuelType,
       odometer: d.odometer,

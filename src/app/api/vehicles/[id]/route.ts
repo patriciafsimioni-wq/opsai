@@ -28,6 +28,7 @@ const patchSchema = z.object({
   vin: z.string().min(1).optional(),
   licensePlate: z.string().optional().nullable(),
   type: z.enum(["TRUCK", "VAN", "CAR", "BUS", "PICKUP", "TRAILER"]).optional(),
+  fleetGroup: z.enum(["REGULAR", "TRACTOR_TRAILER"]).optional(),
   status: z.enum(["ACTIVE", "IDLE", "MAINTENANCE", "OUT_OF_SERVICE"]).optional(),
   station: z.enum(["IAH", "AUS", "HRL", "LRD", "ACT", "CLL", "BPT"]).optional(),
   fuelType: z.enum(["DIESEL", "GASOLINE", "ELECTRIC", "HYBRID", "CNG"]).optional(),
