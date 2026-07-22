@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Star, ShieldCheck, Truck, Phone, Mail } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Truck, Phone, Mail, Flag } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { Card, CardHeader, Badge, Avatar, Table, Th, Td } from "@/components/ui";
 import { DRIVER_STATUS, TRIP_STATUS } from "@/lib/constants";
@@ -32,38 +32,39 @@ export default async function DriverDetailPage({
         <ArrowLeft size={16} /> Back to drivers
       </Link>
 
-      <div className="mb-6 flex items-center gap-4">
-        <Avatar name={`${d.firstName} ${d.lastName}`} color={d.avatarColor} size={56} />
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">
-              {d.firstName} {d.lastName}
-            </h1>
-            <Badge bg={status.bg} fg={status.fg}>
-              {status.label}
-            </Badge>
-          </div>
-          <div className="mt-1 flex flex-wrap gap-4 text-sm text-[var(--color-muted)]">
-            <span className="inline-flex items-center gap-1">
-              <Mail size={14} /> {d.email}
-            </span>
-            {d.phone && (
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Avatar name={`${d.firstName} ${d.lastName}`} color={d.avatarColor} size={56} />
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold">
+                {d.firstName} {d.lastName}
+              </h1>
+              <Badge bg={status.bg} fg={status.fg}>
+                {status.label}
+              </Badge>
+            </div>
+            <div className="mt-1 flex flex-wrap gap-4 text-sm text-[var(--color-muted)]">
               <span className="inline-flex items-center gap-1">
-                <Phone size={14} /> {d.phone}
+                <Mail size={14} /> {d.email}
               </span>
-            )}
+              {d.phone && (
+                <span className="inline-flex items-center gap-1">
+                  <Phone size={14} /> {d.phone}
+                </span>
+              )}
+            </div>
           </div>
         </div>
+        <a
+          href={`/issues?create=1&title=${encodeURIComponent(`Driver Issue — ${d.firstName} ${d.lastName}`)}&category=Drivers&description=${encodeURIComponent(`Driver: ${d.firstName} ${d.lastName} · ${d.email}`)}`}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors whitespace-nowrap"
+        >
+          <Flag size={14} /> Flag Issue
+        </a>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Card className="p-4">
-          <p className="text-xs text-slate-400">Rating</p>
-          <p className="mt-1 inline-flex items-center gap-1 text-xl font-bold">
-            <Star size={16} className="fill-amber-400 text-amber-400" />
-            {d.rating.toFixed(1)}
-          </p>
-        </Card>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
         <Card className="p-4">
           <p className="text-xs text-slate-400">Safety Score</p>
           <p
@@ -176,7 +177,7 @@ export default async function DriverDetailPage({
                       </Badge>
                     </Td>
                     <Td className="text-slate-600">{formatDate(t.scheduledStart)}</Td>
-                    <Td>{Math.round(t.distanceKm)} km</Td>
+                    <Td>{Math.round(t.distanceKm)} mi</Td>
                   </tr>
                 ))}
               </tbody>

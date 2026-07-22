@@ -12,6 +12,7 @@ export default async function VehiclesPage() {
       <PageHeader
         title="Vehicles"
         subtitle="Manage your fleet's vehicles, status, and assignments."
+        flagCategory="Vehicles"
       />
       <VehiclesClient canManage={manage} />
     </div>

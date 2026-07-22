@@ -15,6 +15,7 @@ export type SessionUser = {
   email: string;
   name: string;
   role: Role;
+  station: string | null;
   driverId: string | null;
 };
 
@@ -59,6 +60,7 @@ export async function getSession(): Promise<SessionUser | null> {
       email: payload.email as string,
       name: payload.name as string,
       role: payload.role as Role,
+      station: (payload.station as string | null) ?? null,
       driverId: (payload.driverId as string | null) ?? null,
     };
   } catch {
@@ -81,6 +83,7 @@ export async function authenticate(
     email: user.email,
     name: user.name,
     role: user.role,
+    station: user.station,
     driverId: user.driverId,
   };
 }
@@ -91,6 +94,67 @@ export async function requireUser(): Promise<SessionUser> {
   return session;
 }
 
+// Role hierarchy — higher roles include lower-tier permissions
+const MANAGEMENT_ROLES: Role[] = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "MECHANIC", "DATA_ENTRY"];
+const APPROVAL_ROLES: Role[] = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "MANAGER", "DATA_ENTRY"];
+const SERVICE_ROLES: Role[] = [...MANAGEMENT_ROLES, "MECHANIC", "VENDOR"];
+
+// User account management is restricted to true admins/managers — NOT Data Entry.
+const USER_ADMIN_ROLES: Role[] = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "MECHANIC"];
+
 export function canManage(role: Role) {
-  return role === "ADMIN" || role === "MANAGER";
+  return MANAGEMENT_ROLES.includes(role);
+}
+
+export function canManageUsers(role: Role) {
+  return USER_ADMIN_ROLES.includes(role);
+}
+
+export function canApprove(role: Role) {
+  return APPROVAL_ROLES.includes(role);
+}
+
+export function canLogService(role: Role) {
+  return SERVICE_ROLES.includes(role);
+}
+
+export function canViewFinance(role: Role) {
+  return role !== "VENDOR" && role !== "DRIVER";
+}
+
+export function canViewSafety(role: Role) {
+  return role !== "VENDOR";
+}
+
+// Roles that see ALL stations vs only their assigned station
+const ALL_STATION_ROLES: Role[] = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "DATA_ENTRY"];
+
+export function isStationScoped(role: Role): boolean {
+  return !ALL_STATION_ROLES.includes(role);
+}
+
+export function getUserStationFilter(user: SessionUser): string[] | null {
+  if (!isStationScoped(user.role)) return null; // sees all
+  if (!user.station) {
+    // Vendors without a station can see all stations (they service the fleet)
+    if (user.role === "VENDOR") return null;
+    return []; // other roles without station = see nothing
+  }
+  // Support comma-separated multi-station values
+  return user.station.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+export function getRoleLabel(role: Role): string {
+  const labels: Record<Role, string> = {
+    ADMIN: "Administrator",
+    GENERAL_MANAGER: "General Manager",
+    FLEET_MANAGER: "Fleet Manager",
+    STATION_MANAGER: "Station Manager",
+    MECHANIC: "Mechanic",
+    VENDOR: "Vendor",
+    MANAGER: "Manager",
+    DRIVER: "Driver",
+    DATA_ENTRY: "Data Entry",
+  };
+  return labels[role] || role;
 }

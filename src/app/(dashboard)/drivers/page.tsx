@@ -9,7 +9,7 @@ export default async function DriversPage() {
   const manage = user ? canManage(user.role) : false;
   return (
     <div>
-      <PageHeader title="Drivers" subtitle="Manage drivers, licenses, and safety scores." />
+      <PageHeader title="Drivers" subtitle="Manage drivers, licenses, and safety scores." flagCategory="Drivers" />
       <DriversClient canManage={manage} />
     </div>
   );

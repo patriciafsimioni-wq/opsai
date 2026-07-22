@@ -2,12 +2,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-export function useData<T>(url: string) {
+export function useData<T>(url: string | null) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
+    if (url === null) {
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Request failed (${res.status})`);

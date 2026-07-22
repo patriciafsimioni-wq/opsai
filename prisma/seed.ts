@@ -1,5 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 const prisma = new PrismaClient();
 
@@ -17,17 +19,16 @@ function daysFromNow(days: number) {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 }
 
-// San Francisco Bay Area as the operating region
-const CENTER = { lat: 37.7749, lng: -122.4194 };
+// Texas operating region
 const CITY_POINTS: Record<string, { lat: number; lng: number }> = {
-  "Downtown SF Depot": { lat: 37.7793, lng: -122.4193 },
-  "Oakland Hub": { lat: 37.8044, lng: -122.2712 },
-  "San Jose Yard": { lat: 37.3382, lng: -121.8863 },
-  "Daly City Stop": { lat: 37.6879, lng: -122.4702 },
-  "Berkeley Stop": { lat: 37.8715, lng: -122.273 },
-  "Fremont Warehouse": { lat: 37.5485, lng: -121.9886 },
-  "Palo Alto Client": { lat: 37.4419, lng: -122.143 },
-  "Richmond Plant": { lat: 37.9358, lng: -122.3477 },
+  "IAH Depot - Houston": { lat: 29.9844, lng: -95.3414 },
+  "AUS Hub - Austin": { lat: 30.2672, lng: -97.7431 },
+  "HRL Yard - Harlingen": { lat: 26.1906, lng: -97.6961 },
+  "LRD Stop - Laredo": { lat: 27.5036, lng: -99.5076 },
+  "ACT Stop - Waco": { lat: 31.5493, lng: -97.1467 },
+  "CLL Warehouse - College Station": { lat: 30.6280, lng: -96.3344 },
+  "BPT Plant - Beaumont": { lat: 30.0802, lng: -94.1266 },
+  "San Antonio Client": { lat: 29.4241, lng: -98.4936 },
 };
 const PLACE_NAMES = Object.keys(CITY_POINTS);
 
@@ -40,27 +41,6 @@ const LAST = [
   "Smith", "Johnson", "Williams", "Brown", "Garcia", "Miller", "Davis",
   "Rodriguez", "Martinez", "Chen", "Khan", "Nguyen", "Okafor", "Patel",
   "Silva", "Kim", "Lopez", "Adams", "Ferreira", "Singh",
-];
-
-const VEHICLE_MODELS: Array<{
-  make: string;
-  model: string;
-  type: "TRUCK" | "VAN" | "CAR" | "BUS" | "PICKUP" | "TRAILER";
-  fuel: "DIESEL" | "GASOLINE" | "ELECTRIC" | "HYBRID" | "CNG";
-  tank: number;
-}> = [
-  { make: "Freightliner", model: "Cascadia", type: "TRUCK", fuel: "DIESEL", tank: 380 },
-  { make: "Volvo", model: "VNL 760", type: "TRUCK", fuel: "DIESEL", tank: 400 },
-  { make: "Ford", model: "Transit", type: "VAN", fuel: "GASOLINE", tank: 90 },
-  { make: "Mercedes-Benz", model: "Sprinter", type: "VAN", fuel: "DIESEL", tank: 93 },
-  { make: "Tesla", model: "Semi", type: "TRUCK", fuel: "ELECTRIC", tank: 0 },
-  { make: "Rivian", model: "EDV 700", type: "VAN", fuel: "ELECTRIC", tank: 0 },
-  { make: "Ford", model: "F-150 Lightning", type: "PICKUP", fuel: "ELECTRIC", tank: 0 },
-  { make: "Toyota", model: "Prius", type: "CAR", fuel: "HYBRID", tank: 43 },
-  { make: "Chevrolet", model: "Silverado", type: "PICKUP", fuel: "GASOLINE", tank: 98 },
-  { make: "RAM", model: "ProMaster", type: "VAN", fuel: "GASOLINE", tank: 90 },
-  { make: "Kenworth", model: "T680", type: "TRUCK", fuel: "DIESEL", tank: 450 },
-  { make: "Blue Bird", model: "Vision", type: "BUS", fuel: "CNG", tank: 150 },
 ];
 
 const STATIONS = ["AUS", "ACT", "IAH", "CLL", "BPT", "HRL", "LRD"] as const;
@@ -159,22 +139,13 @@ const SERVICE_CATALOG: ServiceDef[] = [
   { name: "First Aid / Fire Extinguisher Check", category: "CORRECTIVE", group: "Safety & Compliance", material: 25, labor: 40 },
 ];
 
-function vin() {
-  const chars = "ABCDEFGHJKLMNPRSTUVWXYZ0123456789";
-  let v = "";
-  for (let i = 0; i < 17; i++) v += chars[randInt(0, chars.length - 1)];
-  return v;
-}
-function plate() {
-  const n = randInt(0, 9);
-  const l = "ABCDEFGHJKLMNPRSTUVWXYZ";
-  return `${randInt(1, 9)}${l[randInt(0, 22)]}${l[randInt(0, 22)]}${l[randInt(0, 22)]}${randInt(100, 999)}${n}`;
-}
-
 async function main() {
   console.log("🌱 Seeding fleet database...");
 
   // wipe (order matters for FKs)
+  await prisma.fareyeRoute.deleteMany();
+  await prisma.pmBudget.deleteMany();
+  await prisma.workOrderRequest.deleteMany();
   await prisma.telemetryLog.deleteMany();
   await prisma.alert.deleteMany();
   await prisma.fuelLog.deleteMany();
@@ -189,11 +160,11 @@ async function main() {
 
   // ----- geofences -----
   const fenceDefs: Array<{ name: string; type: "DEPOT" | "CUSTOMER" | "SERVICE" | "RESTRICTED"; key: string; radius: number; color: string }> = [
-    { name: "Downtown SF Depot", type: "DEPOT", key: "Downtown SF Depot", radius: 700, color: "#2563eb" },
-    { name: "Oakland Hub", type: "DEPOT", key: "Oakland Hub", radius: 650, color: "#7c3aed" },
-    { name: "San Jose Yard", type: "SERVICE", key: "San Jose Yard", radius: 800, color: "#0891b2" },
-    { name: "Palo Alto Client Site", type: "CUSTOMER", key: "Palo Alto Client", radius: 400, color: "#16a34a" },
-    { name: "Richmond Restricted Zone", type: "RESTRICTED", key: "Richmond Plant", radius: 500, color: "#dc2626" },
+    { name: "IAH Depot - Houston", type: "DEPOT", key: "IAH Depot - Houston", radius: 700, color: "#2563eb" },
+    { name: "AUS Hub - Austin", type: "DEPOT", key: "AUS Hub - Austin", radius: 650, color: "#7c3aed" },
+    { name: "HRL Yard - Harlingen", type: "SERVICE", key: "HRL Yard - Harlingen", radius: 800, color: "#0891b2" },
+    { name: "San Antonio Client", type: "CUSTOMER", key: "San Antonio Client", radius: 400, color: "#16a34a" },
+    { name: "BPT Plant - Beaumont", type: "RESTRICTED", key: "BPT Plant - Beaumont", radius: 500, color: "#dc2626" },
   ];
   for (const f of fenceDefs) {
     const p = CITY_POINTS[f.key];
@@ -270,37 +241,97 @@ async function main() {
     },
   });
 
-  // ----- vehicles -----
+  // ----- vehicles (from real fleet data) -----
+  type FleetRow = {
+    dxNumber: string;
+    licensePlate: string;
+    vin: string;
+    status: string;
+    year: number;
+    make: string;
+    model: string;
+    station: string;
+    type: string;
+    leasingCompany: string | null;
+    samsaraId: string | null;
+    tollEnabled: boolean;
+    odometer: number;
+    onboardedDate: string | null;
+    leaseEndDate: string | null;
+    registrationMonth: string | null;
+  };
+  const fleetData: FleetRow[] = JSON.parse(
+    readFileSync(join(__dirname, "fleet-data.json"), "utf-8"),
+  );
+
+  // Station center coordinates for telemetry scatter
+  const STATION_COORDS: Record<string, { lat: number; lng: number }> = {
+    IAH: { lat: 29.9844, lng: -95.3414 },
+    AUS: { lat: 30.2672, lng: -97.7431 },
+    HRL: { lat: 26.1906, lng: -97.6961 },
+    LRD: { lat: 27.5036, lng: -99.5076 },
+    ACT: { lat: 31.5493, lng: -97.1467 },
+    CLL: { lat: 30.6280, lng: -96.3344 },
+    BPT: { lat: 30.0802, lng: -94.1266 },
+  };
+
+  // Fuel type heuristic from make/model
+  function guessFuel(make: string, model: string): "DIESEL" | "GASOLINE" | "ELECTRIC" | "HYBRID" | "CNG" {
+    const m = `${make} ${model}`.toLowerCase();
+    if (m.includes("freightliner") || m.includes("international") || m.includes("peterbilt") || m.includes("f650") || m.includes("f-650")) return "DIESEL";
+    return "GASOLINE";
+  }
+
+  // Tank capacity heuristic
+  function guessTank(type: string, fuel: string): number {
+    if (fuel === "ELECTRIC") return 0;
+    if (type === "TRUCK") return 380;
+    return 90; // Van
+  }
+
   const vehicles = [];
-  const VEHICLE_COUNT = 24;
-  for (let i = 0; i < VEHICLE_COUNT; i++) {
-    const m = pick(VEHICLE_MODELS);
-    const status = pick([
-      "ACTIVE", "ACTIVE", "ACTIVE", "ACTIVE", "IDLE", "IDLE", "MAINTENANCE", "OUT_OF_SERVICE",
-    ]) as "ACTIVE" | "IDLE" | "MAINTENANCE" | "OUT_OF_SERVICE";
-    const assigned = status === "OUT_OF_SERVICE" ? null : pick(drivers);
-    const isMoving = status === "ACTIVE";
+  for (const row of fleetData) {
+    const stationKey = STATIONS.includes(row.station as StationCode) ? row.station : "IAH";
+    const statusVal = (row.status === "ACTIVE" ? "ACTIVE" : "OUT_OF_SERVICE") as "ACTIVE" | "IDLE" | "MAINTENANCE" | "OUT_OF_SERVICE";
+    const vType = (row.type === "TRUCK" ? "TRUCK" : "VAN") as "TRUCK" | "VAN";
+    const fuel = guessFuel(row.make, row.model);
+    const tank = guessTank(row.type, fuel);
+    const isMoving = statusVal === "ACTIVE" && Math.random() > 0.5;
+    const coords = STATION_COORDS[stationKey] ?? STATION_COORDS.IAH;
+    const assigned = statusVal === "OUT_OF_SERVICE" ? null : pick(drivers);
+
     const v = await prisma.vehicle.create({
       data: {
-        name: `Unit ${String(i + 1).padStart(3, "0")}`,
-        make: m.make,
-        model: m.model,
-        year: randInt(2017, 2025),
-        vin: vin(),
-        licensePlate: plate(),
-        type: m.type,
-        status,
-        fuelType: m.fuel,
-        odometer: randInt(5000, 320000),
-        fuelLevel: m.fuel === "ELECTRIC" ? randInt(15, 100) : randInt(8, 100),
-        tankCapacity: m.tank || 100,
-        station: STATIONS[i % STATIONS.length] as StationCode,
-        registrationExpiry: daysFromNow(randInt(-15, 700)),
-        insuranceExpiry: daysFromNow(randInt(-10, 500)),
-        purchaseDate: daysFromNow(-randInt(200, 2800)),
-        purchasePrice: randInt(35000, 185000),
-        lat: CENTER.lat + rand(-0.18, 0.18),
-        lng: CENTER.lng + rand(-0.22, 0.22),
+        name: row.dxNumber,
+        dxNumber: row.dxNumber,
+        make: row.make,
+        model: row.model,
+        year: row.year,
+        vin: row.vin,
+        licensePlate: row.licensePlate,
+        type: vType,
+        status: statusVal,
+        fuelType: fuel,
+        odometer: row.odometer,
+        fuelLevel: fuel === "ELECTRIC" ? randInt(15, 100) : randInt(8, 100),
+        tankCapacity: tank,
+        station: stationKey as StationCode,
+        leasingCompany: row.leasingCompany,
+        samsaraId: row.samsaraId,
+        onboardedDate: row.onboardedDate ? new Date(row.onboardedDate) : null,
+        leaseEndDate: row.leaseEndDate ? new Date(row.leaseEndDate) : null,
+        registrationMonth: row.registrationMonth,
+        registrationExpiry: row.registrationMonth
+          ? (() => {
+              const monthMap: Record<string, number> = { January: 0, February: 1, March: 2, April: 3, May: 4, June: 5, July: 6, August: 7, September: 8, October: 9, November: 10, December: 11 };
+              const m = monthMap[row.registrationMonth];
+              // Registration month = issue date; expires 12 months later
+              return m !== undefined ? new Date(2027, m, 28) : null;
+            })()
+          : null,
+        insuranceExpiry: new Date("2026-10-31"),
+        lat: coords.lat + rand(-0.05, 0.05),
+        lng: coords.lng + rand(-0.05, 0.05),
         heading: rand(0, 360),
         speed: isMoving ? randInt(15, 75) : 0,
         engineOn: isMoving,
@@ -344,8 +375,30 @@ async function main() {
     });
   }
 
-  // ----- work orders + schedules -----
-  // Map a service group to a MaintenanceType for the legacy filter.
+  // ----- work orders from real service history -----
+  type SvcRow = {
+    dxNumber: string;
+    vin: string | null;
+    serviceType: string | null;
+    odometer: number;
+    provider: string | null;
+    date: string | null;
+    invoiceNumber: string | null;
+    materialCost: number;
+    serviceCost: number;
+    totalCost: number;
+    description: string | null;
+    station: string | null;
+    poNumber: string | null;
+    category: string | null;
+    subcategory: string | null;
+  };
+  const svcHistory: SvcRow[] = JSON.parse(
+    readFileSync(join(__dirname, "services-history.json"), "utf-8"),
+  );
+  const vehicleByDx = new Map(vehicles.map((v) => [v.dxNumber, v]));
+  const serviceByName = new Map(services.map((s) => [s.name, s]));
+
   function typeForService(s: (typeof services)[number]): "SCHEDULED_SERVICE" | "REPAIR" | "INSPECTION" | "TIRE" | "OIL_CHANGE" | "RECALL" {
     const n = s.name.toLowerCase();
     if (n.includes("tire")) return "TIRE";
@@ -354,77 +407,69 @@ async function main() {
     if (s.category === "PREVENTIVE") return "SCHEDULED_SERVICE";
     return "REPAIR";
   }
-  const vendors = ["FleetCare Service", "Lone Star Diesel", "QuickLube Pro", "In-house Shop", "Gulf Coast Truck"];
-  const techNames = ["Miguel Torres", "Sam Patel", "Jordan Lee", "Chris Nguyen", "Andre Bell"];
-  const LABOR_RATE = 95;
-  // Spread completed work orders across the last 6 months for per-month/per-station reporting.
+
+  let woImported = 0;
+  for (const row of svcHistory) {
+    const vehicle = vehicleByDx.get(row.dxNumber);
+    if (!vehicle) continue;
+    const svc = row.subcategory ? serviceByName.get(row.subcategory) : null;
+    const stationKey = row.station ?? vehicle.station;
+    const validStations = ["IAH", "AUS", "HRL", "LRD", "CLL", "BPT", "ACT"];
+    const station = validStations.includes(stationKey) ? stationKey : vehicle.station;
+    const completedAt = row.date ? new Date(row.date) : new Date();
+
+    await prisma.workOrder.create({
+      data: {
+        vehicleId: vehicle.id,
+        serviceId: svc?.id ?? null,
+        station: station as StationCode,
+        type: svc ? typeForService(svc) : "OIL_CHANGE",
+        title: row.subcategory ?? row.serviceType ?? "Service",
+        description: row.description ?? null,
+        status: "COMPLETED",
+        priority: "MEDIUM",
+        materialCost: row.materialCost,
+        laborHours: 0,
+        laborRate: 0,
+        laborCost: Math.min(row.serviceCost, row.totalCost - row.materialCost),
+        cost: row.totalCost,
+        performedBy: null,
+        odometerAt: row.odometer,
+        vendor: row.provider,
+        vin: row.vin ?? vehicle.vin,
+        poNumber: row.poNumber,
+        invoiceNumber: row.invoiceNumber,
+        completedAt,
+        createdAt: completedAt,
+      },
+    });
+    woImported++;
+  }
+
+  // Add a few currently-open/scheduled work orders for the maintenance board
+  for (const v of vehicles.slice(0, 40)) {
+    const s = pick(services);
+    const status = pick(["OPEN", "SCHEDULED", "IN_PROGRESS"]) as "OPEN" | "SCHEDULED" | "IN_PROGRESS";
+    await prisma.workOrder.create({
+      data: {
+        vehicleId: v.id,
+        serviceId: s.id,
+        station: v.station,
+        type: typeForService(s),
+        title: s.name,
+        description: `${s.category === "PREVENTIVE" ? "Preventive" : "Corrective"} — ${s.group}`,
+        status,
+        priority: pick(["LOW", "MEDIUM", "HIGH"]),
+        materialCost: Math.round(s.materialCost * rand(0.8, 1.25)),
+        odometerAt: v.odometer,
+        vendor: "Take5",
+        scheduledFor: daysFromNow(randInt(1, 30)),
+      },
+    });
+  }
+
+  // Recurring maintenance schedules
   for (const v of vehicles) {
-    for (let monthsAgo = 0; monthsAgo < 6; monthsAgo++) {
-      const count = randInt(0, 3);
-      for (let j = 0; j < count; j++) {
-        const s = pick(services);
-        const material = Math.round(s.materialCost * rand(0.8, 1.25));
-        const laborRate = LABOR_RATE;
-        const labor = Math.round(s.laborCost * rand(0.85, 1.2));
-        const laborHours = Math.round((labor / laborRate) * 10) / 10;
-        const day = new Date();
-        day.setMonth(day.getMonth() - monthsAgo);
-        day.setDate(randInt(1, 28));
-        await prisma.workOrder.create({
-          data: {
-            vehicleId: v.id,
-            serviceId: s.id,
-            station: v.station,
-            type: typeForService(s),
-            title: s.name,
-            description: `${s.category === "PREVENTIVE" ? "Preventive" : "Corrective"} — ${s.group}`,
-            status: "COMPLETED",
-            priority: pick(["LOW", "MEDIUM", "MEDIUM", "HIGH"]),
-            materialCost: material,
-            laborHours,
-            laborRate,
-            laborCost: laborHours * laborRate,
-            cost: material + laborHours * laborRate,
-            performedBy: pick(techNames),
-            odometerAt: v.odometer - randInt(0, 5000),
-            vendor: pick(vendors),
-            completedAt: day,
-            createdAt: day,
-          },
-        });
-      }
-    }
-    // a few currently-open / scheduled work orders for the maintenance board
-    const openCount = randInt(0, 2);
-    for (let j = 0; j < openCount; j++) {
-      const s = pick(services);
-      const material = Math.round(s.materialCost * rand(0.8, 1.25));
-      const laborRate = LABOR_RATE;
-      const labor = Math.round(s.laborCost * rand(0.85, 1.2));
-      const laborHours = Math.round((labor / laborRate) * 10) / 10;
-      const status = pick(["OPEN", "SCHEDULED", "IN_PROGRESS"]) as "OPEN" | "SCHEDULED" | "IN_PROGRESS";
-      await prisma.workOrder.create({
-        data: {
-          vehicleId: v.id,
-          serviceId: s.id,
-          station: v.station,
-          type: typeForService(s),
-          title: s.name,
-          description: `${s.category === "PREVENTIVE" ? "Preventive" : "Corrective"} — ${s.group}`,
-          status,
-          priority: pick(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
-          materialCost: material,
-          laborHours,
-          laborRate,
-          laborCost: laborHours * laborRate,
-          cost: material + laborHours * laborRate,
-          odometerAt: v.odometer - randInt(0, 5000),
-          vendor: pick(vendors),
-          scheduledFor: daysFromNow(randInt(1, 30)),
-        },
-      });
-    }
-    // a couple of recurring schedules
     await prisma.maintenanceSchedule.create({
       data: {
         vehicleId: v.id,
@@ -439,49 +484,65 @@ async function main() {
     });
   }
 
-  // ----- fuel logs -----
-  for (const v of vehicles) {
-    if (v.fuelType === "ELECTRIC") continue;
-    const count = randInt(3, 9);
-    for (let j = 0; j < count; j++) {
-      const liters = randInt(30, Math.max(40, Math.round(v.tankCapacity * 0.8)));
-      const price = Math.round(rand(0.95, 1.65) * 100) / 100;
-      await prisma.fuelLog.create({
-        data: {
-          vehicleId: v.id,
-          driverId: v.assignedDriverId,
-          date: daysFromNow(-randInt(1, 120)),
-          liters,
-          pricePerLiter: price,
-          totalCost: Math.round(liters * price * 100) / 100,
-          odometer: v.odometer - randInt(0, 8000),
-          location: pick(["Shell - Market St", "Chevron - Oakland", "BP - San Jose", "Costco Fuel", "76 - Berkeley"]),
-        },
-      });
-    }
+  console.log(`  Imported ${woImported} real service history work orders`);
+
+  // ----- fuel logs (real data from Fuel.xlsx) -----
+  type FuelRow = {
+    dxNumber: string;
+    date: string | null;
+    gallons: number;
+    pricePerGallon: number;
+    totalCost: number;
+    location: string | null;
+    station: string;
+    purchaseType: "UNLEADED" | "DIESEL" | "DEF" | "NON_FUEL";
+    driverName: string | null;
+    productDesc: string | null;
+  };
+  const fuelRows: FuelRow[] = JSON.parse(
+    readFileSync(join(__dirname, "data", "fuel-data.json"), "utf-8"),
+  );
+  let fuelImported = 0;
+  const vehicleByDxFuel = new Map(vehicles.map((v) => [v.dxNumber, v]));
+  for (const f of fuelRows) {
+    const vehicle = vehicleByDxFuel.get(f.dxNumber);
+    if (!vehicle || !f.date) continue;
+    await prisma.fuelLog.create({
+      data: {
+        vehicleId: vehicle.id,
+        driverId: vehicle.assignedDriverId,
+        driverName: f.driverName || null,
+        date: new Date(f.date),
+        liters: f.gallons,
+        pricePerLiter: f.pricePerGallon,
+        totalCost: f.totalCost,
+        odometer: vehicle.odometer - randInt(0, 3000),
+        location: f.location,
+        purchaseType: f.purchaseType,
+      },
+    });
+    fuelImported++;
   }
+  console.log(`  Imported ${fuelImported} real fuel logs (of ${fuelRows.length} total)`);
 
   // ----- alerts -----
   const now = Date.now();
   for (let i = 0; i < 22; i++) {
     const v = pick(vehicles);
     const type = pick([
-      "SPEEDING", "GEOFENCE_ENTER", "GEOFENCE_EXIT", "MAINTENANCE_DUE",
-      "DOCUMENT_EXPIRY", "LOW_FUEL", "IDLE", "HARSH_DRIVING",
-    ]) as "SPEEDING" | "GEOFENCE_ENTER" | "GEOFENCE_EXIT" | "MAINTENANCE_DUE" | "DOCUMENT_EXPIRY" | "LOW_FUEL" | "IDLE" | "HARSH_DRIVING";
+      "SPEEDING", "MAINTENANCE_DUE",
+      "DOCUMENT_EXPIRY", "IDLE", "HARSH_DRIVING",
+    ]) as "SPEEDING" | "MAINTENANCE_DUE" | "DOCUMENT_EXPIRY" | "IDLE" | "HARSH_DRIVING";
     const messages: Record<string, string> = {
       SPEEDING: `${v.name} exceeded speed limit (${randInt(78, 96)} mph in a 65 zone)`,
-      GEOFENCE_ENTER: `${v.name} entered geofence "Downtown SF Depot"`,
-      GEOFENCE_EXIT: `${v.name} left geofence "Oakland Hub"`,
       MAINTENANCE_DUE: `${v.name} is due for scheduled service`,
       DOCUMENT_EXPIRY: `${v.name} registration expires soon`,
-      LOW_FUEL: `${v.name} fuel level below 15%`,
       IDLE: `${v.name} idling for over 20 minutes`,
       HARSH_DRIVING: `${v.name} harsh braking event detected`,
     };
     const severity = (
       type === "SPEEDING" || type === "HARSH_DRIVING" || type === "DOCUMENT_EXPIRY"
-    ) ? "CRITICAL" : type === "IDLE" || type === "GEOFENCE_ENTER" || type === "GEOFENCE_EXIT" ? "INFO" : "WARNING";
+    ) ? "CRITICAL" : type === "IDLE" ? "INFO" : "WARNING";
     await prisma.alert.create({
       data: {
         type,
@@ -495,8 +556,111 @@ async function main() {
     });
   }
 
+  // ----- work order requests (approval workflow demo) -----
+  await prisma.workOrderRequest.deleteMany();
+  const allUsers = await prisma.user.findMany();
+  const driverUser = allUsers.find((u) => u.role === "DRIVER");
+  const managerUser = allUsers.find((u) => u.role === "MANAGER");
+  const adminUser = allUsers.find((u) => u.role === "ADMIN");
+  const requesters = [driverUser, managerUser, adminUser].filter(Boolean) as typeof allUsers;
+  const partsPool = [
+    "Brake pads", "Oil filter", "Air filter", "Spark plugs", "Wiper blades",
+    "Cabin filter", "Timing belt", "Serpentine belt", "Battery", "Coolant",
+    "Transmission fluid", "Brake rotors", "Alternator", "Starter motor",
+  ];
+  // PO number prefix mapping and starting sequences (numbers below start are "already used")
+  const PO_PREFIX: Record<string, string> = { IAH: "IA", AUS: "AU", HRL: "HR", ACT: "AC", LRD: "LR", CLL: "CL", BPT: "BP" };
+  const poCounters: Record<string, number> = { IAH: 265, AUS: 286, HRL: 174, ACT: 34, LRD: 11, CLL: 31, BPT: 7 };
+  for (let i = 0; i < 8; i++) {
+    const v = pick(vehicles);
+    const s = pick(services);
+    const requester = pick(requesters);
+    const partCount = randInt(1, 3);
+    const parts: string[] = [];
+    for (let p = 0; p < partCount; p++) {
+      const part = pick(partsPool);
+      if (!parts.includes(part)) parts.push(part);
+    }
+    const status = i < 5 ? "PENDING" : pick(["APPROVED", "REJECTED"]) as "APPROVED" | "REJECTED";
+    const reviewer = status !== "PENDING" ? (adminUser ?? managerUser) : null;
+    const stationKey = v.station as string;
+    const prefix = PO_PREFIX[stationKey] ?? stationKey.slice(0, 2);
+    const seq = (poCounters[stationKey] ?? 1);
+    poCounters[stationKey] = seq + 1;
+    const poNumber = `${prefix}${String(seq).padStart(3, "0")}`;
+    await prisma.workOrderRequest.create({
+      data: {
+        poNumber,
+        station: v.station,
+        vehicleId: v.id,
+        odometer: v.odometer - randInt(0, 2000),
+        serviceId: s.id,
+        partsNeeded: parts.join(", "),
+        requestedDate: daysFromNow(randInt(1, 14)),
+        expectedCompletion: daysFromNow(randInt(7, 30)),
+        comments: `Request for ${s.name} on ${v.name}`,
+        serviceHours: Math.round(rand(1, 8) * 10) / 10,
+        vendorEstimate: Math.round(rand(100, 3000)),
+        status,
+        requestedById: requester.id,
+        reviewedById: reviewer?.id ?? null,
+        reviewNote: status === "REJECTED" ? "Budget constraints — defer to next quarter." : status === "APPROVED" ? "Approved. Proceed." : null,
+        reviewedAt: status !== "PENDING" ? daysFromNow(-randInt(0, 3)) : null,
+      },
+    });
+  }
+
+  // ----- PM budgets -----
+  type BudgetRow = { year: number; month: number; station: string; category: string; amount: number };
+  const budgetRows: BudgetRow[] = JSON.parse(
+    readFileSync(join(__dirname, "pm-budgets.json"), "utf-8"),
+  );
+  for (const b of budgetRows) {
+    await prisma.pmBudget.create({
+      data: {
+        year: b.year,
+        month: b.month,
+        station: b.station as "IAH" | "AUS" | "HRL" | "LRD" | "ACT" | "CLL" | "BPT",
+        category: b.category,
+        amount: b.amount,
+      },
+    });
+  }
+  console.log(`  Imported ${budgetRows.length} PM budget records`);
+
+  // ----- FareEye routes -----
+  type FareyeRow = { date: string; routeId: string; miles: number; travelMinutes: number; routeDurationMinutes: number; leaveByTime: string | null; plannedEndTime: string | null; stops: number; totalWeight: number; totalPallets: number; vehicleType: string; vehicleTag: string | null; vehicleUtilization: number; sporh: number; plannedHours: number; lat: number | null; lng: number | null; station: string };
+  const fareyeRows: FareyeRow[] = JSON.parse(
+    readFileSync(join(__dirname, "fareye-routes.json"), "utf-8"),
+  );
+  for (const r of fareyeRows) {
+    await prisma.fareyeRoute.create({
+      data: {
+        date: new Date(r.date),
+        routeId: r.routeId,
+        miles: r.miles,
+        travelMinutes: r.travelMinutes,
+        routeDurationMinutes: r.routeDurationMinutes,
+        leaveByTime: r.leaveByTime,
+        plannedEndTime: r.plannedEndTime,
+        stops: r.stops,
+        totalWeight: r.totalWeight,
+        totalPallets: r.totalPallets,
+        vehicleType: r.vehicleType,
+        vehicleTag: r.vehicleTag,
+        vehicleUtilization: r.vehicleUtilization,
+        sporh: r.sporh,
+        plannedHours: r.plannedHours,
+        lat: r.lat,
+        lng: r.lng,
+        station: r.station as "IAH" | "AUS" | "HRL" | "LRD" | "ACT" | "CLL" | "BPT",
+      },
+    });
+  }
+  console.log(`  Imported ${fareyeRows.length} FareEye route records`);
+
   console.log(
-    `✅ Seeded: ${vehicles.length} vehicles, ${drivers.length} drivers, ${services.length} services, 40 trips, work orders, fuel logs, alerts, ${fenceDefs.length} geofences.`,
+    `✅ Seeded: ${vehicles.length} vehicles, ${drivers.length} drivers, ${services.length} services, 40 trips, work orders, fuel logs, alerts, ${fenceDefs.length} geofences, 8 WO requests.`,
   );
   console.log("👤 Logins: admin@livefleet.ai / admin123 · manager@livefleet.ai / manager123 · driver@livefleet.ai / driver123");
 }

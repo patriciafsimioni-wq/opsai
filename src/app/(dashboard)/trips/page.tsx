@@ -9,7 +9,7 @@ export default async function TripsPage() {
   const manage = user ? canManage(user.role) : false;
   return (
     <div>
-      <PageHeader title="Trips & Dispatch" subtitle="Plan, dispatch, and track deliveries." />
+      <PageHeader title="Trips & Dispatch" subtitle="Plan, dispatch, and track deliveries." flagCategory="Operations" />
       <TripsClient canManage={manage} />
     </div>
   );

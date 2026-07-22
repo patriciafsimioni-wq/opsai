@@ -1,27 +1,156 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { requireApiUser, requireManager, badRequest, fleetGroupWhere } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
+import { getUserStationFilter } from "@/lib/auth";
 
-export async function GET() {
+function getMonday(d: Date): Date {
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(d.getFullYear(), d.getMonth(), diff);
+}
+
+export async function GET(req: NextRequest) {
   const auth = await requireApiUser();
   if ("error" in auth) return auth.error;
+
+  const url = new URL(req.url);
+  const userStations = getUserStationFilter(auth.user);
+  const station = userStations ? "" : (url.searchParams.get("station") ?? "");
+  const range = url.searchParams.get("range") ?? "month";
+  const dateParam = url.searchParams.get("date") ?? "";
+
+  const ref = dateParam ? new Date(dateParam + "T12:00:00Z") : new Date();
+
+  let dateStart: Date;
+  let dateEnd: Date;
+
+  if (range === "week") {
+    dateStart = getMonday(ref);
+    dateEnd = new Date(dateStart);
+    dateEnd.setDate(dateEnd.getDate() + 6);
+    dateEnd.setHours(23, 59, 59, 999);
+  } else {
+    dateStart = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), 1));
+    dateEnd = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+  }
+
+  const purchaseType = url.searchParams.get("purchaseType") ?? "";
+
+  const where: Record<string, unknown> = {
+    date: { gte: dateStart, lte: dateEnd },
+  };
+  if (userStations !== null) {
+    where.station = { in: userStations };
+  } else if (station) {
+    where.station = station;
+  }
+  if (purchaseType) {
+    where.purchaseType = purchaseType;
+  }
+  // Fleet grouping (Sync only): tractor/trailer view shows only that fleet's
+  // fuel; the regular view also keeps vehicle-less card charges visible.
+  const fg = await fleetGroupWhere();
+  if (fg === "TRACTOR_TRAILER") where.vehicle = { fleetGroup: "TRACTOR_TRAILER" };
+  else if (fg === "REGULAR") where.OR = [{ vehicle: { fleetGroup: "REGULAR" } }, { vehicleId: null }];
+
   const logs = await prisma.fuelLog.findMany({
     orderBy: { date: "desc" },
     include: { vehicle: true, driver: true },
-    take: 200,
+    where,
   });
-  return NextResponse.json(logs);
+
+  // Also return available stations for the filter dropdown
+  const stationCounts = await prisma.vehicle.groupBy({
+    by: ["station"],
+    _count: true,
+    orderBy: { station: "asc" },
+  });
+
+  // Breakdown by purchase type (always unfiltered by purchaseType)
+  const typeWhere: Record<string, unknown> = {
+    date: { gte: dateStart, lte: dateEnd },
+  };
+  if (userStations !== null) {
+    typeWhere.station = { in: userStations };
+  } else if (station) {
+    typeWhere.station = station;
+  }
+  const typeCounts = await prisma.fuelLog.groupBy({
+    by: ["purchaseType"],
+    where: typeWhere,
+    _count: true,
+    _sum: { totalCost: true, liters: true },
+  });
+  const purchaseBreakdown = typeCounts.map((t) => ({
+    type: t.purchaseType,
+    count: t._count,
+    totalCost: Math.round((t._sum.totalCost ?? 0) * 100) / 100,
+    totalLiters: Math.round((t._sum.liters ?? 0) * 100) / 100,
+  }));
+
+  // Detect true duplicate charges: identical transactions imported twice —
+  // same vehicle/card, date, amount, gallons, and time. Two legitimate
+  // fill-ups on the same day differ in amount/gallons/time and are NOT flagged.
+  const duplicateGroups = new Map<string, string[]>();
+  for (const l of logs) {
+    const who = l.vehicleId ?? l.vehicleLabel ?? l.cardNumber ?? "?";
+    const day = new Date(l.date).toISOString().slice(0, 10);
+    const key = `${who}|${day}|${l.totalCost.toFixed(2)}|${l.liters.toFixed(2)}|${l.transactionTime ?? ""}`;
+    const arr = duplicateGroups.get(key);
+    if (arr) arr.push(l.id);
+    else duplicateGroups.set(key, [l.id]);
+  }
+  const duplicates: string[] = [];
+  for (const ids of duplicateGroups.values()) {
+    if (ids.length > 1) duplicates.push(...ids);
+  }
+
+  // Card status: check each vehicle's last fuel date to flag inactive cards (15+ days)
+  const now = new Date();
+  const inactiveThreshold = 15 * 86400000;
+  const latestPerVehicle = await prisma.fuelLog.groupBy({
+    by: ["vehicleId"],
+    _max: { date: true },
+    ...(userStations !== null
+      ? { where: { station: { in: userStations } } }
+      : station
+        ? { where: { station } }
+        : {}),
+  });
+  const inactiveCards: string[] = [];
+  for (const entry of latestPerVehicle) {
+    if (entry.vehicleId && entry._max.date) {
+      const diff = now.getTime() - new Date(entry._max.date).getTime();
+      if (diff > inactiveThreshold) {
+        inactiveCards.push(entry.vehicleId);
+      }
+    }
+  }
+
+  return NextResponse.json({
+    logs,
+    stations: stationCounts.map((s) => s.station),
+    dateStart: dateStart.toISOString(),
+    dateEnd: dateEnd.toISOString(),
+    purchaseBreakdown,
+    duplicates,
+    inactiveCards,
+  });
 }
 
 const schema = z.object({
   vehicleId: z.string().min(1),
   driverId: z.string().optional().nullable(),
+  station: z.string().optional().nullable(),
   date: z.string().min(1),
   liters: z.coerce.number().min(0),
   pricePerLiter: z.coerce.number().min(0),
   odometer: z.coerce.number().min(0).optional().nullable(),
   location: z.string().optional().nullable(),
+  transactionTime: z.string().optional().nullable(),
+  purchaseType: z.enum(["UNLEADED", "DIESEL", "DEF", "NON_FUEL"]).optional(),
 });
 
 export async function POST(req: Request) {
@@ -31,17 +160,28 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Invalid input");
   const d = parsed.data;
+  const veh = await prisma.vehicle.findUnique({ where: { id: d.vehicleId }, select: { name: true, station: true } });
   const log = await prisma.fuelLog.create({
     data: {
       vehicleId: d.vehicleId,
       driverId: d.driverId || null,
+      station: d.station || veh?.station || null,
       date: new Date(d.date),
       liters: d.liters,
       pricePerLiter: d.pricePerLiter,
       totalCost: Math.round(d.liters * d.pricePerLiter * 100) / 100,
       odometer: d.odometer ?? null,
       location: d.location || null,
+      transactionTime: d.transactionTime || null,
+      purchaseType: d.purchaseType ?? "DIESEL",
     },
+  });
+  await logActivity(auth.user, {
+    action: "logged",
+    entity: "Fuel Log",
+    entityLabel: veh?.name ?? d.vehicleId,
+    station: log.station ?? null,
+    detail: `$${log.totalCost.toFixed(2)}`,
   });
   return NextResponse.json(log, { status: 201 });
 }

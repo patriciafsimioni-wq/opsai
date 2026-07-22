@@ -1,13 +1,27 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { requireApiUser, requireManager, badRequest, stationWhere, fleetGroupWhere } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
 
-export async function GET() {
+export async function GET(req: Request) {
   const auth = await requireApiUser();
   if ("error" in auth) return auth.error;
 
+  const { searchParams } = new URL(req.url);
+  // fleet=1 restricts to the active uploaded fleet (excludes off-boarded /
+  // "not in current fleet list" units) — used by vehicle pickers so only real
+  // fleet vehicles are selectable.
+  const fleetOnly = searchParams.get("fleet") === "1";
+
+  const sw = stationWhere(auth.user);
+  const where: Record<string, unknown> = { ...(sw ?? {}) };
+  if (fleetOnly) where.offboardStatus = null;
+  const fg = await fleetGroupWhere();
+  if (fg) where.fleetGroup = fg;
+
   const vehicles = await prisma.vehicle.findMany({
+    where,
     orderBy: { name: "asc" },
     include: { assignedDriver: true },
   });
@@ -22,6 +36,7 @@ const createSchema = z.object({
   vin: z.string().min(1),
   licensePlate: z.string().min(1),
   type: z.enum(["TRUCK", "VAN", "CAR", "BUS", "PICKUP", "TRAILER"]),
+  fleetGroup: z.enum(["REGULAR", "TRACTOR_TRAILER"]).optional(),
   status: z.enum(["ACTIVE", "IDLE", "MAINTENANCE", "OUT_OF_SERVICE"]),
   fuelType: z.enum(["DIESEL", "GASOLINE", "ELECTRIC", "HYBRID", "CNG"]),
   odometer: z.coerce.number().min(0),
@@ -50,6 +65,7 @@ export async function POST(req: Request) {
       vin: d.vin,
       licensePlate: d.licensePlate,
       type: d.type,
+      fleetGroup: d.fleetGroup ?? "REGULAR",
       status: d.status,
       fuelType: d.fuelType,
       odometer: d.odometer,
@@ -62,6 +78,12 @@ export async function POST(req: Request) {
       lng: -122.4194 + (Math.random() - 0.5) * 0.25,
       lastSeen: new Date(),
     },
+  });
+  await logActivity(auth.user, {
+    action: "created",
+    entity: "Vehicle",
+    entityLabel: vehicle.name,
+    station: vehicle.station,
   });
   return NextResponse.json(vehicle, { status: 201 });
 }

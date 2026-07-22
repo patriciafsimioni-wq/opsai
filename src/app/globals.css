@@ -37,14 +37,14 @@ body {
   background: transparent;
 }
 
-/* MapLibre overrides */
-.maplibregl-popup-content {
+/* Leaflet overrides */
+.leaflet-popup-content-wrapper {
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 4px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
   font-family: var(--font-sans);
 }
-.maplibregl-ctrl-attrib {
+.leaflet-control-attribution {
   font-size: 10px;
 }
 

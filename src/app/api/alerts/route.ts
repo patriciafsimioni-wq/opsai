@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireApiUser } from "@/lib/api";
+import { requireApiUser, stationWhere } from "@/lib/api";
 
 export async function GET() {
   const auth = await requireApiUser();
   if ("error" in auth) return auth.error;
+  const sw = stationWhere(auth.user);
   const alerts = await prisma.alert.findMany({
+    where: sw ? { vehicle: { is: sw } } : undefined,
     orderBy: { createdAt: "desc" },
     include: { vehicle: true, driver: true },
     take: 200,

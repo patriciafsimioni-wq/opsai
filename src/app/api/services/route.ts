@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
 
 export async function GET() {
   const auth = await requireApiUser();
@@ -40,6 +41,11 @@ export async function POST(req: Request) {
       laborCost: d.laborCost ?? 0,
       active: d.active ?? true,
     },
+  });
+  await logActivity(auth.user, {
+    action: "created",
+    entity: "Service type",
+    entityLabel: service.name,
   });
   return NextResponse.json(service, { status: 201 });
 }

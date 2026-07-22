@@ -1,22 +1,50 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { requireApiUser, requireManager, badRequest, stationWhere, fleetGroupWhere } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
+import { sendEmail, buildWorkOrderAssignmentEmail } from "@/lib/email";
+import { STATIONS } from "@/lib/constants";
+import type { Station } from "@prisma/client";
+
+const ASSIGNEE_SELECT = { select: { id: true, name: true, email: true } } as const;
 
 export async function GET() {
   const auth = await requireApiUser();
   if ("error" in auth) return auth.error;
+  // Vendors only see work orders assigned to them.
+  if (auth.user.role === "VENDOR") {
+    const mine = await prisma.workOrder.findMany({
+      where: { assignedToId: auth.user.id },
+      orderBy: { createdAt: "desc" },
+      include: { vehicle: true, service: true, assignedTo: ASSIGNEE_SELECT },
+    });
+    return NextResponse.json(mine);
+  }
+  const sw = stationWhere(auth.user);
+  const fg = await fleetGroupWhere();
+  const and: Record<string, unknown>[] = [];
+  // Match either the linked vehicle's station or the work order's own station,
+  // so services logged against "Other" (no vehicle) or a vehicle at another
+  // station still surface for station-scoped users.
+  if (sw) and.push({ OR: [{ vehicle: { is: sw } }, sw] });
+  // Fleet grouping: tractor/trailer view shows only that fleet's work orders;
+  // the regular view also keeps vehicle-less ("Other") work orders visible.
+  if (fg === "TRACTOR_TRAILER") and.push({ vehicle: { fleetGroup: "TRACTOR_TRAILER" } });
+  else if (fg === "REGULAR") and.push({ OR: [{ vehicle: { fleetGroup: "REGULAR" } }, { vehicleId: null }] });
   const orders = await prisma.workOrder.findMany({
+    where: and.length ? { AND: and } : undefined,
     orderBy: { createdAt: "desc" },
-    include: { vehicle: true, service: true },
+    include: { vehicle: true, service: true, assignedTo: ASSIGNEE_SELECT },
   });
   return NextResponse.json(orders);
 }
 
 const schema = z.object({
-  vehicleId: z.string().min(1),
+  vehicleId: z.string().min(1).optional(),
+  vehicleOther: z.string().optional().nullable(),
   serviceId: z.string().optional().nullable(),
-  station: z.enum(["AUS", "ACT", "IAH", "CLL", "BPT", "HRL", "LRD"]),
+  station: z.string().refine((s) => STATIONS.includes(s), "Invalid station"),
   type: z.enum(["SCHEDULED_SERVICE", "REPAIR", "INSPECTION", "TIRE", "OIL_CHANGE", "RECALL"]),
   title: z.string().min(1),
   description: z.string().optional().nullable(),
@@ -35,6 +63,7 @@ const schema = z.object({
   invoiceUrl: z.string().optional().nullable(),
   scheduledFor: z.string().optional().nullable(),
   completedAt: z.string().optional().nullable(),
+  assignedToId: z.string().optional().nullable(),
 });
 
 export async function POST(req: Request) {
@@ -56,9 +85,10 @@ export async function POST(req: Request) {
       : null;
   const order = await prisma.workOrder.create({
     data: {
-      vehicleId: d.vehicleId,
+      vehicleId: d.vehicleId || null,
+      vehicleOther: d.vehicleOther || null,
       serviceId: d.serviceId || null,
-      station: d.station,
+      station: d.station as Station,
       type: d.type,
       title: d.title,
       description: d.description || null,
@@ -71,6 +101,7 @@ export async function POST(req: Request) {
       cost: materialCost + laborCost,
       performedBy: d.performedBy || null,
       vendor: d.vendor || null,
+      assignedToId: d.assignedToId || null,
       vin: d.vin || null,
       odometerAt: d.odometerAt ?? null,
       poNumber: d.poNumber || null,
@@ -80,5 +111,53 @@ export async function POST(req: Request) {
       completedAt,
     },
   });
+
+  await logActivity(auth.user, {
+    action: "logged",
+    entity: "Work Order",
+    entityLabel: order.poNumber ? `${order.title} (PO ${order.poNumber})` : order.title,
+    station: order.station,
+    detail: order.status === "COMPLETED" ? "Completed" : undefined,
+  });
+
+  // Notify the assigned vendor with the full list of their open work orders.
+  if (d.assignedToId) {
+    void notifyAssignee(d.assignedToId, order.id).catch((e) =>
+      console.error("[Maintenance] assignment email failed:", e),
+    );
+  }
+
   return NextResponse.json(order, { status: 201 });
+}
+
+async function notifyAssignee(assignedToId: string, newOrderId: string) {
+  const assignee = await prisma.user.findUnique({ where: { id: assignedToId } });
+  if (!assignee?.email) return;
+
+  const openOrders = await prisma.workOrder.findMany({
+    where: { assignedToId, status: { notIn: ["COMPLETED", "CANCELLED"] } },
+    orderBy: { createdAt: "desc" },
+    include: { vehicle: { select: { name: true } } },
+  });
+  const newOrder = openOrders.find((o) => o.id === newOrderId) ?? openOrders[0];
+  if (!newOrder) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://opsai-opal.vercel.app";
+  const email = buildWorkOrderAssignmentEmail({
+    vendorName: assignee.name,
+    newItem: {
+      title: newOrder.title,
+      vehicle: newOrder.vehicle?.name ?? newOrder.vehicleOther ?? "—",
+      station: newOrder.station,
+    },
+    openOrders: openOrders.map((o) => ({
+      title: o.title,
+      vehicle: o.vehicle?.name ?? o.vehicleOther ?? "—",
+      station: o.station,
+      poNumber: o.poNumber,
+      status: o.status,
+    })),
+    appUrl,
+  });
+  await sendEmail({ to: assignee.email, ...email });
 }

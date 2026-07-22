@@ -9,7 +9,8 @@ export function formatCurrency(value: number, currency = "USD") {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value);
 }
 
@@ -19,6 +20,14 @@ export function formatNumber(value: number, digits = 0) {
   }).format(value);
 }
 
+export const APP_TIMEZONE = "America/Chicago";
+
+// Today's date as YYYY-MM-DD in Central time, for <input type="date"> defaults.
+// (Using UTC here would roll to "tomorrow" for Central users after ~7pm.)
+export function todayInputDate() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: APP_TIMEZONE });
+}
+
 export function formatDate(date: Date | string | null | undefined) {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
@@ -26,6 +35,7 @@ export function formatDate(date: Date | string | null | undefined) {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   });
 }
 
@@ -37,6 +47,8 @@ export function formatDateTime(date: Date | string | null | undefined) {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: APP_TIMEZONE,
+    timeZoneName: "short",
   });
 }
 

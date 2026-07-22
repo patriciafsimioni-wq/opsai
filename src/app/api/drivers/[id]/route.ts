@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
 
 export async function GET(
   _req: Request,
@@ -29,7 +30,21 @@ const schema = z.object({
   status: z.enum(["ACTIVE", "ON_TRIP", "OFF_DUTY", "INACTIVE"]).optional(),
   rating: z.coerce.number().min(0).max(5).optional(),
   safetyScore: z.coerce.number().min(0).max(100).optional(),
+  vehicleType: z.preprocess((v) => (v === "" ? null : v), z.enum(["CARGO_VAN", "BOX_TRUCK", "TRACTOR_TRUCK"]).optional().nullable()),
+  station: z.string().optional().nullable(),
+  medicalCardExpiry: z.string().optional().nullable(),
+  mvrCheckedAt: z.string().optional().nullable(),
+  drugTestStatus: z.preprocess((v) => (v === "" ? null : v), z.enum(["PASS", "PENDING", "FAIL"]).optional().nullable()),
+  annualReviewAt: z.string().optional().nullable(),
+  medicalCardDocUrl: z.string().optional().nullable(),
+  licenseDocUrl: z.string().optional().nullable(),
+  mvrDocUrl: z.string().optional().nullable(),
+  drugTestDocUrl: z.string().optional().nullable(),
+  annualReviewDocUrl: z.string().optional().nullable(),
 });
+
+const toDateOrUndef = (v: string | null | undefined) =>
+  v === undefined ? undefined : v ? new Date(v) : null;
 
 export async function PATCH(
   req: Request,
@@ -49,8 +64,24 @@ export async function PATCH(
       email: d.email ? d.email.toLowerCase() : undefined,
       phone: d.phone === undefined ? undefined : d.phone || null,
       licenseClass: d.licenseClass === undefined ? undefined : d.licenseClass || null,
+      station: d.station === undefined ? undefined : d.station || null,
       licenseExpiry: d.licenseExpiry ? new Date(d.licenseExpiry) : undefined,
+      medicalCardExpiry: toDateOrUndef(d.medicalCardExpiry),
+      mvrCheckedAt: toDateOrUndef(d.mvrCheckedAt),
+      annualReviewAt: toDateOrUndef(d.annualReviewAt),
+      drugTestStatus: d.drugTestStatus === undefined ? undefined : d.drugTestStatus || null,
+      medicalCardDocUrl: d.medicalCardDocUrl === undefined ? undefined : d.medicalCardDocUrl || null,
+      licenseDocUrl: d.licenseDocUrl === undefined ? undefined : d.licenseDocUrl || null,
+      mvrDocUrl: d.mvrDocUrl === undefined ? undefined : d.mvrDocUrl || null,
+      drugTestDocUrl: d.drugTestDocUrl === undefined ? undefined : d.drugTestDocUrl || null,
+      annualReviewDocUrl: d.annualReviewDocUrl === undefined ? undefined : d.annualReviewDocUrl || null,
     },
+  });
+  await logActivity(auth.user, {
+    action: "updated",
+    entity: "Driver",
+    entityLabel: `${driver.firstName} ${driver.lastName}`,
+    station: driver.station,
   });
   return NextResponse.json(driver);
 }
@@ -62,10 +93,17 @@ export async function DELETE(
   const auth = await requireManager();
   if ("error" in auth) return auth.error;
   const { id } = await params;
+  const existing = await prisma.driver.findUnique({ where: { id }, select: { firstName: true, lastName: true, station: true } });
   await prisma.vehicle.updateMany({
     where: { assignedDriverId: id },
     data: { assignedDriverId: null },
   });
   await prisma.driver.delete({ where: { id } });
+  await logActivity(auth.user, {
+    action: "deleted",
+    entity: "Driver",
+    entityLabel: existing ? `${existing.firstName} ${existing.lastName}` : id,
+    station: existing?.station ?? null,
+  });
   return NextResponse.json({ ok: true });
 }

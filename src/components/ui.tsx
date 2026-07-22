@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function Card({
@@ -108,15 +109,17 @@ export function StatCard({
   icon,
   accent = "#2563eb",
   hint,
+  href,
 }: {
   label: string;
   value: React.ReactNode;
   icon?: React.ReactNode;
   accent?: string;
   hint?: React.ReactNode;
+  href?: string;
 }) {
-  return (
-    <Card className="p-4">
+  const content = (
+    <Card className={`p-4${href ? " cursor-pointer hover:shadow-md transition-shadow" : ""}`}>
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
@@ -140,16 +143,23 @@ export function StatCard({
       </div>
     </Card>
   );
+  if (href) {
+    const LinkComp = require("next/link").default;
+    return <LinkComp href={href}>{content}</LinkComp>;
+  }
+  return content;
 }
 
 export function PageHeader({
   title,
   subtitle,
   action,
+  flagCategory,
 }: {
   title: string;
   subtitle?: string;
   action?: React.ReactNode;
+  flagCategory?: string;
 }) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -161,7 +171,18 @@ export function PageHeader({
           <p className="mt-1 text-sm text-[var(--color-muted)]">{subtitle}</p>
         )}
       </div>
-      {action}
+      <div className="flex items-center gap-2">
+        {flagCategory && (
+          <a
+            href={`/issues?create=1&title=${encodeURIComponent(flagCategory + " Issue")}&category=${encodeURIComponent(flagCategory)}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+            Flag Issue
+          </a>
+        )}
+        {action}
+      </div>
     </div>
   );
 }
@@ -259,6 +280,45 @@ export function Th({
     >
       {children}
     </th>
+  );
+}
+
+// Sortable table header cell. Renders inside a <Th> and shows an
+// asc/desc/neutral indicator; call the shared useTableSort hook to drive it.
+export function SortTh<K extends string>({
+  label,
+  col,
+  sortKey,
+  sortDir,
+  onSort,
+  className,
+}: {
+  label: React.ReactNode;
+  col: K;
+  sortKey: K;
+  sortDir: "asc" | "desc";
+  onSort: (col: K) => void;
+  className?: string;
+}) {
+  const active = sortKey === col;
+  return (
+    <Th className={className}>
+      <button
+        type="button"
+        onClick={() => onSort(col)}
+        className={cn(
+          "inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide hover:text-[var(--color-fg)]",
+          active ? "text-[var(--color-fg)]" : "text-[var(--color-muted)]",
+        )}
+      >
+        {label}
+        {active ? (
+          sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />
+        ) : (
+          <ChevronsUpDown size={13} className="opacity-40" />
+        )}
+      </button>
+    </Th>
   );
 }
 

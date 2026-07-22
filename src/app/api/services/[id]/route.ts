@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireManager, badRequest } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
 
 const schema = z.object({
   name: z.string().min(1).optional(),
@@ -30,6 +31,11 @@ export async function PATCH(
       group: d.group === undefined ? undefined : d.group || null,
     },
   });
+  await logActivity(auth.user, {
+    action: "updated",
+    entity: "Service type",
+    entityLabel: service.name,
+  });
   return NextResponse.json(service);
 }
 
@@ -40,6 +46,12 @@ export async function DELETE(
   const auth = await requireManager();
   if ("error" in auth) return auth.error;
   const { id } = await params;
+  const existing = await prisma.service.findUnique({ where: { id }, select: { name: true } });
   await prisma.service.delete({ where: { id } });
+  await logActivity(auth.user, {
+    action: "deleted",
+    entity: "Service type",
+    entityLabel: existing?.name ?? id,
+  });
   return NextResponse.json({ ok: true });
 }

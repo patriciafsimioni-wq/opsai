@@ -16,7 +16,7 @@ export async function POST() {
   const fences = await prisma.geofence.findMany();
 
   const newAlerts: {
-    type: "SPEEDING" | "LOW_FUEL" | "GEOFENCE_ENTER";
+    type: "SPEEDING";
     severity: "INFO" | "WARNING" | "CRITICAL";
     message: string;
     vehicleId: string;
@@ -63,30 +63,8 @@ export async function POST() {
         vehicleId: v.id,
       });
     }
-    // low fuel alert
-    if (fuelLevel < 15 && v.fuelLevel >= 15) {
-      newAlerts.push({
-        type: "LOW_FUEL",
-        severity: "WARNING",
-        message: `${v.name} fuel level below 15%`,
-        vehicleId: v.id,
-      });
-    }
-    // geofence enter (rare)
-    if (Math.random() < 0.03) {
-      for (const f of fences) {
-        const d = haversineKm(lat, lng, f.centerLat, f.centerLng) * 1000;
-        if (d < f.radiusM) {
-          newAlerts.push({
-            type: "GEOFENCE_ENTER",
-            severity: f.type === "RESTRICTED" ? "CRITICAL" : "INFO",
-            message: `${v.name} entered geofence "${f.name}"`,
-            vehicleId: v.id,
-          });
-          break;
-        }
-      }
-    }
+
+
   }
 
   if (newAlerts.length) {

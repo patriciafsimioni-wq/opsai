@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Card, CardHeader, StatCard, Table, Th, Td, EmptyState, Badge } from "@/components/ui";
+import { Card, CardHeader, StatCard, Table, Th, Td, SortTh, EmptyState, Badge } from "@/components/ui";
 import { MultiLineChart, BarChartCard } from "@/components/charts";
 import { ExportButton } from "@/components/ReportsExport";
 import { useData } from "@/lib/use-data";
+import { useTableSort } from "@/lib/use-sort";
 import type { WorkOrderDTO } from "@/lib/types";
 import { STATIONS, STATION_LABEL, SERVICE_CATEGORY, SERVICE_CATEGORIES, PREVENTIVE_GROUPS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
@@ -14,12 +15,39 @@ function monthKey(d: Date) {
 }
 function monthLabel(key: string) {
   const [y, m] = key.split("-").map(Number);
-  return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
+}
+function dateLabel(d: Date) {
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
+
+function classifyCategory(title: string): "PREVENTIVE" | "CORRECTIVE" {
+  const lower = title.toLowerCase();
+  if (lower.includes("oil change") || lower.includes("pm a") || lower.includes("pm b") || lower.includes("pm c") || lower.includes("tune up") || lower.includes("tune-up")) return "PREVENTIVE";
+  if (lower.includes("brake") || lower.includes("rotor") || lower.includes("slack adjust") || lower.includes("duralast") || lower.includes("dlg rotor") || lower.includes("brake wear")) return "PREVENTIVE";
+  if (lower.includes("tire") || lower.includes("tires")) return "PREVENTIVE";
+  if (lower.includes("battery") || lower.includes("parking brake actuator")) return "PREVENTIVE";
+  if (lower.includes("transmission")) return "PREVENTIVE";
+  if (lower.includes("coolant") || lower.includes("spark plug") || lower.includes("radiator")) return "PREVENTIVE";
+  if (lower.includes("wiper") || lower.includes("fluid") || lower.includes("filter")) return "PREVENTIVE";
+  if (lower.includes("caliper") || lower.includes("drivetrain")) return "PREVENTIVE";
+  if (lower.includes("turbo") || lower.includes("timing") || lower.includes("time belt")) return "PREVENTIVE";
+  if (lower.includes("dot") || lower.includes("inspection")) return "PREVENTIVE";
+  if (lower.includes("bulb") || lower.includes("light") || lower.includes("h11")) return "PREVENTIVE";
+  return "CORRECTIVE";
+}
+
+function getCategory(o: WorkOrderDTO): string {
+  if (o.service?.category) return o.service.category;
+  return classifyCategory(o.title);
 }
 
 export function ServiceCostsClient() {
   const { data: orders, loading } = useData<WorkOrderDTO[]>("/api/maintenance");
+  const { data: partsExpenses } = useData<{ amount: number }[]>("/api/parts-expenses");
+  const partsTotal = (partsExpenses ?? []).reduce((s, e) => s + (e.amount ?? 0), 0);
   const [monthFilter, setMonthFilter] = useState("");
+  const [yearFilter, setYearFilter] = useState("");
   const [stationFilter, setStationFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
 
@@ -29,23 +57,48 @@ export function ServiceCostsClient() {
     [orders],
   );
 
-  const monthOptions = useMemo(() => {
+  const yearOptions = useMemo(() => {
     const set = new Set<string>();
-    for (const o of completed) set.add(monthKey(new Date(o.completedAt!)));
+    for (const o of completed) set.add(String(new Date(o.completedAt!).getUTCFullYear()));
     return Array.from(set).sort().reverse();
   }, [completed]);
 
+  const monthOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const o of completed) {
+      const mk = monthKey(new Date(o.completedAt!));
+      if (yearFilter && !mk.startsWith(`${yearFilter}-`)) continue;
+      set.add(mk);
+    }
+    return Array.from(set).sort().reverse();
+  }, [completed, yearFilter]);
+
   const filtered = useMemo(() => {
     return completed.filter((o) => {
-      const mk = monthKey(new Date(o.completedAt!));
-      const cat = o.service?.category ?? "CORRECTIVE";
+      const d = new Date(o.completedAt!);
+      const mk = monthKey(d);
+      const yr = String(d.getUTCFullYear());
+      const cat = getCategory(o);
       return (
+        (!yearFilter || yr === yearFilter) &&
         (!monthFilter || mk === monthFilter) &&
         (!stationFilter || o.station === stationFilter) &&
         (!categoryFilter || cat === categoryFilter)
       );
     });
-  }, [completed, monthFilter, stationFilter, categoryFilter]);
+  }, [completed, monthFilter, yearFilter, stationFilter, categoryFilter]);
+
+  const dateRange = useMemo(() => {
+    if (filtered.length === 0) return null;
+    let min = new Date(filtered[0].completedAt!);
+    let max = min;
+    for (const o of filtered) {
+      const d = new Date(o.completedAt!);
+      if (d < min) min = d;
+      if (d > max) max = d;
+    }
+    return { min, max };
+  }, [filtered]);
 
   const totals = useMemo(() => {
     return filtered.reduce(
@@ -54,7 +107,7 @@ export function ServiceCostsClient() {
         acc.labor += o.laborCost;
         acc.total += o.cost;
         acc.count += 1;
-        if ((o.service?.category ?? "CORRECTIVE") === "PREVENTIVE") acc.preventive += o.cost;
+        if ((getCategory(o)) === "PREVENTIVE") acc.preventive += o.cost;
         else acc.corrective += o.cost;
         return acc;
       },
@@ -67,7 +120,7 @@ export function ServiceCostsClient() {
     const map = new Map<string, { name: string; category: string; count: number; material: number; labor: number; total: number }>();
     for (const o of filtered) {
       const name = o.service?.name ?? o.title;
-      const category = o.service?.category ?? "CORRECTIVE";
+      const category = getCategory(o);
       const key = `${category}:${name}`;
       const cur = map.get(key) ?? { name, category, count: 0, material: 0, labor: 0, total: 0 };
       cur.count += 1;
@@ -98,13 +151,13 @@ export function ServiceCostsClient() {
     const base = completed.filter(
       (o) =>
         (!stationFilter || o.station === stationFilter) &&
-        (!categoryFilter || (o.service?.category ?? "CORRECTIVE") === categoryFilter),
+        (!categoryFilter || (getCategory(o)) === categoryFilter),
     );
     const map = new Map<string, { Preventive: number; Corrective: number }>();
     for (const o of base) {
       const mk = monthKey(new Date(o.completedAt!));
       const cur = map.get(mk) ?? { Preventive: 0, Corrective: 0 };
-      if ((o.service?.category ?? "CORRECTIVE") === "PREVENTIVE") cur.Preventive += o.cost;
+      if ((getCategory(o)) === "PREVENTIVE") cur.Preventive += o.cost;
       else cur.Corrective += o.cost;
       map.set(mk, cur);
     }
@@ -119,15 +172,47 @@ export function ServiceCostsClient() {
     [byStation],
   );
 
+  const stationSort = useTableSort<(typeof byStation)[number], "station" | "count" | "material" | "labor" | "total">(
+    {
+      station: (r) => r.station,
+      count: (r) => r.count,
+      material: (r) => r.material,
+      labor: (r) => r.labor,
+      total: (r) => r.total,
+    },
+    "total",
+    "desc",
+  );
+  const sortedByStation = useMemo(() => stationSort.sortRows(byStation), [byStation, stationSort]);
+
+  const serviceSort = useTableSort<(typeof byService)[number], "name" | "category" | "count" | "material" | "labor" | "total">(
+    {
+      name: (r) => r.name.toLowerCase(),
+      category: (r) => r.category,
+      count: (r) => r.count,
+      material: (r) => r.material,
+      labor: (r) => r.labor,
+      total: (r) => r.total,
+    },
+    "total",
+    "desc",
+  );
+  const sortedByService = useMemo(() => serviceSort.sortRows(byService), [byService, serviceSort]);
+
   // Preventive matrix: rows = preventive services, columns = stations, for the selected month.
   const prevOrders = useMemo(
     () =>
       completed.filter(
-        (o) =>
-          (o.service?.category ?? "CORRECTIVE") === "PREVENTIVE" &&
-          (!monthFilter || monthKey(new Date(o.completedAt!)) === monthFilter),
+        (o) => {
+          const d = new Date(o.completedAt!);
+          return (
+            (getCategory(o)) === "PREVENTIVE" &&
+            (!yearFilter || String(d.getUTCFullYear()) === yearFilter) &&
+            (!monthFilter || monthKey(d) === monthFilter)
+          );
+        },
       ),
-    [completed, monthFilter],
+    [completed, monthFilter, yearFilter],
   );
 
   const prevMatrix = useMemo(() => {
@@ -172,7 +257,7 @@ export function ServiceCostsClient() {
     for (const o of filtered) {
       const mk = monthLabel(monthKey(new Date(o.completedAt!)));
       const name = o.service?.name ?? o.title;
-      const category = SERVICE_CATEGORY[(o.service?.category ?? "CORRECTIVE") as keyof typeof SERVICE_CATEGORY].label;
+      const category = SERVICE_CATEGORY[(getCategory(o)) as keyof typeof SERVICE_CATEGORY].label;
       const key = `${mk}|${o.station}|${category}|${name}`;
       const cur = map.get(key) ?? { Month: mk, Station: o.station, Service: name, Category: category, Count: 0, Material: 0, Labor: 0, Total: 0 };
       cur.Count += 1;
@@ -193,6 +278,19 @@ export function ServiceCostsClient() {
     <div className="space-y-4">
       <Card>
         <div className="flex flex-wrap items-center gap-3 p-4">
+          <select
+            value={yearFilter}
+            onChange={(e) => {
+              setYearFilter(e.target.value);
+              setMonthFilter("");
+            }}
+            className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm"
+          >
+            <option value="">All years</option>
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
           <select
             value={monthFilter}
             onChange={(e) => setMonthFilter(e.target.value)}
@@ -227,9 +325,30 @@ export function ServiceCostsClient() {
             <ExportButton rows={csvRows} filename="service-costs.csv" label="Export CSV" />
           </div>
         </div>
+        <div className="border-t border-[var(--color-border)] px-4 py-3 text-sm text-slate-500">
+          {loading ? (
+            "Loading…"
+          ) : dateRange ? (
+            <>
+              <span className="font-medium text-slate-700">
+                {monthFilter
+                  ? monthLabel(monthFilter)
+                  : yearFilter
+                    ? `Year ${yearFilter}`
+                    : "All time"}
+              </span>{" "}
+              · showing services from{" "}
+              <span className="font-medium text-slate-700">{dateLabel(dateRange.min)}</span> to{" "}
+              <span className="font-medium text-slate-700">{dateLabel(dateRange.max)}</span>{" "}
+              · {totals.count} {totals.count === 1 ? "service" : "services"}
+            </>
+          ) : (
+            "No services for this selection"
+          )}
+        </div>
       </Card>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard label="Total Cost" value={formatCurrency(totals.total)} accent="#2563eb" hint={`${totals.count} services`} />
         <StatCard label="Material" value={formatCurrency(totals.material)} accent="#0891b2" />
         <StatCard label="Labor" value={formatCurrency(totals.labor)} accent="#d97706" />
@@ -238,6 +357,7 @@ export function ServiceCostsClient() {
           value={`${formatCurrency(totals.preventive)} / ${formatCurrency(totals.corrective)}`}
           accent="#16a34a"
         />
+        <StatCard label="Parts & Supplies" value={formatCurrency(partsTotal)} accent="#6366f1" hint="not vehicle-specific" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -274,7 +394,7 @@ export function ServiceCostsClient() {
           <div>
             <h3 className="text-sm font-semibold">Preventive Maintenance — Cost per Station</h3>
             <p className="text-xs text-slate-400">
-              {monthFilter ? monthLabel(monthFilter) : "All months"} · cost per station for each preventive service group
+              {monthFilter ? monthLabel(monthFilter) : yearFilter ? `Year ${yearFilter}` : "All months"} · cost per station for each preventive service group
             </p>
           </div>
           <ExportButton rows={prevMatrixCsv} filename="preventive-cost-by-station.csv" label="Export matrix" />
@@ -330,15 +450,15 @@ export function ServiceCostsClient() {
           <Table>
             <thead>
               <tr>
-                <Th>Station</Th>
-                <Th>Services</Th>
-                <Th>Material</Th>
-                <Th>Labor</Th>
-                <Th>Total</Th>
+                <SortTh label="Station" col="station" sortKey={stationSort.sortKey} sortDir={stationSort.sortDir} onSort={stationSort.toggle} />
+                <SortTh label="Services" col="count" sortKey={stationSort.sortKey} sortDir={stationSort.sortDir} onSort={stationSort.toggle} />
+                <SortTh label="Material" col="material" sortKey={stationSort.sortKey} sortDir={stationSort.sortDir} onSort={stationSort.toggle} />
+                <SortTh label="Labor" col="labor" sortKey={stationSort.sortKey} sortDir={stationSort.sortDir} onSort={stationSort.toggle} />
+                <SortTh label="Total" col="total" sortKey={stationSort.sortKey} sortDir={stationSort.sortDir} onSort={stationSort.toggle} />
               </tr>
             </thead>
             <tbody>
-              {byStation.map((r) => (
+              {sortedByStation.map((r) => (
                 <tr key={r.station} className="hover:bg-slate-50">
                   <Td><Badge bg="#eef2ff" fg="#3730a3">{r.station}</Badge> <span className="ml-1 text-xs text-slate-400">{STATION_LABEL[r.station].split(" — ")[1]}</span></Td>
                   <Td className="text-slate-600">{r.count}</Td>
@@ -362,16 +482,16 @@ export function ServiceCostsClient() {
           <Table>
             <thead>
               <tr>
-                <Th>Service</Th>
-                <Th>Category</Th>
-                <Th>Count</Th>
-                <Th>Material</Th>
-                <Th>Labor</Th>
-                <Th>Total</Th>
+                <SortTh label="Service" col="name" sortKey={serviceSort.sortKey} sortDir={serviceSort.sortDir} onSort={serviceSort.toggle} />
+                <SortTh label="Category" col="category" sortKey={serviceSort.sortKey} sortDir={serviceSort.sortDir} onSort={serviceSort.toggle} />
+                <SortTh label="Count" col="count" sortKey={serviceSort.sortKey} sortDir={serviceSort.sortDir} onSort={serviceSort.toggle} />
+                <SortTh label="Material" col="material" sortKey={serviceSort.sortKey} sortDir={serviceSort.sortDir} onSort={serviceSort.toggle} />
+                <SortTh label="Labor" col="labor" sortKey={serviceSort.sortKey} sortDir={serviceSort.sortDir} onSort={serviceSort.toggle} />
+                <SortTh label="Total" col="total" sortKey={serviceSort.sortKey} sortDir={serviceSort.sortDir} onSort={serviceSort.toggle} />
               </tr>
             </thead>
             <tbody>
-              {byService.map((r) => (
+              {sortedByService.map((r) => (
                 <tr key={`${r.category}:${r.name}`} className="hover:bg-slate-50">
                   <Td className="font-medium">{r.name}</Td>
                   <Td>

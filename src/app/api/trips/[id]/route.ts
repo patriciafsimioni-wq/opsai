@@ -5,7 +5,13 @@ import { requireManager, badRequest } from "@/lib/api";
 
 const schema = z.object({
   status: z.enum(["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
+  vehicleId: z.string().optional(),
   driverId: z.string().optional().nullable(),
+  origin: z.string().min(1).optional(),
+  destination: z.string().min(1).optional(),
+  scheduledStart: z.string().optional(),
+  distanceKm: z.coerce.number().optional(),
+  cargo: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
 });
 
@@ -24,7 +30,13 @@ export async function PATCH(
     where: { id },
     data: {
       status: d.status,
+      vehicleId: d.vehicleId,
       driverId: d.driverId === undefined ? undefined : d.driverId || null,
+      origin: d.origin,
+      destination: d.destination,
+      scheduledStart: d.scheduledStart ? new Date(d.scheduledStart) : undefined,
+      distanceKm: d.distanceKm,
+      cargo: d.cargo,
       notes: d.notes,
       startedAt: d.status === "IN_PROGRESS" ? new Date() : undefined,
       endedAt: d.status === "COMPLETED" ? new Date() : undefined,

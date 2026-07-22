@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
 
 export async function GET() {
   const auth = await requireApiUser();
@@ -24,6 +25,8 @@ const schema = z.object({
   status: z.enum(["ACTIVE", "ON_TRIP", "OFF_DUTY", "INACTIVE"]),
   rating: z.coerce.number().min(0).max(5).optional(),
   safetyScore: z.coerce.number().min(0).max(100).optional(),
+  vehicleType: z.preprocess((v) => (v === "" ? null : v), z.enum(["CARGO_VAN", "BOX_TRUCK", "TRACTOR_TRUCK"]).optional().nullable()),
+  station: z.string().optional().nullable(),
 });
 
 export async function POST(req: Request) {
@@ -45,10 +48,18 @@ export async function POST(req: Request) {
       status: d.status,
       rating: d.rating ?? 4.5,
       safetyScore: d.safetyScore ?? 85,
+      vehicleType: d.vehicleType ?? "CARGO_VAN",
+      station: d.station || null,
       avatarColor: ["#2563eb", "#dc2626", "#16a34a", "#d97706", "#7c3aed"][
         Math.floor(Math.random() * 5)
       ],
     },
+  });
+  await logActivity(auth.user, {
+    action: "created",
+    entity: "Driver",
+    entityLabel: `${driver.firstName} ${driver.lastName}`,
+    station: driver.station,
   });
   return NextResponse.json(driver, { status: 201 });
 }
