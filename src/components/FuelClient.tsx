@@ -80,7 +80,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
   const fleetView = useFleetView();
   const apiUrl = `/api/fuel?range=${range}&date=${refDate}${station ? `&station=${station}` : ""}${purchaseType ? `&purchaseType=${purchaseType}` : ""}&fv=${fleetView}`;
   const { data, loading, reload } = useData<FuelApiResponse>(apiUrl);
-  const { data: vehicles } = useData<VehicleDTO[]>(`/api/vehicles?fleet=1&fv=${fleetView}`);
+  const { data: vehicles } = useData<VehicleDTO[]>("/api/vehicles?fleet=1&allFleets=1");
   const { data: drivers } = useData<DriverDTO[]>("/api/drivers");
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<FuelSortKey>("date");

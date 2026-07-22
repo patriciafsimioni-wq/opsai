@@ -710,6 +710,7 @@ type TruckRow = {
   licensePlate: string | null;
   station: string | null;
   type: string;
+  status: string;
   dotInspectionDate: string | null;
   dotInspectionExpiry: string | null;
   dotInspectionDocUrl: string | null;
@@ -729,7 +730,7 @@ function truckSortValue(t: TruckRow, key: TruckSortKey): string | number {
 const emptyTruckForm = { dotInspectionDate: "", dotInspectionExpiry: "", dotInspectionDocUrl: "" };
 
 function TruckInspectionsSection({ canManage, uploadFile }: { canManage: boolean; uploadFile: (f: File) => Promise<UploadResult> }) {
-  const { data: vehicles, reload } = useData<TruckRow[]>("/api/vehicles?fleet=1");
+  const { data: vehicles, reload } = useData<TruckRow[]>("/api/vehicles?fleet=1&allFleets=1");
   const [search, setSearch] = useState("");
   const [station, setStation] = useState("");
   const [statusFilter, setStatusFilter] = useState<"" | DateStatus>("");
@@ -746,7 +747,7 @@ function TruckInspectionsSection({ canManage, uploadFile }: { canManage: boolean
     else { setSortKey(k); setSortDir("asc"); }
   }
 
-  const allTrucks = useMemo(() => (vehicles ?? []).filter((v) => v.type === "TRUCK"), [vehicles]);
+  const allTrucks = useMemo(() => (vehicles ?? []).filter((v) => v.type === "TRUCK" && v.status !== "OUT_OF_SERVICE"), [vehicles]);
   const stations = useMemo(() => [...new Set(allTrucks.map((t) => t.station).filter(Boolean))].sort() as string[], [allTrucks]);
 
   const trucks = useMemo(() => {

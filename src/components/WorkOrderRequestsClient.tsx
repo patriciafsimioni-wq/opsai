@@ -60,7 +60,9 @@ export function WorkOrderRequestsClient({
     loading,
     reload,
   } = useData<WorkOrderRequestDTO[]>("/api/work-order-requests");
-  const { data: vehicles } = useData<VehicleDTO[]>("/api/vehicles?fleet=1");
+  const { data: vehicles } = useData<VehicleDTO[]>(
+    "/api/vehicles?fleet=1&allFleets=1",
+  );
   const { data: services } = useData<ServiceDTO[]>("/api/services");
 
   const [showForm, setShowForm] = useState(false);

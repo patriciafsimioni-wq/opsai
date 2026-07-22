@@ -36,6 +36,7 @@ async function generateComplianceAlerts() {
 
   const vehicles = await prisma.vehicle.findMany({
     where: {
+      status: { not: "OUT_OF_SERVICE" },
       OR: [
         { offboardStatus: null },
         { offboardStatus: { notIn: ["IN_PROGRESS", "COMPLETED"] } },

@@ -22,7 +22,9 @@ export function LogServiceClient({
   performerName: string;
 }) {
   const { data: orders, loading, reload } = useData<WorkOrderDTO[]>("/api/maintenance");
-  const { data: vehicles } = useData<VehicleDTO[]>("/api/vehicles?fleet=1");
+  const { data: vehicles } = useData<VehicleDTO[]>(
+    "/api/vehicles?fleet=1&allFleets=1",
+  );
   const { data: services } = useData<ServiceDTO[]>("/api/services");
   const { data: providerList } = useData<{ id: string; name: string }[]>("/api/service-providers");
   const serviceProviders = useMemo(() => (providerList ?? []).map((p) => p.name), [providerList]);

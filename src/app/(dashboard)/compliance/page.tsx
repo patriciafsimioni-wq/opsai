@@ -11,9 +11,11 @@ export default async function CompliancePage() {
   if (!user) redirect("/login");
   if (user.role === "VENDOR") redirect("/");
 
-  // Active fleet only — off-boarded/in-process vehicles are excluded from the audit.
+  // Active fleet only — off-boarded/in-process and out-of-service vehicles are
+  // excluded from the audit (a parked/OOS unit isn't operating on the road).
   const vehicles = await prisma.vehicle.findMany({
     where: {
+      status: { not: "OUT_OF_SERVICE" },
       OR: [
         { offboardStatus: null },
         { offboardStatus: { notIn: ["IN_PROGRESS", "COMPLETED"] } },

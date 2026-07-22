@@ -13,12 +13,18 @@ export async function GET(req: Request) {
   // "not in current fleet list" units) — used by vehicle pickers so only real
   // fleet vehicles are selectable.
   const fleetOnly = searchParams.get("fleet") === "1";
+  // allFleets=1 bypasses the Regular/Tractors fleet filter — used by data-entry
+  // pickers (log service, work-order request, DOT compliance) so any vehicle,
+  // including tractors/trailers, is always selectable regardless of the view.
+  const allFleets = searchParams.get("allFleets") === "1";
 
   const sw = stationWhere(auth.user);
   const where: Record<string, unknown> = { ...(sw ?? {}) };
   if (fleetOnly) where.offboardStatus = null;
-  const fg = await fleetGroupWhere();
-  if (fg) where.fleetGroup = fg;
+  if (!allFleets) {
+    const fg = await fleetGroupWhere();
+    if (fg) where.fleetGroup = fg;
+  }
 
   const vehicles = await prisma.vehicle.findMany({
     where,

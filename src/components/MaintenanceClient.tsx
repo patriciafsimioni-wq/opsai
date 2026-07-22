@@ -52,7 +52,7 @@ export function MaintenanceClient({
 }) {
   const fleetView = useFleetView();
   const { data: orders, loading, reload } = useData<WorkOrderDTO[]>(`/api/maintenance?fv=${fleetView}`);
-  const { data: vehicles } = useData<VehicleDTO[]>(isVendor ? null : `/api/vehicles?fleet=1&fv=${fleetView}`);
+  const { data: vehicles } = useData<VehicleDTO[]>(isVendor ? null : "/api/vehicles?fleet=1&allFleets=1");
   const { data: services } = useData<ServiceDTO[]>(isVendor ? null : "/api/services");
   const { data: woRequests } = useData<WorkOrderRequestDTO[]>(
     isVendor ? null : "/api/work-order-requests",
