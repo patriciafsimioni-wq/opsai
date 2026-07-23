@@ -21,6 +21,7 @@ import {
   MultiLineChart,
 } from "@/components/charts";
 import { useData } from "@/lib/use-data";
+import { useFleetView } from "@/lib/use-fleet-view";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { STATION_LABEL, VEHICLE_STATUS, titleCase } from "@/lib/constants";
 import { ExportButton } from "@/components/ReportsExport";
@@ -68,7 +69,8 @@ export function ReportsClient() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   });
 
-  const apiUrl = `/api/reports?range=${range}&date=${refDate}${station ? `&station=${station}` : ""}`;
+  const fleetView = useFleetView();
+  const apiUrl = `/api/reports?range=${range}&date=${refDate}${station ? `&station=${station}` : ""}&fv=${fleetView}`;
   const { data, loading } = useData<ReportsApiResponse>(apiUrl);
 
   function navigate(dir: -1 | 1) {

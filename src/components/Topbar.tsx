@@ -94,7 +94,12 @@ export function Topbar({
             <Truck size={15} className={fleetView !== "REGULAR" ? "text-blue-600" : "text-slate-400"} />
             <select
               value={fleetView}
-              onChange={(e) => setFleetView(e.target.value as FleetView)}
+              onChange={(e) => {
+                setFleetView(e.target.value as FleetView);
+                // Refresh server components (Dashboard, Fleet Finance) that read
+                // the fleet cookie; client pages update via the fleet event.
+                router.refresh();
+              }}
               title="Switch which fleet you're viewing"
               className={`h-8 rounded-lg border px-2 text-xs font-medium ${fleetView !== "REGULAR" ? "border-blue-300 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-600"}`}
             >

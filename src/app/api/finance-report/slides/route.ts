@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireApiUser } from "@/lib/api";
+import { requireApiUser, fleetGroupWhere } from "@/lib/api";
 import { PM_CATEGORIES, CR_CATEGORIES, STATIONS, REGION_LABEL, REGION_ABBR } from "@/lib/constants";
 import { classifyPM, classifyCR } from "@/lib/classify";
 import { BRAND } from "@/lib/brand";
@@ -52,10 +52,20 @@ export async function GET(req: NextRequest) {
 
   const budgets = await prisma.pmBudget.findMany({ where: { year } });
 
+  // Fleet grouping (Sync only): scope work orders to the selected fleet.
+  const fg = await fleetGroupWhere();
+  const fleetWo: Record<string, unknown> =
+    fg === "TRACTOR_TRAILER"
+      ? { vehicle: { fleetGroup: "TRACTOR_TRAILER" } }
+      : fg === "REGULAR"
+        ? { OR: [{ vehicle: { fleetGroup: "REGULAR" } }, { vehicleId: null }] }
+        : {};
+
   const woFullYear = await prisma.workOrder.findMany({
     where: {
       status: "COMPLETED",
       completedAt: { gte: new Date(year, 0, 1), lte: new Date(year, 11, 31, 23, 59, 59) },
+      ...fleetWo,
     },
     include: { vehicle: { select: { station: true } } },
   });
@@ -64,6 +74,7 @@ export async function GET(req: NextRequest) {
     where: {
       status: "COMPLETED",
       completedAt: { gte: new Date(prevYear, 0, 1), lte: new Date(prevYear, 11, 31, 23, 59, 59) },
+      ...fleetWo,
     },
     include: { vehicle: { select: { station: true } } },
   });

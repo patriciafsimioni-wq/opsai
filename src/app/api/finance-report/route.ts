@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireApiUser } from "@/lib/api";
+import { requireApiUser, fleetGroupWhere } from "@/lib/api";
 import { PM_CATEGORIES, CR_CATEGORIES, STATIONS, STATION_LABEL } from "@/lib/constants";
 import { classifyPM, classifyCR } from "@/lib/classify";
 
@@ -26,6 +26,15 @@ export async function GET(req: NextRequest) {
 
   const CATEGORIES = reportType === "CR" ? CR_CATEGORIES : PM_CATEGORIES;
 
+  // Fleet grouping (Sync only): scope all work orders to the selected fleet.
+  const fg = await fleetGroupWhere();
+  const fleetWo: Record<string, unknown> =
+    fg === "TRACTOR_TRAILER"
+      ? { vehicle: { fleetGroup: "TRACTOR_TRAILER" } }
+      : fg === "REGULAR"
+        ? { OR: [{ vehicle: { fleetGroup: "REGULAR" } }, { vehicleId: null }] }
+        : {};
+
   // Week boundaries (used when viewMode === "week")
   let weekStart: Date | null = null;
   let weekEnd: Date | null = null;
@@ -47,6 +56,7 @@ export async function GET(req: NextRequest) {
     where: {
       status: "COMPLETED",
       completedAt: { gte: startCurrent, lte: endCurrent },
+      ...fleetWo,
     },
     include: { vehicle: { select: { station: true, dxNumber: true, name: true } } },
   });
@@ -58,6 +68,7 @@ export async function GET(req: NextRequest) {
     where: {
       status: "COMPLETED",
       completedAt: { gte: startPrev, lte: endPrev },
+      ...fleetWo,
     },
     include: { vehicle: { select: { station: true, dxNumber: true, name: true } } },
   });
@@ -163,6 +174,7 @@ export async function GET(req: NextRequest) {
     where: {
       status: "COMPLETED",
       completedAt: { gte: new Date(year, 0, 1), lte: new Date(year, 11, 31, 23, 59, 59) },
+      ...fleetWo,
     },
     include: { vehicle: { select: { station: true } } },
   });
@@ -171,6 +183,7 @@ export async function GET(req: NextRequest) {
     where: {
       status: "COMPLETED",
       completedAt: { gte: new Date(prevYear, 0, 1), lte: new Date(prevYear, 11, 31, 23, 59, 59) },
+      ...fleetWo,
     },
     include: { vehicle: { select: { station: true } } },
   });
@@ -322,7 +335,9 @@ export async function GET(req: NextRequest) {
   }
 
   // Parts & Supplies — a separate expense category not tied to a vehicle.
-  const partsExpenses = await prisma.partsExpense.findMany({
+  // Parts & Supplies aren't tied to a vehicle, so they can't be attributed to
+  // the tractor/trailer fleet — show none when that fleet is selected.
+  const partsExpenses = fg === "TRACTOR_TRAILER" ? [] : await prisma.partsExpense.findMany({
     where: { date: { gte: new Date(year, 0, 1), lte: new Date(year, 11, 31, 23, 59, 59) } },
   });
   const partsMonthly: number[] = Array(12).fill(0);

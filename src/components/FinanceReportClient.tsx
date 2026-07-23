@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useData } from "@/lib/use-data";
+import { useFleetView } from "@/lib/use-fleet-view";
 import { SlidePresentation } from "./SlidePresentation";
 import { STATIONS as BRAND_STATIONS, REGION_ABBR } from "@/lib/constants";
 import { BRAND } from "@/lib/brand";
@@ -416,7 +417,8 @@ export function FinanceReportClient() {
   const [weekDate, setWeekDate] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`);
   const [reportType, setReportType] = useState<"PM" | "CR">("PM");
   const weekParam = viewMode === "week" ? `&view=week&weekDate=${weekDate}` : "";
-  const { data, loading } = useData<ReportData>(`/api/finance-report?year=${year}&month=${month}${weekParam}&reportType=${reportType}`);
+  const fleetView = useFleetView();
+  const { data, loading } = useData<ReportData>(`/api/finance-report?year=${year}&month=${month}${weekParam}&reportType=${reportType}&fv=${fleetView}`);
   const [activeStation, setActiveStation] = useState("ALL");
   const [chartStation, setChartStation] = useState("ALL");
   const [exporting, setExporting] = useState(false);

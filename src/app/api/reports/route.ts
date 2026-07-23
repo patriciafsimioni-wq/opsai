@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { fleetGroupWhere } from "@/lib/api";
 
 function getMonday(d: Date): Date {
   const day = d.getDay();
@@ -28,14 +29,28 @@ export async function GET(req: NextRequest) {
     dateEnd = new Date(Date.UTC(refDate.getUTCFullYear(), refDate.getUTCMonth() + 1, 0, 23, 59, 59, 999));
   }
 
-  // Vehicle filter by station
-  const vehicleWhere: Record<string, unknown> = station ? { station } : {};
-  const vehicleIds = station
+  // Fleet grouping (Sync only): scope everything to the selected fleet.
+  const fg = await fleetGroupWhere();
+  // Regular/All keep vehicle-less ("Other") fuel & work orders visible; the
+  // tractor/trailer view shows only records tied to that fleet's vehicles.
+  const fleetRelation = (): Record<string, unknown> => {
+    if (fg === "TRACTOR_TRAILER") return { vehicle: { fleetGroup: "TRACTOR_TRAILER" } };
+    if (fg === "REGULAR") return { OR: [{ vehicle: { fleetGroup: "REGULAR" } }, { vehicleId: null }] };
+    return {};
+  };
+
+  // Vehicle filter by station + fleet
+  const vehicleWhere: Record<string, unknown> = {
+    ...(station ? { station } : {}),
+    ...(fg ? { fleetGroup: fg } : {}),
+  };
+  const vehicleIds = (station || fg)
     ? (await prisma.vehicle.findMany({ where: vehicleWhere, select: { id: true } })).map((v) => v.id)
     : [];
 
   const fuelWhere: Record<string, unknown> = {
     date: { gte: dateStart, lte: dateEnd },
+    ...fleetRelation(),
   };
   if (station) fuelWhere.station = station;
 
@@ -44,11 +59,15 @@ export async function GET(req: NextRequest) {
     completedAt: { gte: dateStart, lte: dateEnd },
   };
   if (station) woWhere.vehicleId = { in: vehicleIds };
+  else Object.assign(woWhere, fleetRelation());
 
+  // Parts & Supplies are station-scoped and not tied to a vehicle, so they
+  // can't be attributed to the tractor/trailer fleet — show none in that view.
   const partsWhere: Record<string, unknown> = {
     date: { gte: dateStart, lte: dateEnd },
   };
   if (station) partsWhere.station = station;
+  if (fg === "TRACTOR_TRAILER") partsWhere.id = "__none__";
 
   // Get all data
   const [vehicles, fuelLogs, workOrders, allFuelLogs, allWorkOrders, partsExpenses, allPartsExpenses] = await Promise.all([
@@ -57,18 +76,18 @@ export async function GET(req: NextRequest) {
     prisma.workOrder.findMany({ where: woWhere, include: { vehicle: true, service: true } }),
     // For trend data, get last 6 months regardless of current filter window
     prisma.fuelLog.findMany({
-      where: station ? { station } : {},
+      where: { ...(station ? { station } : {}), ...fleetRelation() },
       include: { vehicle: true },
     }),
     prisma.workOrder.findMany({
       where: {
         status: "COMPLETED",
-        ...(station ? { vehicleId: { in: vehicleIds } } : {}),
+        ...(station ? { vehicleId: { in: vehicleIds } } : fleetRelation()),
       },
       include: { vehicle: true, service: true },
     }),
     prisma.partsExpense.findMany({ where: partsWhere }),
-    prisma.partsExpense.findMany({ where: station ? { station } : {} }),
+    prisma.partsExpense.findMany({ where: { ...(station ? { station } : {}), ...(fg === "TRACTOR_TRAILER" ? { id: "__none__" } : {}) } }),
   ]);
 
   // Get available stations

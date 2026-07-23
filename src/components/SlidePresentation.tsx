@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useData } from "@/lib/use-data";
+import { useFleetView } from "@/lib/use-fleet-view";
 import { BRAND } from "@/lib/brand";
 import { REGION_LABEL } from "@/lib/constants";
 import {
@@ -622,7 +623,8 @@ function YtdSlideView({ slide, year }: { slide: YtdSlide; year: number }) {
 }
 
 export function SlidePresentation({ year, month, reportType, onClose }: { year: number; month: number; reportType: string; onClose: () => void }) {
-  const { data, loading } = useData<SlidesData>(`/api/finance-report/slides?year=${year}&month=${month}&reportType=${reportType}`);
+  const fleetView = useFleetView();
+  const { data, loading } = useData<SlidesData>(`/api/finance-report/slides?year=${year}&month=${month}&reportType=${reportType}&fv=${fleetView}`);
   const [currentSlide, setCurrentSlide] = useState(0);
   const slidesRef = useRef<HTMLDivElement>(null);
   const allSlidesRef = useRef<HTMLDivElement>(null);

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { getSession, getUserStationFilter } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { FleetFinanceStationFilter } from "@/components/FleetFinanceStationFilter";
+import { fleetGroupWhere } from "@/lib/api";
 import type { Station } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,9 @@ export default async function FleetFinancePage({ searchParams }: { searchParams:
   } else if (selectedStation) {
     whereClause.station = selectedStation as Station;
   }
+  // Fleet grouping (Sync only): scope to the selected fleet.
+  const fg = await fleetGroupWhere();
+  if (fg) whereClause.fleetGroup = fg;
 
   const vehicles = await prisma.vehicle.findMany({
     where: whereClause,

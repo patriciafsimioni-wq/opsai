@@ -25,6 +25,7 @@ import { StationFilter } from "@/components/StationFilter";
 import { MessagesBanner } from "@/components/MessagesBanner";
 import { SyncSamsaraButton } from "@/components/SyncSamsaraButton";
 import { getSession, getUserStationFilter } from "@/lib/auth";
+import { fleetGroupWhere } from "@/lib/api";
 import { cookies } from "next/headers";
 import { ACTIVITY_ACTION_STYLE } from "@/lib/activity";
 import { History } from "lucide-react";
@@ -55,7 +56,29 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const canSeeCompliance = isAdmin;
   const canSeeFinance = isManager;
 
-  const vehicleWhere = station ? { station } : {};
+  // Fleet grouping (Sync only): scope dashboard aggregates to the selected fleet.
+  const fg = await fleetGroupWhere();
+  const fleetVehicleWhere = fg ? { fleetGroup: fg } : {};
+  // Regular/All keep vehicle-less ("Other") records; the tractor view shows
+  // only records tied to that fleet's vehicles.
+  const fleetRelation: Record<string, unknown> =
+    fg === "TRACTOR_TRAILER"
+      ? { vehicle: { fleetGroup: "TRACTOR_TRAILER" } }
+      : fg === "REGULAR"
+        ? { OR: [{ vehicle: { fleetGroup: "REGULAR" } }, { vehicleId: null }] }
+        : {};
+
+  const vehicleWhere = { ...(station ? { station } : {}), ...fleetVehicleWhere };
+  // Work-order fleet+station scope: station applies to the vehicle relation, so
+  // combine it with the fleet constraint rather than spreading two `vehicle` keys.
+  const woWhere: Record<string, unknown> =
+    fg === "TRACTOR_TRAILER"
+      ? { vehicle: { ...(station ? { station } : {}), fleetGroup: "TRACTOR_TRAILER" } }
+      : fg === "REGULAR"
+        ? { OR: [{ vehicle: { ...(station ? { station } : {}), fleetGroup: "REGULAR" } }, { vehicleId: null }] }
+        : station
+          ? { vehicle: { station } }
+          : {};
   const [allVehicles, drivers, fareyeRoutes, alerts, workOrders, fuelLogs, partsExpenses, issues] =
     await Promise.all([
       prisma.vehicle.findMany({ where: vehicleWhere }),
@@ -64,12 +87,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       prisma.alert.findMany({
         orderBy: { createdAt: "desc" },
         include: { vehicle: true },
-        where: { type: { notIn: ["SPEEDING", "HARSH_DRIVING"] }, ...(station ? { vehicle: { station } } : {}) },
+        where: {
+          type: { notIn: ["SPEEDING", "HARSH_DRIVING"] },
+          ...((station || fg)
+            ? { vehicle: { ...(station ? { station } : {}), ...(fg ? { fleetGroup: fg } : {}) } }
+            : {}),
+        },
         take: 20,
       }),
-      prisma.workOrder.findMany({ include: { vehicle: true }, where: station ? { vehicle: { station } } : {} }),
-      prisma.fuelLog.findMany({ where: station ? { station } : {} }),
-      prisma.partsExpense.findMany({ where: station ? { station } : {} }),
+      prisma.workOrder.findMany({ include: { vehicle: true }, where: woWhere }),
+      prisma.fuelLog.findMany({ where: { ...(station ? { station } : {}), ...fleetRelation } }),
+      prisma.partsExpense.findMany({ where: fg === "TRACTOR_TRAILER" ? { id: "__none__" } : (station ? { station } : {}) }),
       (async () => {
         const user = await getSession();
         const adminRoles = ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "DATA_ENTRY"];
@@ -120,6 +148,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       { offboardStatus: null },
       { offboardStatus: { notIn: ["IN_PROGRESS", "COMPLETED"] } },
     ],
+    ...fleetVehicleWhere,
   };
   const activeByStation = await prisma.vehicle.groupBy({
     by: ["station"],
@@ -158,7 +187,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     .sort((a, b) => b.live - a.live);
   const liveTotal = liveStationRows.reduce((s, r) => s + r.live, 0);
 
-  const unreadAlerts = await prisma.alert.count({ where: { read: false, type: { notIn: ["SPEEDING", "HARSH_DRIVING"] }, ...(station ? { vehicle: { station } } : {}) } });
+  const unreadAlerts = await prisma.alert.count({ where: { read: false, type: { notIn: ["SPEEDING", "HARSH_DRIVING"] }, ...((station || fg) ? { vehicle: { ...(station ? { station } : {}), ...(fg ? { fleetGroup: fg } : {}) } } : {}) } });
   const openWO = workOrders.filter(
     (w) => w.status === "OPEN" || w.status === "SCHEDULED" || w.status === "IN_PROGRESS",
   ).length;
