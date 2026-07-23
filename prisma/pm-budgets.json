@@ -1,0 +1,4706 @@
+[
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "IAH",
+    "category": "Brakes",
+    "amount": 2753
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "IAH",
+    "category": "Brakes",
+    "amount": 2753
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "IAH",
+    "category": "Brakes",
+    "amount": 2753
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "IAH",
+    "category": "Brakes",
+    "amount": 2753
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "IAH",
+    "category": "Brakes",
+    "amount": 2753
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "IAH",
+    "category": "Brakes",
+    "amount": 2753
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "IAH",
+    "category": "Brakes",
+    "amount": 3442
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "IAH",
+    "category": "Brakes",
+    "amount": 2753
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "IAH",
+    "category": "Brakes",
+    "amount": 2753
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "IAH",
+    "category": "Brakes",
+    "amount": 3442
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "IAH",
+    "category": "Brakes",
+    "amount": 3442
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "IAH",
+    "category": "Brakes",
+    "amount": 3442
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "IAH",
+    "category": "Tires Replacement",
+    "amount": 2868
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "IAH",
+    "category": "Tires Replacement",
+    "amount": 2868
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "IAH",
+    "category": "Tires Replacement",
+    "amount": 2868
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "IAH",
+    "category": "Tires Replacement",
+    "amount": 2868
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "IAH",
+    "category": "Tires Replacement",
+    "amount": 2868
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "IAH",
+    "category": "Tires Replacement",
+    "amount": 2868
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "IAH",
+    "category": "Tires Replacement",
+    "amount": 3585
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "IAH",
+    "category": "Tires Replacement",
+    "amount": 2868
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "IAH",
+    "category": "Tires Replacement",
+    "amount": 2868
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "IAH",
+    "category": "Tires Replacement",
+    "amount": 3585
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "IAH",
+    "category": "Tires Replacement",
+    "amount": 3585
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "IAH",
+    "category": "Tires Replacement",
+    "amount": 3585
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "IAH",
+    "category": "Oil Change",
+    "amount": 2033
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "IAH",
+    "category": "Oil Change",
+    "amount": 2033
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "IAH",
+    "category": "Oil Change",
+    "amount": 2033
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "IAH",
+    "category": "Oil Change",
+    "amount": 2033
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "IAH",
+    "category": "Oil Change",
+    "amount": 2033
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "IAH",
+    "category": "Oil Change",
+    "amount": 2033
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "IAH",
+    "category": "Oil Change",
+    "amount": 2541
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "IAH",
+    "category": "Oil Change",
+    "amount": 2033
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "IAH",
+    "category": "Oil Change",
+    "amount": 2033
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "IAH",
+    "category": "Oil Change",
+    "amount": 2541
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "IAH",
+    "category": "Oil Change",
+    "amount": 2541
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "IAH",
+    "category": "Oil Change",
+    "amount": 2541
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "IAH",
+    "category": "Brake Calipers",
+    "amount": 1992
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "IAH",
+    "category": "Brake Calipers",
+    "amount": 1992
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "IAH",
+    "category": "Brake Calipers",
+    "amount": 1992
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "IAH",
+    "category": "Brake Calipers",
+    "amount": 1992
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "IAH",
+    "category": "Brake Calipers",
+    "amount": 1992
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "IAH",
+    "category": "Brake Calipers",
+    "amount": 1992
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "IAH",
+    "category": "Brake Calipers",
+    "amount": 2490
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "IAH",
+    "category": "Brake Calipers",
+    "amount": 1992
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "IAH",
+    "category": "Brake Calipers",
+    "amount": 1992
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "IAH",
+    "category": "Brake Calipers",
+    "amount": 2490
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "IAH",
+    "category": "Brake Calipers",
+    "amount": 2490
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "IAH",
+    "category": "Brake Calipers",
+    "amount": 2490
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "IAH",
+    "category": "Drivetrain Overhaul",
+    "amount": 813
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "IAH",
+    "category": "Drivetrain Overhaul",
+    "amount": 813
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "IAH",
+    "category": "Drivetrain Overhaul",
+    "amount": 813
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "IAH",
+    "category": "Drivetrain Overhaul",
+    "amount": 813
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "IAH",
+    "category": "Drivetrain Overhaul",
+    "amount": 813
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "IAH",
+    "category": "Drivetrain Overhaul",
+    "amount": 813
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "IAH",
+    "category": "Drivetrain Overhaul",
+    "amount": 1017
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "IAH",
+    "category": "Drivetrain Overhaul",
+    "amount": 813
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "IAH",
+    "category": "Drivetrain Overhaul",
+    "amount": 813
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "IAH",
+    "category": "Drivetrain Overhaul",
+    "amount": 1017
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "IAH",
+    "category": "Drivetrain Overhaul",
+    "amount": 1017
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "IAH",
+    "category": "Drivetrain Overhaul",
+    "amount": 1017
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "IAH",
+    "category": "Transmission Fluid",
+    "amount": 1155
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "IAH",
+    "category": "Transmission Fluid",
+    "amount": 1155
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "IAH",
+    "category": "Transmission Fluid",
+    "amount": 1155
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "IAH",
+    "category": "Transmission Fluid",
+    "amount": 1155
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "IAH",
+    "category": "Transmission Fluid",
+    "amount": 1155
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "IAH",
+    "category": "Transmission Fluid",
+    "amount": 1155
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "IAH",
+    "category": "Transmission Fluid",
+    "amount": 1443
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "IAH",
+    "category": "Transmission Fluid",
+    "amount": 1155
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "IAH",
+    "category": "Transmission Fluid",
+    "amount": 1155
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "IAH",
+    "category": "Transmission Fluid",
+    "amount": 1443
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "IAH",
+    "category": "Transmission Fluid",
+    "amount": 1443
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "IAH",
+    "category": "Transmission Fluid",
+    "amount": 1443
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "IAH",
+    "category": "Coolant + Spark plugs",
+    "amount": 921
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "IAH",
+    "category": "Coolant + Spark plugs",
+    "amount": 921
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "IAH",
+    "category": "Coolant + Spark plugs",
+    "amount": 921
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "IAH",
+    "category": "Coolant + Spark plugs",
+    "amount": 921
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "IAH",
+    "category": "Coolant + Spark plugs",
+    "amount": 921
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "IAH",
+    "category": "Coolant + Spark plugs",
+    "amount": 921
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "IAH",
+    "category": "Coolant + Spark plugs",
+    "amount": 1151
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "IAH",
+    "category": "Coolant + Spark plugs",
+    "amount": 921
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "IAH",
+    "category": "Coolant + Spark plugs",
+    "amount": 921
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "IAH",
+    "category": "Coolant + Spark plugs",
+    "amount": 1151
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "IAH",
+    "category": "Coolant + Spark plugs",
+    "amount": 1151
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "IAH",
+    "category": "Coolant + Spark plugs",
+    "amount": 1151
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "IAH",
+    "category": "Time Belt",
+    "amount": 271
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "IAH",
+    "category": "Time Belt",
+    "amount": 271
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "IAH",
+    "category": "Time Belt",
+    "amount": 271
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "IAH",
+    "category": "Time Belt",
+    "amount": 271
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "IAH",
+    "category": "Time Belt",
+    "amount": 271
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "IAH",
+    "category": "Time Belt",
+    "amount": 271
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "IAH",
+    "category": "Time Belt",
+    "amount": 339
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "IAH",
+    "category": "Time Belt",
+    "amount": 271
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "IAH",
+    "category": "Time Belt",
+    "amount": 271
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "IAH",
+    "category": "Time Belt",
+    "amount": 339
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "IAH",
+    "category": "Time Belt",
+    "amount": 339
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "IAH",
+    "category": "Time Belt",
+    "amount": 339
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "IAH",
+    "category": "Diesel Filter Cleaning",
+    "amount": 339
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "IAH",
+    "category": "Diesel Filter Cleaning",
+    "amount": 339
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "IAH",
+    "category": "Diesel Filter Cleaning",
+    "amount": 339
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "IAH",
+    "category": "Diesel Filter Cleaning",
+    "amount": 339
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "IAH",
+    "category": "Diesel Filter Cleaning",
+    "amount": 339
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "IAH",
+    "category": "Diesel Filter Cleaning",
+    "amount": 339
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "IAH",
+    "category": "Diesel Filter Cleaning",
+    "amount": 424
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "IAH",
+    "category": "Diesel Filter Cleaning",
+    "amount": 339
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "IAH",
+    "category": "Diesel Filter Cleaning",
+    "amount": 339
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "IAH",
+    "category": "Diesel Filter Cleaning",
+    "amount": 424
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "IAH",
+    "category": "Diesel Filter Cleaning",
+    "amount": 424
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "IAH",
+    "category": "Diesel Filter Cleaning",
+    "amount": 424
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "IAH",
+    "category": "Engine Filter",
+    "amount": 241
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "IAH",
+    "category": "Engine Filter",
+    "amount": 241
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "IAH",
+    "category": "Engine Filter",
+    "amount": 241
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "IAH",
+    "category": "Engine Filter",
+    "amount": 241
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "IAH",
+    "category": "Engine Filter",
+    "amount": 241
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "IAH",
+    "category": "Engine Filter",
+    "amount": 241
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "IAH",
+    "category": "Engine Filter",
+    "amount": 302
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "IAH",
+    "category": "Engine Filter",
+    "amount": 241
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "IAH",
+    "category": "Engine Filter",
+    "amount": 241
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "IAH",
+    "category": "Engine Filter",
+    "amount": 302
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "IAH",
+    "category": "Engine Filter",
+    "amount": 302
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "IAH",
+    "category": "Engine Filter",
+    "amount": 302
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "IAH",
+    "category": "Battery Replacement",
+    "amount": 636
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "IAH",
+    "category": "Battery Replacement",
+    "amount": 636
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "IAH",
+    "category": "Battery Replacement",
+    "amount": 636
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "IAH",
+    "category": "Battery Replacement",
+    "amount": 636
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "IAH",
+    "category": "Battery Replacement",
+    "amount": 636
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "IAH",
+    "category": "Battery Replacement",
+    "amount": 636
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "IAH",
+    "category": "Battery Replacement",
+    "amount": 795
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "IAH",
+    "category": "Battery Replacement",
+    "amount": 636
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "IAH",
+    "category": "Battery Replacement",
+    "amount": 636
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "IAH",
+    "category": "Battery Replacement",
+    "amount": 795
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "IAH",
+    "category": "Battery Replacement",
+    "amount": 795
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "IAH",
+    "category": "Battery Replacement",
+    "amount": 795
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "IAH",
+    "category": "Fluids",
+    "amount": 203
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "IAH",
+    "category": "Fluids",
+    "amount": 203
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "IAH",
+    "category": "Fluids",
+    "amount": 203
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "IAH",
+    "category": "Fluids",
+    "amount": 203
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "IAH",
+    "category": "Fluids",
+    "amount": 203
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "IAH",
+    "category": "Fluids",
+    "amount": 203
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "IAH",
+    "category": "Fluids",
+    "amount": 253
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "IAH",
+    "category": "Fluids",
+    "amount": 203
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "IAH",
+    "category": "Fluids",
+    "amount": 203
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "IAH",
+    "category": "Fluids",
+    "amount": 253
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "IAH",
+    "category": "Fluids",
+    "amount": 253
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "IAH",
+    "category": "Fluids",
+    "amount": 253
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "IAH",
+    "category": "Wiper Replacement",
+    "amount": 99
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "IAH",
+    "category": "Wiper Replacement",
+    "amount": 99
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "IAH",
+    "category": "Wiper Replacement",
+    "amount": 99
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "IAH",
+    "category": "Wiper Replacement",
+    "amount": 99
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "IAH",
+    "category": "Wiper Replacement",
+    "amount": 99
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "IAH",
+    "category": "Wiper Replacement",
+    "amount": 99
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "IAH",
+    "category": "Wiper Replacement",
+    "amount": 124
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "IAH",
+    "category": "Wiper Replacement",
+    "amount": 99
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "IAH",
+    "category": "Wiper Replacement",
+    "amount": 99
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "IAH",
+    "category": "Wiper Replacement",
+    "amount": 124
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "IAH",
+    "category": "Wiper Replacement",
+    "amount": 124
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "IAH",
+    "category": "Wiper Replacement",
+    "amount": 124
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "IAH",
+    "category": "Turbo Charger Inspection",
+    "amount": 34
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "IAH",
+    "category": "Turbo Charger Inspection",
+    "amount": 34
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "IAH",
+    "category": "Turbo Charger Inspection",
+    "amount": 34
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "IAH",
+    "category": "Turbo Charger Inspection",
+    "amount": 34
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "IAH",
+    "category": "Turbo Charger Inspection",
+    "amount": 34
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "IAH",
+    "category": "Turbo Charger Inspection",
+    "amount": 34
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "IAH",
+    "category": "Turbo Charger Inspection",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "IAH",
+    "category": "Turbo Charger Inspection",
+    "amount": 34
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "IAH",
+    "category": "Turbo Charger Inspection",
+    "amount": 34
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "IAH",
+    "category": "Turbo Charger Inspection",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "IAH",
+    "category": "Turbo Charger Inspection",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "IAH",
+    "category": "Turbo Charger Inspection",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "AUS",
+    "category": "Brakes",
+    "amount": 2818
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "AUS",
+    "category": "Brakes",
+    "amount": 2818
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "AUS",
+    "category": "Brakes",
+    "amount": 2818
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "AUS",
+    "category": "Brakes",
+    "amount": 2818
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "AUS",
+    "category": "Brakes",
+    "amount": 2818
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "AUS",
+    "category": "Brakes",
+    "amount": 2818
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "AUS",
+    "category": "Brakes",
+    "amount": 3522
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "AUS",
+    "category": "Brakes",
+    "amount": 2818
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "AUS",
+    "category": "Brakes",
+    "amount": 2818
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "AUS",
+    "category": "Brakes",
+    "amount": 3522
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "AUS",
+    "category": "Brakes",
+    "amount": 3522
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "AUS",
+    "category": "Brakes",
+    "amount": 3522
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "AUS",
+    "category": "Tires Replacement",
+    "amount": 1875
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "AUS",
+    "category": "Tires Replacement",
+    "amount": 1875
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "AUS",
+    "category": "Tires Replacement",
+    "amount": 1875
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "AUS",
+    "category": "Tires Replacement",
+    "amount": 1875
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "AUS",
+    "category": "Tires Replacement",
+    "amount": 1875
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "AUS",
+    "category": "Tires Replacement",
+    "amount": 1875
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "AUS",
+    "category": "Tires Replacement",
+    "amount": 2344
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "AUS",
+    "category": "Tires Replacement",
+    "amount": 1875
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "AUS",
+    "category": "Tires Replacement",
+    "amount": 1875
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "AUS",
+    "category": "Tires Replacement",
+    "amount": 2344
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "AUS",
+    "category": "Tires Replacement",
+    "amount": 2344
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "AUS",
+    "category": "Tires Replacement",
+    "amount": 2344
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "AUS",
+    "category": "Oil Change",
+    "amount": 1498
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "AUS",
+    "category": "Oil Change",
+    "amount": 1498
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "AUS",
+    "category": "Oil Change",
+    "amount": 1498
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "AUS",
+    "category": "Oil Change",
+    "amount": 1498
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "AUS",
+    "category": "Oil Change",
+    "amount": 1498
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "AUS",
+    "category": "Oil Change",
+    "amount": 1498
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "AUS",
+    "category": "Oil Change",
+    "amount": 1872
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "AUS",
+    "category": "Oil Change",
+    "amount": 1498
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "AUS",
+    "category": "Oil Change",
+    "amount": 1498
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "AUS",
+    "category": "Oil Change",
+    "amount": 1872
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "AUS",
+    "category": "Oil Change",
+    "amount": 1872
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "AUS",
+    "category": "Oil Change",
+    "amount": 1872
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "AUS",
+    "category": "Brake Calipers",
+    "amount": 1531
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "AUS",
+    "category": "Brake Calipers",
+    "amount": 1531
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "AUS",
+    "category": "Brake Calipers",
+    "amount": 1531
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "AUS",
+    "category": "Brake Calipers",
+    "amount": 1531
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "AUS",
+    "category": "Brake Calipers",
+    "amount": 1531
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "AUS",
+    "category": "Brake Calipers",
+    "amount": 1531
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "AUS",
+    "category": "Brake Calipers",
+    "amount": 1914
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "AUS",
+    "category": "Brake Calipers",
+    "amount": 1531
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "AUS",
+    "category": "Brake Calipers",
+    "amount": 1531
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "AUS",
+    "category": "Brake Calipers",
+    "amount": 1914
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "AUS",
+    "category": "Brake Calipers",
+    "amount": 1914
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "AUS",
+    "category": "Brake Calipers",
+    "amount": 1914
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "AUS",
+    "category": "Drivetrain Overhaul",
+    "amount": 384
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "AUS",
+    "category": "Drivetrain Overhaul",
+    "amount": 384
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "AUS",
+    "category": "Drivetrain Overhaul",
+    "amount": 384
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "AUS",
+    "category": "Drivetrain Overhaul",
+    "amount": 384
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "AUS",
+    "category": "Drivetrain Overhaul",
+    "amount": 384
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "AUS",
+    "category": "Drivetrain Overhaul",
+    "amount": 384
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "AUS",
+    "category": "Drivetrain Overhaul",
+    "amount": 480
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "AUS",
+    "category": "Drivetrain Overhaul",
+    "amount": 384
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "AUS",
+    "category": "Drivetrain Overhaul",
+    "amount": 384
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "AUS",
+    "category": "Drivetrain Overhaul",
+    "amount": 480
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "AUS",
+    "category": "Drivetrain Overhaul",
+    "amount": 480
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "AUS",
+    "category": "Drivetrain Overhaul",
+    "amount": 480
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "AUS",
+    "category": "Transmission Fluid",
+    "amount": 707
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "AUS",
+    "category": "Transmission Fluid",
+    "amount": 707
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "AUS",
+    "category": "Transmission Fluid",
+    "amount": 707
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "AUS",
+    "category": "Transmission Fluid",
+    "amount": 707
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "AUS",
+    "category": "Transmission Fluid",
+    "amount": 707
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "AUS",
+    "category": "Transmission Fluid",
+    "amount": 707
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "AUS",
+    "category": "Transmission Fluid",
+    "amount": 884
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "AUS",
+    "category": "Transmission Fluid",
+    "amount": 707
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "AUS",
+    "category": "Transmission Fluid",
+    "amount": 707
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "AUS",
+    "category": "Transmission Fluid",
+    "amount": 884
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "AUS",
+    "category": "Transmission Fluid",
+    "amount": 884
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "AUS",
+    "category": "Transmission Fluid",
+    "amount": 884
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "AUS",
+    "category": "Coolant + Spark plugs",
+    "amount": 303
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "AUS",
+    "category": "Coolant + Spark plugs",
+    "amount": 303
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "AUS",
+    "category": "Coolant + Spark plugs",
+    "amount": 303
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "AUS",
+    "category": "Coolant + Spark plugs",
+    "amount": 303
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "AUS",
+    "category": "Coolant + Spark plugs",
+    "amount": 303
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "AUS",
+    "category": "Coolant + Spark plugs",
+    "amount": 303
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "AUS",
+    "category": "Coolant + Spark plugs",
+    "amount": 379
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "AUS",
+    "category": "Coolant + Spark plugs",
+    "amount": 303
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "AUS",
+    "category": "Coolant + Spark plugs",
+    "amount": 303
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "AUS",
+    "category": "Coolant + Spark plugs",
+    "amount": 379
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "AUS",
+    "category": "Coolant + Spark plugs",
+    "amount": 379
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "AUS",
+    "category": "Coolant + Spark plugs",
+    "amount": 379
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "AUS",
+    "category": "Time Belt",
+    "amount": 115
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "AUS",
+    "category": "Time Belt",
+    "amount": 115
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "AUS",
+    "category": "Time Belt",
+    "amount": 115
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "AUS",
+    "category": "Time Belt",
+    "amount": 115
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "AUS",
+    "category": "Time Belt",
+    "amount": 115
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "AUS",
+    "category": "Time Belt",
+    "amount": 115
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "AUS",
+    "category": "Time Belt",
+    "amount": 144
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "AUS",
+    "category": "Time Belt",
+    "amount": 115
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "AUS",
+    "category": "Time Belt",
+    "amount": 115
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "AUS",
+    "category": "Time Belt",
+    "amount": 144
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "AUS",
+    "category": "Time Belt",
+    "amount": 144
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "AUS",
+    "category": "Time Belt",
+    "amount": 144
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "AUS",
+    "category": "Diesel Filter Cleaning",
+    "amount": 345
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "AUS",
+    "category": "Diesel Filter Cleaning",
+    "amount": 345
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "AUS",
+    "category": "Diesel Filter Cleaning",
+    "amount": 345
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "AUS",
+    "category": "Diesel Filter Cleaning",
+    "amount": 345
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "AUS",
+    "category": "Diesel Filter Cleaning",
+    "amount": 345
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "AUS",
+    "category": "Diesel Filter Cleaning",
+    "amount": 345
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "AUS",
+    "category": "Diesel Filter Cleaning",
+    "amount": 432
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "AUS",
+    "category": "Diesel Filter Cleaning",
+    "amount": 345
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "AUS",
+    "category": "Diesel Filter Cleaning",
+    "amount": 345
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "AUS",
+    "category": "Diesel Filter Cleaning",
+    "amount": 432
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "AUS",
+    "category": "Diesel Filter Cleaning",
+    "amount": 432
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "AUS",
+    "category": "Diesel Filter Cleaning",
+    "amount": 432
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "AUS",
+    "category": "Engine Filter",
+    "amount": 247
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "AUS",
+    "category": "Engine Filter",
+    "amount": 247
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "AUS",
+    "category": "Engine Filter",
+    "amount": 247
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "AUS",
+    "category": "Engine Filter",
+    "amount": 247
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "AUS",
+    "category": "Engine Filter",
+    "amount": 247
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "AUS",
+    "category": "Engine Filter",
+    "amount": 247
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "AUS",
+    "category": "Engine Filter",
+    "amount": 309
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "AUS",
+    "category": "Engine Filter",
+    "amount": 247
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "AUS",
+    "category": "Engine Filter",
+    "amount": 247
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "AUS",
+    "category": "Engine Filter",
+    "amount": 309
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "AUS",
+    "category": "Engine Filter",
+    "amount": 309
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "AUS",
+    "category": "Engine Filter",
+    "amount": 309
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "AUS",
+    "category": "Battery Replacement",
+    "amount": 554
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "AUS",
+    "category": "Battery Replacement",
+    "amount": 554
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "AUS",
+    "category": "Battery Replacement",
+    "amount": 554
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "AUS",
+    "category": "Battery Replacement",
+    "amount": 554
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "AUS",
+    "category": "Battery Replacement",
+    "amount": 554
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "AUS",
+    "category": "Battery Replacement",
+    "amount": 554
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "AUS",
+    "category": "Battery Replacement",
+    "amount": 692
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "AUS",
+    "category": "Battery Replacement",
+    "amount": 554
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "AUS",
+    "category": "Battery Replacement",
+    "amount": 554
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "AUS",
+    "category": "Battery Replacement",
+    "amount": 692
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "AUS",
+    "category": "Battery Replacement",
+    "amount": 692
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "AUS",
+    "category": "Battery Replacement",
+    "amount": 692
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "AUS",
+    "category": "Fluids",
+    "amount": 152
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "AUS",
+    "category": "Fluids",
+    "amount": 152
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "AUS",
+    "category": "Fluids",
+    "amount": 152
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "AUS",
+    "category": "Fluids",
+    "amount": 152
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "AUS",
+    "category": "Fluids",
+    "amount": 152
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "AUS",
+    "category": "Fluids",
+    "amount": 152
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "AUS",
+    "category": "Fluids",
+    "amount": 190
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "AUS",
+    "category": "Fluids",
+    "amount": 152
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "AUS",
+    "category": "Fluids",
+    "amount": 152
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "AUS",
+    "category": "Fluids",
+    "amount": 190
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "AUS",
+    "category": "Fluids",
+    "amount": 190
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "AUS",
+    "category": "Fluids",
+    "amount": 190
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "AUS",
+    "category": "Wiper Replacement",
+    "amount": 75
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "AUS",
+    "category": "Wiper Replacement",
+    "amount": 75
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "AUS",
+    "category": "Wiper Replacement",
+    "amount": 75
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "AUS",
+    "category": "Wiper Replacement",
+    "amount": 75
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "AUS",
+    "category": "Wiper Replacement",
+    "amount": 75
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "AUS",
+    "category": "Wiper Replacement",
+    "amount": 75
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "AUS",
+    "category": "Wiper Replacement",
+    "amount": 93
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "AUS",
+    "category": "Wiper Replacement",
+    "amount": 75
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "AUS",
+    "category": "Wiper Replacement",
+    "amount": 75
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "AUS",
+    "category": "Wiper Replacement",
+    "amount": 93
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "AUS",
+    "category": "Wiper Replacement",
+    "amount": 93
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "AUS",
+    "category": "Wiper Replacement",
+    "amount": 93
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "AUS",
+    "category": "Turbo Charger Inspection",
+    "amount": 35
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "AUS",
+    "category": "Turbo Charger Inspection",
+    "amount": 35
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "AUS",
+    "category": "Turbo Charger Inspection",
+    "amount": 35
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "AUS",
+    "category": "Turbo Charger Inspection",
+    "amount": 35
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "AUS",
+    "category": "Turbo Charger Inspection",
+    "amount": 35
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "AUS",
+    "category": "Turbo Charger Inspection",
+    "amount": 35
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "AUS",
+    "category": "Turbo Charger Inspection",
+    "amount": 43
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "AUS",
+    "category": "Turbo Charger Inspection",
+    "amount": 35
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "AUS",
+    "category": "Turbo Charger Inspection",
+    "amount": 35
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "AUS",
+    "category": "Turbo Charger Inspection",
+    "amount": 43
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "AUS",
+    "category": "Turbo Charger Inspection",
+    "amount": 43
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "AUS",
+    "category": "Turbo Charger Inspection",
+    "amount": 43
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "HRL",
+    "category": "Brakes",
+    "amount": 418
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "HRL",
+    "category": "Brakes",
+    "amount": 418
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "HRL",
+    "category": "Brakes",
+    "amount": 418
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "HRL",
+    "category": "Brakes",
+    "amount": 418
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "HRL",
+    "category": "Brakes",
+    "amount": 418
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "HRL",
+    "category": "Brakes",
+    "amount": 418
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "HRL",
+    "category": "Brakes",
+    "amount": 523
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "HRL",
+    "category": "Brakes",
+    "amount": 418
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "HRL",
+    "category": "Brakes",
+    "amount": 418
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "HRL",
+    "category": "Brakes",
+    "amount": 523
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "HRL",
+    "category": "Brakes",
+    "amount": 523
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "HRL",
+    "category": "Brakes",
+    "amount": 523
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "HRL",
+    "category": "Tires Replacement",
+    "amount": 479
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "HRL",
+    "category": "Tires Replacement",
+    "amount": 479
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "HRL",
+    "category": "Tires Replacement",
+    "amount": 479
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "HRL",
+    "category": "Tires Replacement",
+    "amount": 479
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "HRL",
+    "category": "Tires Replacement",
+    "amount": 479
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "HRL",
+    "category": "Tires Replacement",
+    "amount": 479
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "HRL",
+    "category": "Tires Replacement",
+    "amount": 598
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "HRL",
+    "category": "Tires Replacement",
+    "amount": 479
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "HRL",
+    "category": "Tires Replacement",
+    "amount": 479
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "HRL",
+    "category": "Tires Replacement",
+    "amount": 598
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "HRL",
+    "category": "Tires Replacement",
+    "amount": 598
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "HRL",
+    "category": "Tires Replacement",
+    "amount": 598
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "HRL",
+    "category": "Oil Change",
+    "amount": 451
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "HRL",
+    "category": "Oil Change",
+    "amount": 451
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "HRL",
+    "category": "Oil Change",
+    "amount": 451
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "HRL",
+    "category": "Oil Change",
+    "amount": 451
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "HRL",
+    "category": "Oil Change",
+    "amount": 451
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "HRL",
+    "category": "Oil Change",
+    "amount": 451
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "HRL",
+    "category": "Oil Change",
+    "amount": 564
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "HRL",
+    "category": "Oil Change",
+    "amount": 451
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "HRL",
+    "category": "Oil Change",
+    "amount": 451
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "HRL",
+    "category": "Oil Change",
+    "amount": 564
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "HRL",
+    "category": "Oil Change",
+    "amount": 564
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "HRL",
+    "category": "Oil Change",
+    "amount": 564
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "HRL",
+    "category": "Brake Calipers",
+    "amount": 399
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "HRL",
+    "category": "Brake Calipers",
+    "amount": 399
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "HRL",
+    "category": "Brake Calipers",
+    "amount": 399
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "HRL",
+    "category": "Brake Calipers",
+    "amount": 399
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "HRL",
+    "category": "Brake Calipers",
+    "amount": 399
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "HRL",
+    "category": "Brake Calipers",
+    "amount": 399
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "HRL",
+    "category": "Brake Calipers",
+    "amount": 499
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "HRL",
+    "category": "Brake Calipers",
+    "amount": 399
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "HRL",
+    "category": "Brake Calipers",
+    "amount": 399
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "HRL",
+    "category": "Brake Calipers",
+    "amount": 499
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "HRL",
+    "category": "Brake Calipers",
+    "amount": 499
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "HRL",
+    "category": "Brake Calipers",
+    "amount": 499
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "HRL",
+    "category": "Drivetrain Overhaul",
+    "amount": 548
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "HRL",
+    "category": "Drivetrain Overhaul",
+    "amount": 548
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "HRL",
+    "category": "Drivetrain Overhaul",
+    "amount": 548
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "HRL",
+    "category": "Drivetrain Overhaul",
+    "amount": 548
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "HRL",
+    "category": "Drivetrain Overhaul",
+    "amount": 548
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "HRL",
+    "category": "Drivetrain Overhaul",
+    "amount": 548
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "HRL",
+    "category": "Drivetrain Overhaul",
+    "amount": 685
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "HRL",
+    "category": "Drivetrain Overhaul",
+    "amount": 548
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "HRL",
+    "category": "Drivetrain Overhaul",
+    "amount": 548
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "HRL",
+    "category": "Drivetrain Overhaul",
+    "amount": 685
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "HRL",
+    "category": "Drivetrain Overhaul",
+    "amount": 685
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "HRL",
+    "category": "Drivetrain Overhaul",
+    "amount": 685
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "HRL",
+    "category": "Transmission Fluid",
+    "amount": 182
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "HRL",
+    "category": "Transmission Fluid",
+    "amount": 182
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "HRL",
+    "category": "Transmission Fluid",
+    "amount": 182
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "HRL",
+    "category": "Transmission Fluid",
+    "amount": 182
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "HRL",
+    "category": "Transmission Fluid",
+    "amount": 182
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "HRL",
+    "category": "Transmission Fluid",
+    "amount": 182
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "HRL",
+    "category": "Transmission Fluid",
+    "amount": 228
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "HRL",
+    "category": "Transmission Fluid",
+    "amount": 182
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "HRL",
+    "category": "Transmission Fluid",
+    "amount": 182
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "HRL",
+    "category": "Transmission Fluid",
+    "amount": 228
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "HRL",
+    "category": "Transmission Fluid",
+    "amount": 228
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "HRL",
+    "category": "Transmission Fluid",
+    "amount": 228
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "HRL",
+    "category": "Coolant + Spark plugs",
+    "amount": 221
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "HRL",
+    "category": "Coolant + Spark plugs",
+    "amount": 221
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "HRL",
+    "category": "Coolant + Spark plugs",
+    "amount": 221
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "HRL",
+    "category": "Coolant + Spark plugs",
+    "amount": 221
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "HRL",
+    "category": "Coolant + Spark plugs",
+    "amount": 221
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "HRL",
+    "category": "Coolant + Spark plugs",
+    "amount": 221
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "HRL",
+    "category": "Coolant + Spark plugs",
+    "amount": 277
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "HRL",
+    "category": "Coolant + Spark plugs",
+    "amount": 221
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "HRL",
+    "category": "Coolant + Spark plugs",
+    "amount": 221
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "HRL",
+    "category": "Coolant + Spark plugs",
+    "amount": 277
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "HRL",
+    "category": "Coolant + Spark plugs",
+    "amount": 277
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "HRL",
+    "category": "Coolant + Spark plugs",
+    "amount": 277
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "HRL",
+    "category": "Time Belt",
+    "amount": 34
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "HRL",
+    "category": "Time Belt",
+    "amount": 34
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "HRL",
+    "category": "Time Belt",
+    "amount": 34
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "HRL",
+    "category": "Time Belt",
+    "amount": 34
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "HRL",
+    "category": "Time Belt",
+    "amount": 34
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "HRL",
+    "category": "Time Belt",
+    "amount": 34
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "HRL",
+    "category": "Time Belt",
+    "amount": 43
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "HRL",
+    "category": "Time Belt",
+    "amount": 34
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "HRL",
+    "category": "Time Belt",
+    "amount": 34
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "HRL",
+    "category": "Time Belt",
+    "amount": 43
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "HRL",
+    "category": "Time Belt",
+    "amount": 43
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "HRL",
+    "category": "Time Belt",
+    "amount": 43
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "HRL",
+    "category": "Diesel Filter Cleaning",
+    "amount": 240
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "HRL",
+    "category": "Diesel Filter Cleaning",
+    "amount": 240
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "HRL",
+    "category": "Diesel Filter Cleaning",
+    "amount": 240
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "HRL",
+    "category": "Diesel Filter Cleaning",
+    "amount": 240
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "HRL",
+    "category": "Diesel Filter Cleaning",
+    "amount": 240
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "HRL",
+    "category": "Diesel Filter Cleaning",
+    "amount": 240
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "HRL",
+    "category": "Diesel Filter Cleaning",
+    "amount": 300
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "HRL",
+    "category": "Diesel Filter Cleaning",
+    "amount": 240
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "HRL",
+    "category": "Diesel Filter Cleaning",
+    "amount": 240
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "HRL",
+    "category": "Diesel Filter Cleaning",
+    "amount": 300
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "HRL",
+    "category": "Diesel Filter Cleaning",
+    "amount": 300
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "HRL",
+    "category": "Diesel Filter Cleaning",
+    "amount": 300
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "HRL",
+    "category": "Engine Filter",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "HRL",
+    "category": "Engine Filter",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "HRL",
+    "category": "Engine Filter",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "HRL",
+    "category": "Engine Filter",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "HRL",
+    "category": "Engine Filter",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "HRL",
+    "category": "Engine Filter",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "HRL",
+    "category": "Engine Filter",
+    "amount": 52
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "HRL",
+    "category": "Engine Filter",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "HRL",
+    "category": "Engine Filter",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "HRL",
+    "category": "Engine Filter",
+    "amount": 52
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "HRL",
+    "category": "Engine Filter",
+    "amount": 52
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "HRL",
+    "category": "Engine Filter",
+    "amount": 52
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "HRL",
+    "category": "Battery Replacement",
+    "amount": 173
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "HRL",
+    "category": "Battery Replacement",
+    "amount": 173
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "HRL",
+    "category": "Battery Replacement",
+    "amount": 173
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "HRL",
+    "category": "Battery Replacement",
+    "amount": 173
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "HRL",
+    "category": "Battery Replacement",
+    "amount": 173
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "HRL",
+    "category": "Battery Replacement",
+    "amount": 173
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "HRL",
+    "category": "Battery Replacement",
+    "amount": 216
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "HRL",
+    "category": "Battery Replacement",
+    "amount": 173
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "HRL",
+    "category": "Battery Replacement",
+    "amount": 173
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "HRL",
+    "category": "Battery Replacement",
+    "amount": 216
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "HRL",
+    "category": "Battery Replacement",
+    "amount": 216
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "HRL",
+    "category": "Battery Replacement",
+    "amount": 216
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "HRL",
+    "category": "Fluids",
+    "amount": 43
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "HRL",
+    "category": "Fluids",
+    "amount": 43
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "HRL",
+    "category": "Fluids",
+    "amount": 43
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "HRL",
+    "category": "Fluids",
+    "amount": 43
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "HRL",
+    "category": "Fluids",
+    "amount": 43
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "HRL",
+    "category": "Fluids",
+    "amount": 43
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "HRL",
+    "category": "Fluids",
+    "amount": 53
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "HRL",
+    "category": "Fluids",
+    "amount": 43
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "HRL",
+    "category": "Fluids",
+    "amount": 43
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "HRL",
+    "category": "Fluids",
+    "amount": 53
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "HRL",
+    "category": "Fluids",
+    "amount": 53
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "HRL",
+    "category": "Fluids",
+    "amount": 53
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "HRL",
+    "category": "Wiper Replacement",
+    "amount": 17
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "HRL",
+    "category": "Wiper Replacement",
+    "amount": 17
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "HRL",
+    "category": "Wiper Replacement",
+    "amount": 17
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "HRL",
+    "category": "Wiper Replacement",
+    "amount": 17
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "HRL",
+    "category": "Wiper Replacement",
+    "amount": 17
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "HRL",
+    "category": "Wiper Replacement",
+    "amount": 17
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "HRL",
+    "category": "Wiper Replacement",
+    "amount": 22
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "HRL",
+    "category": "Wiper Replacement",
+    "amount": 17
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "HRL",
+    "category": "Wiper Replacement",
+    "amount": 17
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "HRL",
+    "category": "Wiper Replacement",
+    "amount": 22
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "HRL",
+    "category": "Wiper Replacement",
+    "amount": 22
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "HRL",
+    "category": "Wiper Replacement",
+    "amount": 22
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "HRL",
+    "category": "Turbo Charger Inspection",
+    "amount": 24
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "HRL",
+    "category": "Turbo Charger Inspection",
+    "amount": 24
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "HRL",
+    "category": "Turbo Charger Inspection",
+    "amount": 24
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "HRL",
+    "category": "Turbo Charger Inspection",
+    "amount": 24
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "HRL",
+    "category": "Turbo Charger Inspection",
+    "amount": 24
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "HRL",
+    "category": "Turbo Charger Inspection",
+    "amount": 24
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "HRL",
+    "category": "Turbo Charger Inspection",
+    "amount": 30
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "HRL",
+    "category": "Turbo Charger Inspection",
+    "amount": 24
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "HRL",
+    "category": "Turbo Charger Inspection",
+    "amount": 24
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "HRL",
+    "category": "Turbo Charger Inspection",
+    "amount": 30
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "HRL",
+    "category": "Turbo Charger Inspection",
+    "amount": 30
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "HRL",
+    "category": "Turbo Charger Inspection",
+    "amount": 30
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "LRD",
+    "category": "Brakes",
+    "amount": 113
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "LRD",
+    "category": "Brakes",
+    "amount": 113
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "LRD",
+    "category": "Brakes",
+    "amount": 113
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "LRD",
+    "category": "Brakes",
+    "amount": 113
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "LRD",
+    "category": "Brakes",
+    "amount": 113
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "LRD",
+    "category": "Brakes",
+    "amount": 113
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "LRD",
+    "category": "Brakes",
+    "amount": 141
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "LRD",
+    "category": "Brakes",
+    "amount": 113
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "LRD",
+    "category": "Brakes",
+    "amount": 113
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "LRD",
+    "category": "Brakes",
+    "amount": 141
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "LRD",
+    "category": "Brakes",
+    "amount": 141
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "LRD",
+    "category": "Brakes",
+    "amount": 141
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "LRD",
+    "category": "Tires Replacement",
+    "amount": 116
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "LRD",
+    "category": "Tires Replacement",
+    "amount": 116
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "LRD",
+    "category": "Tires Replacement",
+    "amount": 116
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "LRD",
+    "category": "Tires Replacement",
+    "amount": 116
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "LRD",
+    "category": "Tires Replacement",
+    "amount": 116
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "LRD",
+    "category": "Tires Replacement",
+    "amount": 116
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "LRD",
+    "category": "Tires Replacement",
+    "amount": 145
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "LRD",
+    "category": "Tires Replacement",
+    "amount": 116
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "LRD",
+    "category": "Tires Replacement",
+    "amount": 116
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "LRD",
+    "category": "Tires Replacement",
+    "amount": 145
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "LRD",
+    "category": "Tires Replacement",
+    "amount": 145
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "LRD",
+    "category": "Tires Replacement",
+    "amount": 145
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "LRD",
+    "category": "Oil Change",
+    "amount": 97
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "LRD",
+    "category": "Oil Change",
+    "amount": 97
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "LRD",
+    "category": "Oil Change",
+    "amount": 97
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "LRD",
+    "category": "Oil Change",
+    "amount": 97
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "LRD",
+    "category": "Oil Change",
+    "amount": 97
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "LRD",
+    "category": "Oil Change",
+    "amount": 97
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "LRD",
+    "category": "Oil Change",
+    "amount": 122
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "LRD",
+    "category": "Oil Change",
+    "amount": 97
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "LRD",
+    "category": "Oil Change",
+    "amount": 97
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "LRD",
+    "category": "Oil Change",
+    "amount": 122
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "LRD",
+    "category": "Oil Change",
+    "amount": 122
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "LRD",
+    "category": "Oil Change",
+    "amount": 122
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "LRD",
+    "category": "Brake Calipers",
+    "amount": 111
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "LRD",
+    "category": "Brake Calipers",
+    "amount": 111
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "LRD",
+    "category": "Brake Calipers",
+    "amount": 111
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "LRD",
+    "category": "Brake Calipers",
+    "amount": 111
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "LRD",
+    "category": "Brake Calipers",
+    "amount": 111
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "LRD",
+    "category": "Brake Calipers",
+    "amount": 111
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "LRD",
+    "category": "Brake Calipers",
+    "amount": 139
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "LRD",
+    "category": "Brake Calipers",
+    "amount": 111
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "LRD",
+    "category": "Brake Calipers",
+    "amount": 111
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "LRD",
+    "category": "Brake Calipers",
+    "amount": 139
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "LRD",
+    "category": "Brake Calipers",
+    "amount": 139
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "LRD",
+    "category": "Brake Calipers",
+    "amount": 139
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "LRD",
+    "category": "Drivetrain Overhaul",
+    "amount": 163
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "LRD",
+    "category": "Drivetrain Overhaul",
+    "amount": 163
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "LRD",
+    "category": "Drivetrain Overhaul",
+    "amount": 163
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "LRD",
+    "category": "Drivetrain Overhaul",
+    "amount": 163
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "LRD",
+    "category": "Drivetrain Overhaul",
+    "amount": 163
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "LRD",
+    "category": "Drivetrain Overhaul",
+    "amount": 163
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "LRD",
+    "category": "Drivetrain Overhaul",
+    "amount": 204
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "LRD",
+    "category": "Drivetrain Overhaul",
+    "amount": 163
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "LRD",
+    "category": "Drivetrain Overhaul",
+    "amount": 163
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "LRD",
+    "category": "Drivetrain Overhaul",
+    "amount": 204
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "LRD",
+    "category": "Drivetrain Overhaul",
+    "amount": 204
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "LRD",
+    "category": "Drivetrain Overhaul",
+    "amount": 204
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "LRD",
+    "category": "Transmission Fluid",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "LRD",
+    "category": "Transmission Fluid",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "LRD",
+    "category": "Transmission Fluid",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "LRD",
+    "category": "Transmission Fluid",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "LRD",
+    "category": "Transmission Fluid",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "LRD",
+    "category": "Transmission Fluid",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "LRD",
+    "category": "Transmission Fluid",
+    "amount": 52
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "LRD",
+    "category": "Transmission Fluid",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "LRD",
+    "category": "Transmission Fluid",
+    "amount": 42
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "LRD",
+    "category": "Transmission Fluid",
+    "amount": 52
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "LRD",
+    "category": "Transmission Fluid",
+    "amount": 52
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "LRD",
+    "category": "Transmission Fluid",
+    "amount": 52
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "LRD",
+    "category": "Coolant + Spark plugs",
+    "amount": 67
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "LRD",
+    "category": "Coolant + Spark plugs",
+    "amount": 67
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "LRD",
+    "category": "Coolant + Spark plugs",
+    "amount": 67
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "LRD",
+    "category": "Coolant + Spark plugs",
+    "amount": 67
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "LRD",
+    "category": "Coolant + Spark plugs",
+    "amount": 67
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "LRD",
+    "category": "Coolant + Spark plugs",
+    "amount": 67
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "LRD",
+    "category": "Coolant + Spark plugs",
+    "amount": 84
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "LRD",
+    "category": "Coolant + Spark plugs",
+    "amount": 67
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "LRD",
+    "category": "Coolant + Spark plugs",
+    "amount": 67
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "LRD",
+    "category": "Coolant + Spark plugs",
+    "amount": 84
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "LRD",
+    "category": "Coolant + Spark plugs",
+    "amount": 84
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "LRD",
+    "category": "Coolant + Spark plugs",
+    "amount": 84
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "LRD",
+    "category": "Time Belt",
+    "amount": 31
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "LRD",
+    "category": "Time Belt",
+    "amount": 31
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "LRD",
+    "category": "Time Belt",
+    "amount": 31
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "LRD",
+    "category": "Time Belt",
+    "amount": 31
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "LRD",
+    "category": "Time Belt",
+    "amount": 31
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "LRD",
+    "category": "Time Belt",
+    "amount": 31
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "LRD",
+    "category": "Time Belt",
+    "amount": 38
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "LRD",
+    "category": "Time Belt",
+    "amount": 31
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "LRD",
+    "category": "Time Belt",
+    "amount": 31
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "LRD",
+    "category": "Time Belt",
+    "amount": 38
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "LRD",
+    "category": "Time Belt",
+    "amount": 38
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "LRD",
+    "category": "Time Belt",
+    "amount": 38
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "LRD",
+    "category": "Diesel Filter Cleaning",
+    "amount": 92
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "LRD",
+    "category": "Diesel Filter Cleaning",
+    "amount": 92
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "LRD",
+    "category": "Diesel Filter Cleaning",
+    "amount": 92
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "LRD",
+    "category": "Diesel Filter Cleaning",
+    "amount": 92
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "LRD",
+    "category": "Diesel Filter Cleaning",
+    "amount": 92
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "LRD",
+    "category": "Diesel Filter Cleaning",
+    "amount": 92
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "LRD",
+    "category": "Diesel Filter Cleaning",
+    "amount": 115
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "LRD",
+    "category": "Diesel Filter Cleaning",
+    "amount": 92
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "LRD",
+    "category": "Diesel Filter Cleaning",
+    "amount": 92
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "LRD",
+    "category": "Diesel Filter Cleaning",
+    "amount": 115
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "LRD",
+    "category": "Diesel Filter Cleaning",
+    "amount": 115
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "LRD",
+    "category": "Diesel Filter Cleaning",
+    "amount": 115
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "LRD",
+    "category": "Engine Filter",
+    "amount": 10
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "LRD",
+    "category": "Engine Filter",
+    "amount": 10
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "LRD",
+    "category": "Engine Filter",
+    "amount": 10
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "LRD",
+    "category": "Engine Filter",
+    "amount": 10
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "LRD",
+    "category": "Engine Filter",
+    "amount": 10
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "LRD",
+    "category": "Engine Filter",
+    "amount": 10
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "LRD",
+    "category": "Engine Filter",
+    "amount": 13
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "LRD",
+    "category": "Engine Filter",
+    "amount": 10
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "LRD",
+    "category": "Engine Filter",
+    "amount": 10
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "LRD",
+    "category": "Engine Filter",
+    "amount": 13
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "LRD",
+    "category": "Engine Filter",
+    "amount": 13
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "LRD",
+    "category": "Engine Filter",
+    "amount": 13
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "LRD",
+    "category": "Battery Replacement",
+    "amount": 0
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "LRD",
+    "category": "Battery Replacement",
+    "amount": 0
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "LRD",
+    "category": "Battery Replacement",
+    "amount": 0
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "LRD",
+    "category": "Battery Replacement",
+    "amount": 0
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "LRD",
+    "category": "Battery Replacement",
+    "amount": 0
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "LRD",
+    "category": "Battery Replacement",
+    "amount": 0
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "LRD",
+    "category": "Battery Replacement",
+    "amount": 0
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "LRD",
+    "category": "Battery Replacement",
+    "amount": 0
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "LRD",
+    "category": "Battery Replacement",
+    "amount": 0
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "LRD",
+    "category": "Battery Replacement",
+    "amount": 0
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "LRD",
+    "category": "Battery Replacement",
+    "amount": 0
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "LRD",
+    "category": "Battery Replacement",
+    "amount": 0
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "LRD",
+    "category": "Fluids",
+    "amount": 9
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "LRD",
+    "category": "Fluids",
+    "amount": 9
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "LRD",
+    "category": "Fluids",
+    "amount": 9
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "LRD",
+    "category": "Fluids",
+    "amount": 9
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "LRD",
+    "category": "Fluids",
+    "amount": 9
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "LRD",
+    "category": "Fluids",
+    "amount": 9
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "LRD",
+    "category": "Fluids",
+    "amount": 12
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "LRD",
+    "category": "Fluids",
+    "amount": 9
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "LRD",
+    "category": "Fluids",
+    "amount": 9
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "LRD",
+    "category": "Fluids",
+    "amount": 12
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "LRD",
+    "category": "Fluids",
+    "amount": 12
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "LRD",
+    "category": "Fluids",
+    "amount": 12
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "LRD",
+    "category": "Wiper Replacement",
+    "amount": 4
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "LRD",
+    "category": "Wiper Replacement",
+    "amount": 4
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "LRD",
+    "category": "Wiper Replacement",
+    "amount": 4
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "LRD",
+    "category": "Wiper Replacement",
+    "amount": 4
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "LRD",
+    "category": "Wiper Replacement",
+    "amount": 4
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "LRD",
+    "category": "Wiper Replacement",
+    "amount": 4
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "LRD",
+    "category": "Wiper Replacement",
+    "amount": 5
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "LRD",
+    "category": "Wiper Replacement",
+    "amount": 4
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "LRD",
+    "category": "Wiper Replacement",
+    "amount": 4
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "LRD",
+    "category": "Wiper Replacement",
+    "amount": 5
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "LRD",
+    "category": "Wiper Replacement",
+    "amount": 5
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "LRD",
+    "category": "Wiper Replacement",
+    "amount": 5
+  },
+  {
+    "year": 2026,
+    "month": 1,
+    "station": "LRD",
+    "category": "Turbo Charger Inspection",
+    "amount": 9
+  },
+  {
+    "year": 2026,
+    "month": 2,
+    "station": "LRD",
+    "category": "Turbo Charger Inspection",
+    "amount": 9
+  },
+  {
+    "year": 2026,
+    "month": 3,
+    "station": "LRD",
+    "category": "Turbo Charger Inspection",
+    "amount": 9
+  },
+  {
+    "year": 2026,
+    "month": 4,
+    "station": "LRD",
+    "category": "Turbo Charger Inspection",
+    "amount": 9
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "station": "LRD",
+    "category": "Turbo Charger Inspection",
+    "amount": 9
+  },
+  {
+    "year": 2026,
+    "month": 6,
+    "station": "LRD",
+    "category": "Turbo Charger Inspection",
+    "amount": 9
+  },
+  {
+    "year": 2026,
+    "month": 7,
+    "station": "LRD",
+    "category": "Turbo Charger Inspection",
+    "amount": 11
+  },
+  {
+    "year": 2026,
+    "month": 8,
+    "station": "LRD",
+    "category": "Turbo Charger Inspection",
+    "amount": 9
+  },
+  {
+    "year": 2026,
+    "month": 9,
+    "station": "LRD",
+    "category": "Turbo Charger Inspection",
+    "amount": 9
+  },
+  {
+    "year": 2026,
+    "month": 10,
+    "station": "LRD",
+    "category": "Turbo Charger Inspection",
+    "amount": 11
+  },
+  {
+    "year": 2026,
+    "month": 11,
+    "station": "LRD",
+    "category": "Turbo Charger Inspection",
+    "amount": 11
+  },
+  {
+    "year": 2026,
+    "month": 12,
+    "station": "LRD",
+    "category": "Turbo Charger Inspection",
+    "amount": 11
+  }
+]
