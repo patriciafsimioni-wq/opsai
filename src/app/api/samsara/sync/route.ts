@@ -21,12 +21,15 @@ export async function POST() {
 
   const stats = await getSamsaraVehicleStats();
   const vehicles = await prisma.vehicle.findMany({
-    select: { id: true, dxNumber: true, licensePlate: true, samsaraId: true },
+    select: { id: true, name: true, dxNumber: true, licensePlate: true, samsaraId: true },
   });
 
   // Build lookup maps
   const byDx = new Map(vehicles.map((v) => [v.dxNumber?.toUpperCase(), v]));
   const byPlate = new Map(vehicles.map((v) => [v.licensePlate?.toUpperCase().replace(/\s+/g, ""), v]));
+  const byName = new Map(
+    vehicles.map((v) => [v.name?.toUpperCase().replace(/\s+/g, ""), v]),
+  );
   const bySamsaraId = new Map(
     vehicles.filter((v) => v.samsaraId).map((v) => [v.samsaraId!, v]),
   );
@@ -45,6 +48,12 @@ export async function POST() {
     if (!vehicle) {
       const plate = s.name?.toUpperCase().replace(/\s+/g, "");
       if (plate) vehicle = byPlate.get(plate);
+    }
+    if (!vehicle) {
+      // Fall back to an exact vehicle-name match (e.g. "Tractor Truck 3"),
+      // which is reliable when the Samsara name isn't a DX# or plate.
+      const nm = s.name?.toUpperCase().replace(/\s+/g, "");
+      if (nm) vehicle = byName.get(nm);
     }
     if (!vehicle) continue;
     matched++;
