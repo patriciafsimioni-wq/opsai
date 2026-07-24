@@ -474,7 +474,7 @@ export function buildWorkOrderAssignmentEmail(params: {
   <p style="font-size: 14px; line-height: 1.6;">Hi ${vendorName},</p>
   <p style="font-size: 14px; line-height: 1.6;">
     You have <strong>${openOrders.length}</strong> open work order${openOrders.length === 1 ? "" : "s"} assigned to you.
-    When you finish a service, open it in the portal and click <strong>Service Done</strong> to record the details — it goes straight to logged services.
+    When you finish a service, open the work order in the portal and <strong>log the service</strong> — enter the invoice number, parts/labor amounts, and a description so it's fully recorded.
   </p>
 
   <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px;">
