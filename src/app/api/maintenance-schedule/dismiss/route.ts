@@ -6,8 +6,11 @@ import { requireManager, badRequest } from "@/lib/api";
 const schema = z.object({
   vehicleId: z.string().min(1),
   service: z.string().min(1),
-  action: z.enum(["done", "skip", "assigned"]),
+  action: z.enum(["done", "skip", "assigned", "inspected"]),
   note: z.string().optional().nullable(),
+  // Required when action = "inspected": push next-due to this odometer.
+  nextDueMileage: z.number().positive().optional().nullable(),
+  inspectedAt: z.string().optional().nullable(),
 });
 
 export async function POST(req: Request) {
@@ -24,10 +27,22 @@ export async function POST(req: Request) {
   const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId }, select: { odometer: true } });
   if (!vehicle) return badRequest("Vehicle not found");
 
+  if (action === "inspected" && (parsed.data.nextDueMileage == null || parsed.data.nextDueMileage <= 0)) {
+    return badRequest("nextDueMileage is required when marking a service inspected");
+  }
+
+  const isInspected = action === "inspected";
+  const nextDueMileage = isInspected ? parsed.data.nextDueMileage ?? null : null;
+  const inspectedAt = isInspected
+    ? parsed.data.inspectedAt
+      ? new Date(parsed.data.inspectedAt)
+      : new Date()
+    : null;
+
   const dismissal = await prisma.pmAlertDismissal.upsert({
     where: { vehicleId_service: { vehicleId, service } },
-    create: { vehicleId, service, action, note: note ?? null, mileageAt: vehicle.odometer },
-    update: { action, note: note ?? null, mileageAt: vehicle.odometer, createdAt: new Date() },
+    create: { vehicleId, service, action, note: note ?? null, mileageAt: vehicle.odometer, nextDueMileage, inspectedAt },
+    update: { action, note: note ?? null, mileageAt: vehicle.odometer, nextDueMileage, inspectedAt, createdAt: new Date() },
   });
 
   return NextResponse.json(dismissal);

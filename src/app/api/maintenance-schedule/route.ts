@@ -10,7 +10,6 @@ import { TIME_SCHEDULE } from "@/lib/constants";
  */
 const SERVICE_INTERVALS: [number, string, number][] = [
   [6000, "Oil + Filter + Tire Rotation", 6000],
-  [10000, "Fluids", 10000],
   [12000, "Brake Pads Replacement", 20000],
   [12000, "Brake Inspection + Cabin Air", 24000],
   [30000, "Engine Air Filter", 30000],
@@ -67,6 +66,7 @@ type ServiceStatus = {
   status: "overdue" | "upcoming" | "on_track" | "never_performed" | "dismissed";
   dismissedAction: string | null;
   dismissedNote: string | null;
+  lastInspected: boolean;
 };
 
 type TimeServiceStatus = {
@@ -150,12 +150,12 @@ export async function GET(req: NextRequest) {
   }
 
   // Get all dismissals (gracefully handle if table doesn't exist yet)
-  const dismissalMap: Record<string, Record<string, { action: string; note: string | null }>> = {};
+  const dismissalMap: Record<string, Record<string, { action: string; note: string | null; mileageAt: number | null; nextDueMileage: number | null; inspectedAt: Date | null }>> = {};
   try {
     const dismissals = await prisma.pmAlertDismissal.findMany();
     for (const d of dismissals) {
       if (!dismissalMap[d.vehicleId]) dismissalMap[d.vehicleId] = {};
-      dismissalMap[d.vehicleId][d.service] = { action: d.action, note: d.note };
+      dismissalMap[d.vehicleId][d.service] = { action: d.action, note: d.note, mileageAt: d.mileageAt, nextDueMileage: d.nextDueMileage, inspectedAt: d.inspectedAt };
     }
   } catch {
     // Table may not exist yet — continue without dismissals
@@ -190,6 +190,7 @@ export async function GET(req: NextRequest) {
         let lastPerformedAt: number | null = null;
         let lastPerformedDate: string | null = null;
         let status: ServiceStatus["status"];
+        let lastInspected = false;
 
         const catchUp = !last && odo >= CATCH_UP_MILEAGE;
 
@@ -204,11 +205,29 @@ export async function GET(req: NextRequest) {
           nextDue = firstDue;
         }
 
+        // An "inspected" record means the service was checked and still has life:
+        // push next-due to the inspector's estimate instead of hiding it. Only
+        // applies if the inspection is at/after any real completed service.
+        const inspection =
+          dismissed?.action === "inspected" && dismissed.nextDueMileage != null
+            ? dismissed
+            : null;
+        const inspectionApplies =
+          inspection != null &&
+          (!last || (inspection.mileageAt ?? odo) >= last.odometerAt);
+
+        if (inspectionApplies && inspection) {
+          nextDue = inspection.nextDueMileage!;
+          lastPerformedAt = Math.round(inspection.mileageAt ?? odo);
+          lastPerformedDate = (inspection.inspectedAt ?? now).toISOString().slice(0, 10);
+          lastInspected = true;
+        }
+
         const milesUntil = Math.round(nextDue - odo);
 
-        if (dismissed) {
+        if (dismissed && !inspectionApplies) {
           status = "dismissed";
-        } else if (!last && !catchUp && odo >= firstDue) {
+        } else if (!last && !catchUp && !inspectionApplies && odo >= firstDue) {
           status = "never_performed";
         } else if (milesUntil < 0) {
           status = "overdue";
@@ -227,8 +246,9 @@ export async function GET(req: NextRequest) {
           nextDue: Math.round(nextDue),
           milesUntil,
           status,
-          dismissedAction: dismissed?.action ?? null,
-          dismissedNote: dismissed?.note ?? null,
+          dismissedAction: inspectionApplies ? null : dismissed?.action ?? null,
+          dismissedNote: inspectionApplies ? null : dismissed?.note ?? null,
+          lastInspected,
         };
       });
 

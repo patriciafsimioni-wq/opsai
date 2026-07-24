@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useData, apiSend } from "@/lib/use-data";
-import { AlertTriangle, Check, SkipForward, Undo2, UserPlus } from "lucide-react";
+import { AlertTriangle, Check, SkipForward, Undo2, UserPlus, ClipboardCheck } from "lucide-react";
 import { STATIONS as BRAND_STATIONS } from "@/lib/constants";
 
 const STATIONS = ["ALL", ...BRAND_STATIONS];
@@ -18,6 +18,7 @@ type ServiceStatus = {
   status: "overdue" | "upcoming" | "on_track" | "never_performed" | "dismissed";
   dismissedAction: string | null;
   dismissedNote: string | null;
+  lastInspected: boolean;
 };
 
 type TimeServiceStatus = {
@@ -95,11 +96,12 @@ function AssignmentNote({ action, note }: { action: string | null; note: string 
   return null;
 }
 
-function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss }: {
+function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss, onInspect }: {
   vehicle: VehicleSchedule;
   onClose: () => void;
   onDismiss: (vehicleId: string, service: string, action: "done" | "skip" | "assigned", note?: string) => void;
   onUndismiss: (vehicleId: string, service: string) => void;
+  onInspect: (vehicleId: string, service: string, nextDueMileage: number, inspectedAt: string) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
   const services = showAll
@@ -219,6 +221,7 @@ function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss }: {
                         <div>
                           <span className="font-medium">{s.lastPerformedAt.toLocaleString()} mi</span>
                           {s.lastPerformedDate && <span className="block text-[10px] text-slate-400">{s.lastPerformedDate}</span>}
+                          {s.lastInspected && <span className="block text-[10px] font-medium text-blue-500">Inspected</span>}
                         </div>
                       ) : (
                         <span className="text-slate-300">Never</span>
@@ -232,12 +235,16 @@ function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss }: {
                       {(s.status === "never_performed" || s.status === "overdue" || s.status === "upcoming") && (
                         <div className="flex justify-end gap-1">
                           <AssignButton vehicleId={vehicle.id} vehicleName={vehicle.dxNumber ?? vehicle.name} service={s.service} station={vehicle.station} onAssigned={(name) => { onDismiss(vehicle.id, s.service, "assigned", name); }} />
+                          <InspectButton service={s.service} vehicleName={vehicle.dxNumber ?? vehicle.name} currentOdometer={vehicle.odometer} onInspect={(nextDueMileage, inspectedAt) => onInspect(vehicle.id, s.service, nextDueMileage, inspectedAt)} />
                           <button onClick={() => onDismiss(vehicle.id, s.service, "done")} className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-green-700 hover:bg-green-50" title="Mark as done"><Check size={11} /></button>
                           <button onClick={() => onDismiss(vehicle.id, s.service, "skip")} className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-slate-500 hover:bg-slate-100" title="Skip this service"><SkipForward size={11} /></button>
                         </div>
                       )}
                       {s.status === "dismissed" && (
-                        <button onClick={() => onUndismiss(vehicle.id, s.service)} className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-blue-600 hover:bg-blue-50" title="Undo dismiss"><Undo2 size={11} /></button>
+                        <div className="flex justify-end gap-1">
+                          <InspectButton service={s.service} vehicleName={vehicle.dxNumber ?? vehicle.name} currentOdometer={vehicle.odometer} onInspect={(nextDueMileage, inspectedAt) => onInspect(vehicle.id, s.service, nextDueMileage, inspectedAt)} />
+                          <button onClick={() => onUndismiss(vehicle.id, s.service)} className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-blue-600 hover:bg-blue-50" title="Undo dismiss"><Undo2 size={11} /></button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -341,6 +348,76 @@ function AssignButton({ vehicleId, vehicleName, service, station, onAssigned }: 
   );
 }
 
+// Records an inspection: the service was checked, still has life, so push the
+// next-due to the mileage the inspector estimates it will last.
+function InspectButton({ service, vehicleName, currentOdometer, onInspect }: {
+  service: string;
+  vehicleName: string;
+  currentOdometer: number;
+  onInspect: (nextDueMileage: number, inspectedAt: string) => void;
+}) {
+  const [show, setShow] = useState(false);
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [nextDue, setNextDue] = useState("");
+  const [addMiles, setAddMiles] = useState("");
+
+  function reset() {
+    setDate(new Date().toISOString().slice(0, 10));
+    setNextDue("");
+    setAddMiles("");
+  }
+
+  function submit() {
+    // Prefer an explicit next-due odometer; else current odometer + "lasts N more miles".
+    const explicit = parseInt(nextDue.replace(/,/g, ""), 10);
+    const extra = parseInt(addMiles.replace(/,/g, ""), 10);
+    const target = !isNaN(explicit) && explicit > 0
+      ? explicit
+      : !isNaN(extra) && extra > 0
+        ? Math.round(currentOdometer + extra)
+        : NaN;
+    if (isNaN(target) || target <= 0) return;
+    onInspect(target, new Date(date).toISOString());
+    setShow(false);
+    reset();
+  }
+
+  return (
+    <>
+      <button
+        onClick={(e) => { e.stopPropagation(); setShow(true); }}
+        className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-indigo-600 hover:bg-indigo-50"
+        title="Inspected — reschedule next-due"
+      >
+        <ClipboardCheck size={11} />
+      </button>
+      {show && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30" onClick={() => setShow(false)}>
+          <div className="w-96 rounded-lg bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <p className="mb-1 font-semibold">Inspected — Reschedule</p>
+            <p className="mb-3 text-xs text-slate-500">{service} — {vehicleName} (now {currentOdometer.toLocaleString()} mi)</p>
+
+            <label className="mb-1 block text-xs font-medium text-slate-600">Inspection date</label>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mb-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+
+            <label className="mb-1 block text-xs font-medium text-slate-600">Next due at odometer (mi)</label>
+            <input type="text" inputMode="numeric" value={nextDue} onChange={(e) => { setNextDue(e.target.value); if (e.target.value) setAddMiles(""); }} placeholder="e.g. 45000" className="mb-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+
+            <p className="mb-1 text-center text-[10px] uppercase text-slate-400">— or —</p>
+            <label className="mb-1 block text-xs font-medium text-slate-600">Lasts about N more miles</label>
+            <input type="text" inputMode="numeric" value={addMiles} onChange={(e) => { setAddMiles(e.target.value); if (e.target.value) setNextDue(""); }} placeholder="e.g. 2000" className="mb-4 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+
+            <div className="flex gap-2">
+              <button onClick={submit} disabled={!nextDue && !addMiles} className="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">Save Inspection</button>
+              <button onClick={() => { setShow(false); reset(); }} className="flex-1 rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export function MaintenanceScheduleClient() {
   const [station, setStation] = useState("ALL");
   const { data, loading, reload } = useData<ScheduleData>(`/api/maintenance-schedule?station=${station}`);
@@ -357,6 +434,14 @@ export function MaintenanceScheduleClient() {
 
   async function handleUndismiss(vehicleId: string, service: string) {
     const res = await apiSend(`/api/maintenance-schedule/dismiss?vehicleId=${vehicleId}&service=${encodeURIComponent(service)}`, "DELETE");
+    if (res.ok) {
+      reload();
+      setSelectedVehicle(null);
+    }
+  }
+
+  async function handleInspect(vehicleId: string, service: string, nextDueMileage: number, inspectedAt: string) {
+    const res = await apiSend("/api/maintenance-schedule/dismiss", "POST", { vehicleId, service, action: "inspected", nextDueMileage, inspectedAt });
     if (res.ok) {
       reload();
       setSelectedVehicle(null);
@@ -515,6 +600,7 @@ export function MaintenanceScheduleClient() {
           onClose={() => setSelectedVehicle(null)}
           onDismiss={handleDismiss}
           onUndismiss={handleUndismiss}
+          onInspect={handleInspect}
         />
       )}
     </div>

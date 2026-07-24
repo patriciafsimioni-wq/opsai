@@ -629,9 +629,13 @@ model PmAlertDismissal {
   id        String   @id @default(cuid())
   vehicleId String
   service   String
-  action    String   @default("done") // "done" or "skip"
+  action    String   @default("done") // "done" | "skip" | "assigned" | "inspected"
   note      String?
   mileageAt Float?
+  // Set when action = "inspected": the service was checked and still has life,
+  // so the next-due is pushed to this odometer instead of being marked complete.
+  nextDueMileage Float?
+  inspectedAt    DateTime?
   createdAt DateTime @default(now())
 
   vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
