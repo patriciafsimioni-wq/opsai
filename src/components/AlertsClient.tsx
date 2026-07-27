@@ -38,6 +38,8 @@ export function AlertsClient() {
   const { data: alerts, loading, reload } = useData<AlertDTO[]>("/api/alerts");
   const [filter, setFilter] = useState("");
   const [tab, setTab] = useState<"all" | "unread">("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
 
   const filtered = useMemo(() => {
     if (!alerts) return [];
@@ -49,6 +51,20 @@ export function AlertsClient() {
       return true;
     });
   }, [alerts, filter, tab]);
+
+  const allSelected = filtered.length > 0 && filtered.every((a) => selected.has(a.id));
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(filtered.map((a) => a.id)));
+  }
 
   async function markRead(a: AlertDTO) {
     await apiSend(`/api/alerts/${a.id}`, "PATCH", { read: true });
@@ -62,6 +78,17 @@ export function AlertsClient() {
   }
   async function remove(a: AlertDTO) {
     await apiSend(`/api/alerts/${a.id}`, "DELETE");
+    reload();
+    router.refresh();
+  }
+  async function bulk(action: "read" | "delete") {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    if (action === "delete" && !confirm(`Delete ${ids.length} alert${ids.length === 1 ? "" : "s"}? This can't be undone.`)) return;
+    setBusy(true);
+    await apiSend("/api/alerts/bulk", "POST", { action, ids });
+    setBusy(false);
+    setSelected(new Set());
     reload();
     router.refresh();
   }
@@ -96,7 +123,27 @@ export function AlertsClient() {
           <option value="WARNING">Warning</option>
           <option value="INFO">Info</option>
         </select>
-        <div className="ml-auto">
+        <label className="flex items-center gap-2 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            checked={allSelected}
+            onChange={toggleAll}
+            disabled={filtered.length === 0}
+            className="h-4 w-4 rounded border-slate-300"
+          />
+          Select all
+        </label>
+        <div className="ml-auto flex gap-2">
+          {selected.size > 0 && (
+            <>
+              <Button variant="secondary" onClick={() => bulk("read")} disabled={busy}>
+                <CheckCheck size={16} /> Mark read ({selected.size})
+              </Button>
+              <Button variant="danger" onClick={() => bulk("delete")} disabled={busy}>
+                <Trash2 size={16} /> Delete ({selected.size})
+              </Button>
+            </>
+          )}
           <Button variant="secondary" onClick={markAllRead} disabled={unreadCount === 0}>
             <CheckCheck size={16} /> Mark all read
           </Button>
@@ -122,6 +169,12 @@ export function AlertsClient() {
                 key={a.id}
                 className={"flex items-center gap-4 px-5 py-3.5 " + (a.read ? "" : "bg-blue-50/40")}
               >
+                <input
+                  type="checkbox"
+                  checked={selected.has(a.id)}
+                  onChange={() => toggleOne(a.id)}
+                  className="h-4 w-4 shrink-0 rounded border-slate-300"
+                />
                 <div
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
                   style={{ backgroundColor: sev.bg, color: sev.color }}
