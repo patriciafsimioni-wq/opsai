@@ -192,7 +192,12 @@ export function DotComplianceClient({ canManage = false }: { canManage?: boolean
   }
 
   const dotDrivers = useMemo(
-    () => (drivers ?? []).filter((d) => d.vehicleType === "BOX_TRUCK" || d.vehicleType === "TRACTOR_TRUCK"),
+    () =>
+      (drivers ?? []).filter(
+        (d) =>
+          d.status !== "INACTIVE" &&
+          (d.vehicleType === "BOX_TRUCK" || d.vehicleType === "TRACTOR_TRUCK"),
+      ),
     [drivers],
   );
 

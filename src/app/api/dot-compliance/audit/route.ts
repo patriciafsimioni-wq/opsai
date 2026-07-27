@@ -48,7 +48,7 @@ export async function GET() {
 
   const [drivers, companyDocs, audits, trucks] = await Promise.all([
     prisma.driver.findMany({
-      where: { vehicleType: { in: ["BOX_TRUCK", "TRACTOR_TRUCK"] } },
+      where: { vehicleType: { in: ["BOX_TRUCK", "TRACTOR_TRUCK"] }, status: { not: "INACTIVE" } },
       orderBy: [{ station: "asc" }, { firstName: "asc" }],
       include: { vehicles: { select: { name: true, dxNumber: true, licensePlate: true, vin: true } } },
     }),

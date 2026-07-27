@@ -106,7 +106,7 @@ async function generateComplianceAlerts() {
 async function generateDotAlerts(now: Date, cutoff: Date, newAlerts: NewAlert[]) {
   const YEAR = 365 * 24 * 60 * 60 * 1000;
   const drivers = await prisma.driver.findMany({
-    where: { vehicleType: { in: ["BOX_TRUCK", "TRACTOR_TRUCK"] } },
+    where: { vehicleType: { in: ["BOX_TRUCK", "TRACTOR_TRUCK"] }, status: { not: "INACTIVE" } },
     select: {
       id: true, firstName: true, lastName: true,
       medicalCardExpiry: true, licenseExpiry: true, annualReviewAt: true,
@@ -145,6 +145,23 @@ async function generateDotAlerts(now: Date, cutoff: Date, newAlerts: NewAlert[])
     for (const [label, url] of missingDocs) {
       if (!url) items.push({ driverId: d.id, label, message: `${label} not uploaded for ${who}`, critical: false });
     }
+  }
+
+  // Clear any lingering open DOT alerts for drivers that are now inactive, so
+  // deactivated drivers stop showing up anywhere under compliance.
+  const inactiveDrivers = await prisma.driver.findMany({
+    where: { status: "INACTIVE" },
+    select: { id: true },
+  });
+  if (inactiveDrivers.length > 0) {
+    await prisma.alert.updateMany({
+      where: {
+        type: "DOCUMENT_EXPIRY",
+        resolvedAt: null,
+        driverId: { in: inactiveDrivers.map((d) => d.id) },
+      },
+      data: { resolvedAt: new Date() },
+    });
   }
 
   const existing = await prisma.alert.findMany({
