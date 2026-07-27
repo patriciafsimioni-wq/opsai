@@ -151,6 +151,50 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
       });
   }, [activeVehicles, search, statusFilter, stationFilter, sortKey, sortDir]);
 
+  function downloadCsv() {
+    const fmtDate = (d: string | null | undefined) =>
+      d ? new Date(d).toISOString().slice(0, 10) : "";
+    const columns: { header: string; value: (v: VehicleDTO) => string | number }[] = [
+      { header: "DX Number", value: (v) => v.dxNumber ?? "" },
+      { header: "Name", value: (v) => v.name },
+      { header: "License Plate", value: (v) => v.licensePlate },
+      { header: "VIN", value: (v) => v.vin },
+      { header: "Year", value: (v) => v.year },
+      { header: "Make", value: (v) => v.make },
+      { header: "Model", value: (v) => v.model },
+      { header: "Type", value: (v) => titleCase(v.type) },
+      { header: "Status", value: (v) => VEHICLE_STATUS[v.status as keyof typeof VEHICLE_STATUS]?.label ?? v.status },
+      { header: "Fleet", value: (v) => FLEET_GROUP_LABEL[v.fleetGroup ?? "REGULAR"] ?? (v.fleetGroup ?? "REGULAR") },
+      { header: "Station", value: (v) => STATION_LABEL[v.station]?.split(" — ")[0] ?? v.station },
+      { header: "Fuel Type", value: (v) => titleCase(v.fuelType) },
+      { header: "Odometer", value: (v) => v.odometer ?? 0 },
+      { header: "Leasing Company", value: (v) => v.leasingCompany ?? "" },
+      { header: "Lease Type", value: (v) => v.leaseType ?? "" },
+      { header: "Lease Start", value: (v) => fmtDate(v.leaseStartDate) },
+      { header: "Lease End", value: (v) => fmtDate(v.leaseEndDate) },
+      { header: "Monthly Payment", value: (v) => (v.totalRentPerMonth ?? v.monthlyPayment ?? "") as string | number },
+      { header: "Camera", value: (v) => (v.hasSamsaraCamera ? "Yes" : "No") },
+      { header: "Samsara ID", value: (v) => v.samsaraId ?? "" },
+    ];
+    const escape = (val: string | number) => {
+      const s = String(val ?? "");
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const rows = [
+      columns.map((c) => c.header).join(","),
+      ...filtered.map((v) => columns.map((c) => escape(c.value(v))).join(",")),
+    ];
+    const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fleet-vehicles-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   async function syncSamsara() {
     setSyncing(true);
     setSyncResult(null);
@@ -390,6 +434,9 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
             </option>
           ))}
         </select>
+        <Button variant="secondary" onClick={downloadCsv} disabled={filtered.length === 0}>
+          <FileDown size={16} /> Download CSV
+        </Button>
         {canManage && (
           <>
             <Button variant="secondary" onClick={() => window.open("/api/vehicles/lease-return-report", "_blank")}>
