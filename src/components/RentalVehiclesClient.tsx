@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Search, Pencil, Trash2, Car, Paperclip, X, CalendarPlus } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Car, Paperclip, X, CalendarPlus, BellRing } from "lucide-react";
 import { Card, Button, Table, Th, Td, SortTh, EmptyState } from "@/components/ui";
 import { Field, Input, Select, Textarea, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
@@ -69,6 +69,8 @@ export function RentalVehiclesClient({ canManage }: { canManage: boolean }) {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+  const [reminding, setReminding] = useState(false);
+  const [reminderMsg, setReminderMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const sort = useTableSort<RentalVehicle, "vehicle" | "company" | "station" | "status" | "pickup" | "return" | "cost">(
     {
@@ -206,6 +208,28 @@ export function RentalVehiclesClient({ canManage }: { canManage: boolean }) {
       reload();
     } else setError(res.error ?? "Failed to save");
   }
+  async function sendReminders() {
+    if (!confirm("Email every station manager a reminder to upload the invoice for their station's current/latest rental vehicle?")) return;
+    setReminding(true);
+    setReminderMsg(null);
+    const res = await apiSend("/api/rental-vehicles/remind", "POST");
+    setReminding(false);
+    if (res.ok && res.data) {
+      const { sent, stationsWithoutManager, failed } = res.data as {
+        sent: number;
+        stationsWithRentals: number;
+        stationsWithoutManager: string[];
+        failed: number;
+      };
+      const parts = [`Reminder sent to ${sent} station manager${sent === 1 ? "" : "s"}.`];
+      if (stationsWithoutManager.length) parts.push(`No station manager for: ${stationsWithoutManager.join(", ")}.`);
+      if (failed) parts.push(`${failed} email${failed === 1 ? "" : "s"} failed to send.`);
+      setReminderMsg({ ok: sent > 0, text: parts.join(" ") });
+    } else {
+      setReminderMsg({ ok: false, text: res.error ?? "Failed to send reminders" });
+    }
+  }
+
   async function remove(r: RentalVehicle) {
     if (!confirm(`Delete rental "${r.vehicleName}"?`)) return;
     const res = await apiSend(`/api/rental-vehicles/${r.id}`, "DELETE");
@@ -261,9 +285,19 @@ export function RentalVehiclesClient({ canManage }: { canManage: boolean }) {
             ))}
           </select>
           {canManage && (
-            <Button onClick={openCreate}><Plus size={16} /> Add Rental</Button>
+            <>
+              <Button variant="secondary" onClick={sendReminders} disabled={reminding} title="Email station managers to upload their rental invoices">
+                <BellRing size={16} /> {reminding ? "Sending…" : "Send Reminders"}
+              </Button>
+              <Button onClick={openCreate}><Plus size={16} /> Add Rental</Button>
+            </>
           )}
         </div>
+        {reminderMsg && (
+          <div className={`border-b border-[var(--color-border)] px-4 py-2 text-sm ${reminderMsg.ok ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+            {reminderMsg.text}
+          </div>
+        )}
 
         {loading ? (
           <p className="p-8 text-center text-sm text-slate-400">Loading…</p>
