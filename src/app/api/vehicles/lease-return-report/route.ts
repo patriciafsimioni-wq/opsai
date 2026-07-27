@@ -162,6 +162,9 @@ export async function GET() {
         <td>${fmtMoney(v.currentBookValue ?? v.openEndNetBookValue)}</td>
         <td>${fmtMoney(v.currentMarketValue)}</td>
         <td>${equityCell(a)}</td>
+        <td>${fmtDate(v.offboardedDate)}</td>
+        <td>${fmtMoney(v.offboardSoldAmount)}</td>
+        <td>${fmtNum(v.offboardMileage)}</td>
         <td><span class="badge ${a.returnState.cls}">${a.returnState.label}</span></td>
       </tr>`;
   };
@@ -175,15 +178,17 @@ export async function GET() {
         <div class="scroll">
         <table class="grid">
           <colgroup>
-            <col style="width:6%"><col style="width:9%"><col style="width:5%"><col style="width:8%"><col style="width:5%"><col style="width:6%">
-            <col style="width:6%"><col style="width:6%"><col style="width:6%"><col style="width:4%"><col style="width:6%">
-            <col style="width:7%"><col style="width:3%"><col style="width:6%"><col style="width:6%"><col style="width:6%"><col style="width:6%">
+            <col style="width:5%"><col style="width:7%"><col style="width:4%"><col style="width:7%"><col style="width:5%"><col style="width:5%">
+            <col style="width:5%"><col style="width:5%"><col style="width:5%"><col style="width:4%"><col style="width:5%">
+            <col style="width:6%"><col style="width:3%"><col style="width:5%"><col style="width:5%"><col style="width:5%">
+            <col style="width:5%"><col style="width:5%"><col style="width:4%"><col style="width:5%">
           </colgroup>
           <thead>
             <tr>
               <th>Vehicle</th><th>Description</th><th>Age</th><th>VIN</th><th>Plate</th><th>Station</th>
               <th>Lease Type</th><th>Lease Start</th><th>Lease End</th><th>Months Left</th><th>Rent/Mo</th>
-              <th>Odo / Contract</th><th>Over Miles</th><th>Book Value</th><th>Market Value</th><th>Equity</th><th>Status</th>
+              <th>Odo / Contract</th><th>Over Miles</th><th>Book Value</th><th>Market Value</th><th>Equity</th>
+              <th>Sale Date</th><th>Sale Price</th><th>End Miles</th><th>Status</th>
             </tr>
           </thead>
           <tbody>${list.map(detailRow).join("")}</tbody>
