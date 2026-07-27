@@ -8,6 +8,7 @@ import { useData, apiSend } from "@/lib/use-data";
 import { useTableSort } from "@/lib/use-sort";
 import { STATIONS, STATION_LABEL } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
+import { compressImage } from "@/lib/image";
 
 type Invoice = { amount: number | null; url: string | null; note: string | null };
 
@@ -167,7 +168,7 @@ export function RentalVehiclesClient({ canManage }: { canManage: boolean }) {
   async function uploadInvoiceFile(idx: number, file: File) {
     setUploadingIdx(idx);
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("file", await compressImage(file));
     const res = await fetch("/api/uploads", { method: "POST", body: fd });
     const data = await res.json().catch(() => ({}));
     if (res.ok && (data as { url?: string }).url) {

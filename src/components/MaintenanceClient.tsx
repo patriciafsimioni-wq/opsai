@@ -22,6 +22,7 @@ import {
   IS_TROVA,
 } from "@/lib/constants";
 import { formatCurrency, todayInputDate } from "@/lib/utils";
+import { compressImage } from "@/lib/image";
 
 const DEFAULT_RATE = "95";
 
@@ -626,7 +627,7 @@ function ServiceDoneModal({
     let invoiceUrl: string | undefined;
     if (file) {
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", await compressImage(file));
       const up = await fetch("/api/uploads", { method: "POST", body: fd });
       const upData = await up.json().catch(() => ({}));
       if (!up.ok) {

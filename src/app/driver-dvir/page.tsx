@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { BRAND } from "@/lib/brand";
 import { STATIONS, STATION_LABEL } from "@/lib/constants";
 import { ClipboardCheck, CheckCircle2, Truck, Camera } from "lucide-react";
+import { compressImage } from "@/lib/image";
 
 type Vehicle = { id: string; name: string; dxNumber: string | null };
 
@@ -278,7 +279,7 @@ export default function DriverDvirPage() {
                 if (!file) return;
                 setUploading(true);
                 const fd = new FormData();
-                fd.append("file", file);
+                fd.append("file", await compressImage(file));
                 const res = await fetch("/api/uploads", { method: "POST", body: fd });
                 const data = await res.json().catch(() => ({}));
                 if (res.ok && (data as { url: string }).url) {

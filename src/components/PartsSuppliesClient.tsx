@@ -8,6 +8,7 @@ import { useData, apiSend } from "@/lib/use-data";
 import { useTableSort } from "@/lib/use-sort";
 import { STATIONS, STATION_LABEL } from "@/lib/constants";
 import { formatDate, todayInputDate } from "@/lib/utils";
+import { compressImage } from "@/lib/image";
 
 type PartsExpense = {
   id: string;
@@ -294,7 +295,7 @@ export function PartsSuppliesClient({ canManage }: { canManage: boolean }) {
                     if (!file) return;
                     setUploading(true);
                     const fd = new FormData();
-                    fd.append("file", file);
+                    fd.append("file", await compressImage(file));
                     const res = await fetch("/api/uploads", { method: "POST", body: fd });
                     const data = await res.json().catch(() => ({}));
                     if (res.ok && (data as { url?: string }).url) {

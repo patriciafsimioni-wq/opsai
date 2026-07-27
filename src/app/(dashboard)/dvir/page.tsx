@@ -5,6 +5,7 @@ import { Card, CardHeader, Badge } from "@/components/ui";
 import { ClipboardCheck, AlertTriangle, Camera, CheckCircle2, XCircle, Flag } from "lucide-react";
 import { apiSend } from "@/lib/use-data";
 import { STATIONS as BRAND_STATIONS } from "@/lib/constants";
+import { compressImage } from "@/lib/image";
 
 type Vehicle = { id: string; name: string; dxNumber: string | null; station?: string };
 type DvirReport = {
@@ -262,7 +263,7 @@ export default function DvirPage() {
                       if (!file) return;
                       setUploading(true);
                       const fd = new FormData();
-                      fd.append("file", file);
+                      fd.append("file", await compressImage(file));
                       const res = await fetch("/api/uploads", { method: "POST", body: fd });
                       const data = await res.json().catch(() => ({}));
                       if (res.ok && (data as { url: string }).url) {

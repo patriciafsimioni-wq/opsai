@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const formData = await req.formData().catch(() => null);
   const file = formData?.get("file");
   if (!file || !(file instanceof File)) return badRequest("No file uploaded");
-  if (file.size > MAX_BYTES) return badRequest("File exceeds the 5 MB limit");
+  if (file.size > MAX_BYTES) return badRequest("File is too large — please use an image under 4 MB");
   if (!ALLOWED.includes(file.type)) return badRequest("Unsupported file type");
 
   const buffer = Buffer.from(await file.arrayBuffer());

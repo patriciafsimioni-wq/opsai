@@ -6,6 +6,7 @@ import { Button, Card, Badge } from "@/components/ui";
 import { Field, Input, Modal } from "@/components/form";
 import { apiSend } from "@/lib/use-data";
 import { formatDate } from "@/lib/utils";
+import { compressImage } from "@/lib/image";
 
 const BRANDING_OPTIONS = [
   { value: "", label: "Select branding…" },
@@ -138,7 +139,7 @@ export function VehicleActions({ vehicleId, branding: initialBranding, offboarde
                       const file = e.target.files?.[0];
                       if (!file) return;
                       const fd = new FormData();
-                      fd.append("file", file);
+                      fd.append("file", await compressImage(file));
                       const res = await fetch("/api/uploads", { method: "POST", body: fd });
                       const data = await res.json().catch(() => ({}));
                       if (res.ok && (data as { url: string }).url) saveBrandingPhoto(i, (data as { url: string }).url);
@@ -215,7 +216,7 @@ export function VehicleActions({ vehicleId, branding: initialBranding, offboarde
                       const file = e.target.files?.[0];
                       if (!file) return;
                       const fd = new FormData();
-                      fd.append("file", file);
+                      fd.append("file", await compressImage(file));
                       const res = await fetch("/api/uploads", { method: "POST", body: fd });
                       const data = await res.json().catch(() => ({}));
                       if (res.ok && (data as { url: string }).url) {

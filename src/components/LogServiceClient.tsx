@@ -9,6 +9,7 @@ import { useTableSort } from "@/lib/use-sort";
 import type { WorkOrderDTO, VehicleDTO, ServiceDTO } from "@/lib/types";
 import { FORM_STATIONS, STATION_LABEL } from "@/lib/constants";
 import { formatCurrency, formatDate, todayInputDate } from "@/lib/utils";
+import { compressImage } from "@/lib/image";
 
 function todayStr() {
   return todayInputDate();
@@ -221,7 +222,7 @@ export function LogServiceClient({
     let invoiceUrl: string | null = null;
     if (file) {
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", await compressImage(file));
       const up = await fetch("/api/uploads", { method: "POST", body: fd });
       const upData = await up.json().catch(() => ({}));
       if (!up.ok) {

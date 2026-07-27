@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pencil, X, Save } from "lucide-react";
 import { apiSend } from "@/lib/use-data";
 import { STATIONS } from "@/lib/constants";
+import { compressImage } from "@/lib/image";
 
 type VehicleData = {
   id: string;
@@ -53,8 +54,9 @@ export function VehicleEditForm({ vehicle }: { vehicle: VehicleData }) {
   const set = (field: string, value: string | number | null) =>
     setForm((f) => ({ ...f, [field]: value }));
 
-  async function uploadInspection(file: File) {
+  async function uploadInspection(rawFile: File) {
     setUploadError("");
+    const file = await compressImage(rawFile);
     if (file.size > MAX_UPLOAD_BYTES) {
       setUploadError(`File is ${(file.size / 1024 / 1024).toFixed(1)} MB — the maximum is about 3.5 MB. Please compress the PDF or scan at a lower resolution.`);
       return;
