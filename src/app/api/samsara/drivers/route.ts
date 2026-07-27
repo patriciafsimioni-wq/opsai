@@ -14,9 +14,12 @@ export async function POST() {
     );
   }
 
-  const samsaraDrivers = await getSamsaraDrivers();
+  const [samsaraDrivers, deactivatedSamsaraDrivers] = await Promise.all([
+    getSamsaraDrivers(),
+    getSamsaraDrivers("deactivated"),
+  ]);
   const existingDrivers = await prisma.driver.findMany({
-    select: { id: true, firstName: true, lastName: true, samsaraId: true },
+    select: { id: true, firstName: true, lastName: true, samsaraId: true, status: true },
   });
 
   // Build lookup by samsaraId and by name
@@ -30,6 +33,31 @@ export async function POST() {
   let created = 0;
   let updated = 0;
   let skipped = 0;
+  let deactivated = 0;
+
+  // Mirror Samsara deactivations: any portal driver whose Samsara record is
+  // deactivated is set INACTIVE so they drop out of compliance and elsewhere.
+  for (const sd of deactivatedSamsaraDrivers) {
+    const nameParts = sd.name.trim().split(/\s+/);
+    const firstName = nameParts[0]
+      ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1).toLowerCase()
+      : "Unknown";
+    const lastName = nameParts.slice(1).map((n) =>
+      n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()
+    ).join(" ") || "Driver";
+
+    const existing =
+      bySamsaraId.get(sd.id) ??
+      byFullName.get(`${firstName} ${lastName}`.toUpperCase());
+
+    if (existing && existing.status !== "INACTIVE") {
+      await prisma.driver.update({
+        where: { id: existing.id },
+        data: { status: "INACTIVE" },
+      });
+      deactivated++;
+    }
+  }
 
   for (const sd of samsaraDrivers) {
     if (sd.driverActivationStatus !== "active") {
@@ -93,5 +121,6 @@ export async function POST() {
     created,
     updated,
     skipped,
+    deactivated,
   });
 }

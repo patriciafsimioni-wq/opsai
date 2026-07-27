@@ -97,11 +97,17 @@ export interface SamsaraDriver {
   carrierSettings?: { carrierName?: string; homeTerminalName?: string };
 }
 
-export async function getSamsaraDrivers(): Promise<SamsaraDriver[]> {
+// Samsara's /fleet/drivers returns only active drivers by default. Pass
+// "deactivated" to fetch the deactivated ones (used to mirror deactivations
+// into our portal).
+export async function getSamsaraDrivers(
+  activationStatus?: "active" | "deactivated",
+): Promise<SamsaraDriver[]> {
   const all: SamsaraDriver[] = [];
   let cursor: string | undefined;
   do {
     const params: Record<string, string> = { limit: "200" };
+    if (activationStatus) params.driverActivationStatus = activationStatus;
     if (cursor) params.after = cursor;
     const res = await samsaraFetch<{ data: SamsaraDriver[]; pagination: { endCursor: string; hasNextPage: boolean } }>(
       "/fleet/drivers",

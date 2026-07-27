@@ -57,7 +57,7 @@ export function DriversClient({ canManage }: { canManage: boolean }) {
       if (!res.ok) {
         setSyncResult(`Error: ${data.error || "Sync failed"}`);
       } else {
-        setSyncResult(`Created ${data.created}, updated ${data.updated} of ${data.samsaraDrivers} Samsara drivers`);
+        setSyncResult(`Created ${data.created}, updated ${data.updated}${data.deactivated ? `, deactivated ${data.deactivated}` : ""} of ${data.samsaraDrivers} Samsara drivers`);
         reload();
       }
     } catch {
