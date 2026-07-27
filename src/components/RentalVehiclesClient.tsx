@@ -209,21 +209,20 @@ export function RentalVehiclesClient({ canManage }: { canManage: boolean }) {
     } else setError(res.error ?? "Failed to save");
   }
   async function sendReminders() {
-    if (!confirm("Email every station manager a reminder to upload the invoice for their station's current/latest rental vehicle?")) return;
+    if (!confirm("Email every station manager a reminder to report any rental vehicles and upload their invoices immediately?")) return;
     setReminding(true);
     setReminderMsg(null);
     const res = await apiSend("/api/rental-vehicles/remind", "POST");
     setReminding(false);
     if (res.ok && res.data) {
-      const { sent, stationsWithoutManager, failed } = res.data as {
+      const { sent, totalManagers, failed } = res.data as {
         sent: number;
-        stationsWithRentals: number;
-        stationsWithoutManager: string[];
+        totalManagers: number;
         failed: number;
       };
-      const parts = [`Reminder sent to ${sent} station manager${sent === 1 ? "" : "s"}.`];
-      if (stationsWithoutManager.length) parts.push(`No station manager for: ${stationsWithoutManager.join(", ")}.`);
+      const parts = [`Reminder sent to ${sent} of ${totalManagers} station manager${totalManagers === 1 ? "" : "s"}.`];
       if (failed) parts.push(`${failed} email${failed === 1 ? "" : "s"} failed to send.`);
+      if (totalManagers === 0) parts.push("No station managers found — add users with the Station Manager role.");
       setReminderMsg({ ok: sent > 0, text: parts.join(" ") });
     } else {
       setReminderMsg({ ok: false, text: res.error ?? "Failed to send reminders" });
@@ -286,7 +285,7 @@ export function RentalVehiclesClient({ canManage }: { canManage: boolean }) {
           </select>
           {canManage && (
             <>
-              <Button variant="secondary" onClick={sendReminders} disabled={reminding} title="Email station managers to upload their rental invoices">
+              <Button variant="secondary" onClick={sendReminders} disabled={reminding} title="Email all station managers to report rentals and upload invoices immediately">
                 <BellRing size={16} /> {reminding ? "Sending…" : "Send Reminders"}
               </Button>
               <Button onClick={openCreate}><Plus size={16} /> Add Rental</Button>

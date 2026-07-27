@@ -436,23 +436,11 @@ export function buildApprovalEmail(params: {
 export function buildRentalInvoiceReminderEmail(params: {
   managerName: string;
   stationLabel: string;
-  rentals: { vehicleName: string; rentalCompany: string | null; pickupDate: string | null; hasInvoice: boolean }[];
   appUrl: string;
 }): { subject: string; html: string } {
-  const { managerName, stationLabel, rentals, appUrl } = params;
+  const { managerName, stationLabel, appUrl } = params;
 
-  const subject = `Reminder: upload rental invoice${rentals.length === 1 ? "" : "s"} — ${stationLabel}`;
-
-  const rows = rentals
-    .map(
-      (r) => `<tr>
-      <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${escapeHtml(r.vehicleName)}</td>
-      <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${escapeHtml(r.rentalCompany ?? "—")}</td>
-      <td style="padding: 8px 12px; border: 1px solid #e2e8f0; white-space: nowrap;">${r.pickupDate ? escapeHtml(new Date(r.pickupDate).toISOString().slice(0, 10)) : "—"}</td>
-      <td style="padding: 8px 12px; border: 1px solid #e2e8f0; color: ${r.hasInvoice ? "#16a34a" : "#dc2626"}; font-weight: 600;">${r.hasInvoice ? "Uploaded" : "Missing"}</td>
-    </tr>`,
-    )
-    .join("");
+  const subject = "Action needed: report your rental vehicles & upload invoices";
 
   const html = shell(
     "Rental Invoice Reminder",
@@ -460,20 +448,16 @@ export function buildRentalInvoiceReminderEmail(params: {
     `
   <p style="font-size: 14px; line-height: 1.6;">Hi ${escapeHtml(managerName)},</p>
   <p style="font-size: 14px; line-height: 1.6;">
-    Please upload the rental invoice${rentals.length === 1 ? "" : "s"} for the current/latest rental vehicle${rentals.length === 1 ? "" : "s"} at
-    <strong>${escapeHtml(stationLabel)}</strong>. Open the Rental Vehicles page, find the vehicle, and add the invoice (amount + photo/PDF).
+    If you currently have any <strong>rental vehicles</strong>${stationLabel ? ` at <strong>${escapeHtml(stationLabel)}</strong>` : ""},
+    please report them in the portal and <strong>upload the invoices right away</strong>. This is a reminder to
+    submit any outstanding rentals and invoices <strong>immediately</strong> so we stay current.
   </p>
-  <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px;">
-    <thead><tr>
-      <th style="padding: 8px 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left;">Vehicle</th>
-      <th style="padding: 8px 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left;">Rental Company</th>
-      <th style="padding: 8px 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left;">Pickup</th>
-      <th style="padding: 8px 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left;">Invoice</th>
-    </tr></thead>
-    <tbody>${rows}</tbody>
-  </table>
+  <p style="font-size: 14px; line-height: 1.6;">
+    Open the Rental Vehicles page, add each rental vehicle (if it isn't there yet), and attach the invoice —
+    including the <strong>amount</strong> and a <strong>photo or PDF</strong>. If you have no rentals right now, no action is needed.
+  </p>
   <div style="text-align: center; margin: 24px 0;">
-    <a href="${appUrl}/rental-vehicles" style="display: inline-block; background: #d97706; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Upload Rental Invoice</a>
+    <a href="${appUrl}/rental-vehicles" style="display: inline-block; background: #d97706; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Report Rentals & Upload Invoices</a>
   </div>`,
   );
 
