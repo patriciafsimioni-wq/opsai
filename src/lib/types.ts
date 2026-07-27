@@ -3,7 +3,9 @@ import type {
   Driver,
   Trip,
   WorkOrder,
+  WorkOrderItem,
   WorkOrderRequest,
+  WoRequestItem,
   FuelLog,
   Geofence,
   Alert,
@@ -39,10 +41,15 @@ export type TripDTO = Json<Trip> & {
   driver: Json<Driver> | null;
 };
 
+export type WorkOrderItemDTO = Json<WorkOrderItem> & {
+  service?: Json<Service> | null;
+};
+
 export type WorkOrderDTO = Json<WorkOrder> & {
   vehicle: Json<Vehicle>;
   service?: Json<Service> | null;
   assignedTo?: { id: string; name: string; email: string } | null;
+  items?: WorkOrderItemDTO[];
 };
 
 export type ServiceDTO = Json<Service> & {
@@ -63,11 +70,16 @@ export type AlertDTO = Json<Alert> & {
 
 export type UserSummary = Pick<Json<User>, "id" | "name" | "email" | "role">;
 
+export type WoRequestItemDTO = Json<WoRequestItem> & {
+  service?: Json<Service> | null;
+};
+
 export type WorkOrderRequestDTO = Json<WorkOrderRequest> & {
   vehicle: Json<Vehicle> | null;
   service: Json<Service> | null;
   requestedBy: UserSummary;
   reviewedBy: UserSummary | null;
+  items?: WoRequestItemDTO[];
 };
 
 export type PositionDTO = {

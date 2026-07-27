@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ClipboardCheck, Lock, Upload, Pencil, X } from "lucide-react";
+import { ClipboardCheck, Lock, Upload, Pencil, X, Plus, Trash2 } from "lucide-react";
 import { Card, CardHeader, Button, Badge, Table, Th, Td, SortTh, EmptyState } from "@/components/ui";
 import { Field, Input, Select, Textarea } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
@@ -14,6 +14,13 @@ import { compressImage } from "@/lib/image";
 function todayStr() {
   return todayInputDate();
 }
+
+type ServiceLine = {
+  category: string;
+  serviceId: string;
+  materialCost: string;
+  serviceCost: string;
+};
 
 export function LogServiceClient({
   canManage,
@@ -36,23 +43,53 @@ export function LogServiceClient({
       vin: "",
       vehicleId: "",
       vehicleOther: "",
-      category: "PREVENTIVE",
-      serviceId: "",
       odometer: "",
       serviceProvider: "" as string,
       serviceProviderOther: "",
       completedAt: todayStr(),
       poNumber: "",
       invoiceNumber: "",
-      materialCost: "",
-      serviceCost: "",
       description: "",
     }),
     [],
   );
 
+  const emptyLine = (): ServiceLine => ({
+    category: "PREVENTIVE",
+    serviceId: "",
+    materialCost: "",
+    serviceCost: "",
+  });
+
   const [form, setForm] = useState(initialForm);
+  // One or more service line items on a single invoice (shared vehicle, PO,
+  // invoice #, date, provider, photo). Legacy single-service = one line.
+  const [lines, setLines] = useState<ServiceLine[]>([emptyLine()]);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const servicesForCategory = (cat: string) =>
+    (services ?? []).filter((s) => s.category === cat).sort((a, b) => a.name.localeCompare(b.name));
+
+  function updateLine(idx: number, patch: Partial<ServiceLine>) {
+    setLines((ls) => ls.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
+  }
+
+  function selectLineService(idx: number, serviceId: string) {
+    const svc = (services ?? []).find((s) => s.id === serviceId);
+    updateLine(idx, {
+      serviceId,
+      materialCost: svc && !lines[idx].materialCost ? String(svc.materialCost) : lines[idx].materialCost,
+      serviceCost: svc && !lines[idx].serviceCost ? String(svc.laborCost) : lines[idx].serviceCost,
+    });
+  }
+
+  function addLine() {
+    setLines((ls) => [...ls, emptyLine()]);
+  }
+
+  function removeLine(idx: number) {
+    setLines((ls) => (ls.length <= 1 ? ls : ls.filter((_, i) => i !== idx)));
+  }
   useEffect(() => {
     if (serviceProviders.length > 0 && !form.serviceProvider) {
       setForm((f) => ({ ...f, serviceProvider: serviceProviders[0] }));
@@ -60,25 +97,38 @@ export function LogServiceClient({
   }, [serviceProviders]);
 
   function startEdit(o: WorkOrderDTO) {
-    const category = o.service?.category ?? (o.type === "REPAIR" ? "CORRECTIVE" : "PREVENTIVE");
+    const parentCategory = o.service?.category ?? (o.type === "REPAIR" ? "CORRECTIVE" : "PREVENTIVE");
     const knownProvider = o.vendor && serviceProviders.includes(o.vendor);
     setForm({
       station: o.station ?? FORM_STATIONS[0],
       vin: o.vin ?? "",
       vehicleId: o.vehicleId ?? (o.vehicleOther ? "OTHER" : ""),
       vehicleOther: o.vehicleOther ?? "",
-      category,
-      serviceId: o.serviceId ?? "",
       odometer: o.odometerAt != null ? String(o.odometerAt) : "",
       serviceProvider: o.vendor ? (knownProvider ? o.vendor : "Other") : "",
       serviceProviderOther: o.vendor && !knownProvider ? o.vendor : "",
       completedAt: o.completedAt ? String(o.completedAt).slice(0, 10) : todayStr(),
       poNumber: o.poNumber ?? "",
       invoiceNumber: o.invoiceNumber ?? "",
-      materialCost: String(o.materialCost ?? ""),
-      serviceCost: String(o.laborCost ?? ""),
       description: o.description ?? "",
     });
+    // Rebuild the line items from the stored items, or fall back to the single
+    // legacy service on older work orders.
+    setLines(
+      o.items && o.items.length > 0
+        ? o.items.map((it) => ({
+            category: it.service?.category ?? parentCategory,
+            serviceId: it.serviceId ?? "",
+            materialCost: String(it.materialCost ?? ""),
+            serviceCost: String(it.laborCost ?? ""),
+          }))
+        : [{
+            category: parentCategory,
+            serviceId: o.serviceId ?? "",
+            materialCost: String(o.materialCost ?? ""),
+            serviceCost: String(o.laborCost ?? ""),
+          }],
+    );
     setEditingId(o.id);
     setError("");
     setSavedMsg("");
@@ -88,6 +138,7 @@ export function LogServiceClient({
   function cancelEdit() {
     setEditingId(null);
     setForm({ ...initialForm });
+    setLines([emptyLine()]);
     setFile(null);
     if (fileRef.current) fileRef.current.value = "";
   }
@@ -112,7 +163,10 @@ export function LogServiceClient({
     }
   }, [orders, editParamHandled]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const total = Number(form.materialCost || 0) + Number(form.serviceCost || 0);
+  const total = lines.reduce(
+    (s, l) => s + Number(l.materialCost || 0) + Number(l.serviceCost || 0),
+    0,
+  );
 
   const sort = useTableSort<WorkOrderDTO, "service" | "vehicle" | "station" | "odometer" | "po" | "date" | "total">(
     {
@@ -144,14 +198,6 @@ export function LogServiceClient({
     return sort.sortRows(filtered);
   }, [orders, sort, search]);
 
-  const catServices = useMemo(
-    () =>
-      (services ?? [])
-        .filter((s) => s.category === form.category)
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    [services, form.category],
-  );
-
   function onSelectVehicle(vehicleId: string) {
     const v = (vehicles ?? []).find((x) => x.id === vehicleId);
     setForm((f) => ({
@@ -162,53 +208,39 @@ export function LogServiceClient({
     }));
   }
 
-  function onSelectService(serviceId: string) {
-    const svc = (services ?? []).find((s) => s.id === serviceId);
-    if (!svc) {
-      setForm((f) => ({ ...f, serviceId }));
-      return;
-    }
-    setForm((f) => ({
-      ...f,
-      serviceId,
-      description: f.description || svc.name,
-      materialCost: f.materialCost || String(svc.materialCost),
-      serviceCost: f.serviceCost || String(svc.laborCost),
-    }));
-  }
-
-  const selectedService = (services ?? []).find((s) => s.id === form.serviceId);
+  const serviceById = (id: string) => (services ?? []).find((s) => s.id === id);
+  const firstService = serviceById(lines[0]?.serviceId ?? "");
   const provider =
     form.serviceProvider === "Other" ? form.serviceProviderOther.trim() : form.serviceProvider;
 
   const hasVehicle = form.vehicleId === "OTHER" ? form.vehicleOther.trim() : form.vehicleId;
 
+  const linesValid = lines.every(
+    (l) => l.serviceId && l.materialCost !== "" && l.serviceCost !== "",
+  );
+
   const valid =
     form.station &&
     form.vin.trim() &&
     hasVehicle &&
-    form.serviceId &&
     form.odometer !== "" &&
     provider &&
     form.completedAt &&
     form.poNumber.trim() &&
     form.invoiceNumber.trim() &&
-    form.materialCost !== "" &&
-    form.serviceCost !== "" &&
+    linesValid &&
     form.description.trim();
 
   const missingFields = [
     { ok: !!form.station, label: "Station" },
     { ok: !!hasVehicle, label: "Vehicle" },
-    { ok: !!form.serviceId, label: "Service" },
+    { ok: linesValid, label: "Each service line (service + costs)" },
     { ok: !!form.vin.trim(), label: "VIN" },
     { ok: form.odometer !== "", label: "Odometer" },
     { ok: !!provider, label: "Service provider" },
     { ok: !!form.completedAt, label: "Date" },
     { ok: !!form.poNumber.trim(), label: "PO number" },
     { ok: !!form.invoiceNumber.trim(), label: "Invoice number" },
-    { ok: form.materialCost !== "", label: "Parts cost" },
-    { ok: form.serviceCost !== "", label: "Service cost" },
     { ok: !!form.description.trim(), label: "Description" },
   ]
     .filter((f) => !f.ok)
@@ -233,18 +265,33 @@ export function LogServiceClient({
       invoiceUrl = (upData as { url: string }).url;
     }
 
+    const items = lines.map((l) => {
+      const svc = serviceById(l.serviceId);
+      return {
+        serviceId: l.serviceId,
+        title: svc?.name ?? form.description,
+        materialCost: l.materialCost,
+        laborCost: l.serviceCost,
+      };
+    });
+    const multi = items.length > 1;
+    const title = multi
+      ? `${items[0].title} +${items.length - 1} more`
+      : firstService?.name ?? form.description;
+    // A single line still stores its cost on the parent (legacy shape); multiple
+    // lines are persisted as items and rolled up server-side.
     const payload = {
       vehicleId: form.vehicleId === "OTHER" ? undefined : form.vehicleId,
       vehicleOther: form.vehicleId === "OTHER" ? form.vehicleOther.trim() : undefined,
-      serviceId: form.serviceId,
+      serviceId: lines[0]?.serviceId,
       station: form.station,
-      type: form.category === "CORRECTIVE" ? "REPAIR" : "SCHEDULED_SERVICE",
-      title: selectedService?.name ?? form.description,
+      type: (firstService?.category ?? lines[0]?.category) === "CORRECTIVE" ? "REPAIR" : "SCHEDULED_SERVICE",
+      title,
       description: form.description,
       status: "COMPLETED",
       priority: "MEDIUM",
-      materialCost: form.materialCost,
-      serviceCost: form.serviceCost,
+      materialCost: lines[0]?.materialCost,
+      serviceCost: lines[0]?.serviceCost,
       vin: form.vin.trim(),
       odometerAt: form.odometer,
       vendor: provider,
@@ -253,6 +300,7 @@ export function LogServiceClient({
       invoiceUrl,
       performedBy: performerName,
       completedAt: form.completedAt,
+      ...(multi || editingId ? { items } : {}),
     };
     const res = editingId
       ? await apiSend(`/api/maintenance/${editingId}`, "PATCH", {
@@ -269,6 +317,7 @@ export function LogServiceClient({
       );
       setEditingId(null);
       setForm({ ...initialForm });
+      setLines([emptyLine()]);
       setFile(null);
       if (fileRef.current) fileRef.current.value = "";
       reload();
@@ -347,27 +396,76 @@ export function LogServiceClient({
             />
           </Field>
 
-          <Field label="Service Category" required>
-            <Select
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value, serviceId: "" })}
-              options={[
-                { value: "PREVENTIVE", label: "Preventive Maintenance" },
-                { value: "CORRECTIVE", label: "Corrective Maintenance" },
-              ]}
-            />
-          </Field>
-
-          <Field label="Service" required>
-            <Select
-              value={form.serviceId}
-              onChange={(e) => onSelectService(e.target.value)}
-              options={[
-                { value: "", label: "Choose…" },
-                ...catServices.map((s) => ({ value: s.id, label: s.name })),
-              ]}
-            />
-          </Field>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-[var(--color-muted)]">
+                Services on this invoice<span className="text-red-500"> *</span>
+              </span>
+              <button
+                type="button"
+                onClick={addLine}
+                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <Plus size={13} /> Add service
+              </button>
+            </div>
+            {lines.map((line, idx) => (
+              <div key={idx} className="rounded-lg border border-slate-200 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-500">Service {idx + 1}</span>
+                  {lines.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeLine(idx)}
+                      className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 size={13} /> Remove
+                    </button>
+                  )}
+                </div>
+                <Field label="Service Category" required>
+                  <Select
+                    value={line.category}
+                    onChange={(e) => updateLine(idx, { category: e.target.value, serviceId: "" })}
+                    options={[
+                      { value: "PREVENTIVE", label: "Preventive Maintenance" },
+                      { value: "CORRECTIVE", label: "Corrective Maintenance" },
+                    ]}
+                  />
+                </Field>
+                <Field label="Service" required>
+                  <Select
+                    value={line.serviceId}
+                    onChange={(e) => selectLineService(idx, e.target.value)}
+                    options={[
+                      { value: "", label: "Choose…" },
+                      ...servicesForCategory(line.category).map((s) => ({ value: s.id, label: s.name })),
+                    ]}
+                  />
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Material Cost ($)" required>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={line.materialCost}
+                      onChange={(e) => updateLine(idx, { materialCost: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Service Cost ($)" required>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={line.serviceCost}
+                      onChange={(e) => updateLine(idx, { serviceCost: e.target.value })}
+                    />
+                  </Field>
+                </div>
+              </div>
+            ))}
+          </div>
 
           <Field label="Odometer — all services must have the odometer recorded" required>
             <Input
@@ -430,24 +528,6 @@ export function LogServiceClient({
               <Input
                 value={form.invoiceNumber}
                 onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })}
-              />
-            </Field>
-            <Field label="Material Cost ($)" required>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.materialCost}
-                onChange={(e) => setForm({ ...form, materialCost: e.target.value })}
-              />
-            </Field>
-            <Field label="Service Cost ($)" required>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.serviceCost}
-                onChange={(e) => setForm({ ...form, serviceCost: e.target.value })}
               />
             </Field>
           </div>

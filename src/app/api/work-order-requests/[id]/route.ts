@@ -21,6 +21,7 @@ export async function GET(
       service: true,
       requestedBy: { select: userSelect },
       reviewedBy: { select: userSelect },
+      items: { include: { service: true } },
     },
   });
   if (!record) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -62,6 +63,7 @@ export async function PATCH(
       service: true,
       requestedBy: { select: userSelect },
       reviewedBy: { select: userSelect },
+      items: { include: { service: true } },
     },
   });
 
@@ -96,10 +98,22 @@ export async function PATCH(
       : null;
     if (!already) {
       const requesterIsVendor = updated.requestedBy?.role === "VENDOR";
-      const estimate = updated.vendorEstimate ?? 0;
       const description = [updated.comments, updated.partsNeeded ? `Parts: ${updated.partsNeeded}` : null]
         .filter(Boolean)
         .join("\n") || null;
+      // Carry every requested service line onto the created work order. A
+      // legacy request without item rows falls back to its single service.
+      const reqItems = updated.items.length > 0
+        ? updated.items
+        : [{
+            serviceId: updated.serviceId,
+            title: updated.service?.name ?? "Service Request",
+            vendorEstimate: updated.vendorEstimate,
+          }];
+      const estimate = reqItems.reduce((s, it) => s + (it.vendorEstimate ?? 0), 0);
+      const title = reqItems.length > 1
+        ? `${reqItems[0].title} +${reqItems.length - 1} more`
+        : reqItems[0].title;
       const workOrder = await prisma.workOrder.create({
         data: {
           vehicleId: updated.vehicleId || null,
@@ -107,7 +121,7 @@ export async function PATCH(
           serviceId: updated.serviceId || null,
           station: updated.station,
           type: "REPAIR",
-          title: updated.service?.name ?? "Service Request",
+          title,
           description,
           status: "OPEN",
           priority: "MEDIUM",
@@ -120,6 +134,14 @@ export async function PATCH(
           assignedToId: requesterIsVendor ? updated.requestedById : null,
           vendor: requesterIsVendor ? updated.requestedBy?.name ?? null : null,
           scheduledFor: updated.expectedCompletion ?? updated.requestedDate ?? null,
+          items: {
+            create: reqItems.map((it) => ({
+              serviceId: it.serviceId || null,
+              title: it.title,
+              laborCost: it.vendorEstimate ?? 0,
+              materialCost: 0,
+            })),
+          },
         },
       });
       await logActivity(auth.user, {

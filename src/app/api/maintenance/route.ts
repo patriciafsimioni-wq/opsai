@@ -8,6 +8,7 @@ import { STATIONS } from "@/lib/constants";
 import type { Station } from "@prisma/client";
 
 const ASSIGNEE_SELECT = { select: { id: true, name: true, email: true } } as const;
+const ITEMS_INCLUDE = { include: { service: true } } as const;
 
 export async function GET() {
   const auth = await requireApiUser();
@@ -17,7 +18,7 @@ export async function GET() {
     const mine = await prisma.workOrder.findMany({
       where: { assignedToId: auth.user.id },
       orderBy: { createdAt: "desc" },
-      include: { vehicle: true, service: true, assignedTo: ASSIGNEE_SELECT },
+      include: { vehicle: true, service: true, assignedTo: ASSIGNEE_SELECT, items: ITEMS_INCLUDE },
     });
     return NextResponse.json(mine);
   }
@@ -35,10 +36,18 @@ export async function GET() {
   const orders = await prisma.workOrder.findMany({
     where: and.length ? { AND: and } : undefined,
     orderBy: { createdAt: "desc" },
-    include: { vehicle: true, service: true, assignedTo: ASSIGNEE_SELECT },
+    include: { vehicle: true, service: true, assignedTo: ASSIGNEE_SELECT, items: ITEMS_INCLUDE },
   });
   return NextResponse.json(orders);
 }
+
+const itemSchema = z.object({
+  serviceId: z.string().optional().nullable(),
+  title: z.string().min(1),
+  description: z.string().optional().nullable(),
+  materialCost: z.coerce.number().min(0).optional(),
+  laborCost: z.coerce.number().min(0).optional(),
+});
 
 const schema = z.object({
   vehicleId: z.string().min(1).optional(),
@@ -64,6 +73,9 @@ const schema = z.object({
   scheduledFor: z.string().optional().nullable(),
   completedAt: z.string().optional().nullable(),
   assignedToId: z.string().optional().nullable(),
+  // Optional multi-service line items. When present, the parent work order's
+  // material/labor/cost are the rolled-up sums of these lines.
+  items: z.array(itemSchema).optional(),
 });
 
 export async function POST(req: Request) {
@@ -73,11 +85,19 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Invalid input");
   const d = parsed.data;
-  const materialCost = d.materialCost ?? 0;
+  const hasItems = !!(d.items && d.items.length > 0);
   const laborHours = d.laborHours ?? 0;
   const laborRate = d.laborRate ?? 0;
-  // Labor is entered either as a flat "service cost" (the form) or hours × rate.
-  const laborCost = d.serviceCost != null ? d.serviceCost : laborHours * laborRate;
+  // With line items the parent totals are the sum of the lines; otherwise labor
+  // is entered either as a flat "service cost" (the form) or hours × rate.
+  const materialCost = hasItems
+    ? d.items!.reduce((s, i) => s + (i.materialCost ?? 0), 0)
+    : d.materialCost ?? 0;
+  const laborCost = hasItems
+    ? d.items!.reduce((s, i) => s + (i.laborCost ?? 0), 0)
+    : d.serviceCost != null
+      ? d.serviceCost
+      : laborHours * laborRate;
   const completedAt = d.completedAt
     ? new Date(d.completedAt)
     : d.status === "COMPLETED"
@@ -87,7 +107,7 @@ export async function POST(req: Request) {
     data: {
       vehicleId: d.vehicleId || null,
       vehicleOther: d.vehicleOther || null,
-      serviceId: d.serviceId || null,
+      serviceId: d.serviceId || (hasItems ? d.items![0].serviceId || null : null),
       station: d.station as Station,
       type: d.type,
       title: d.title,
@@ -109,6 +129,17 @@ export async function POST(req: Request) {
       invoiceUrl: d.invoiceUrl || null,
       scheduledFor: d.scheduledFor ? new Date(d.scheduledFor) : null,
       completedAt,
+      items: hasItems
+        ? {
+            create: d.items!.map((i) => ({
+              serviceId: i.serviceId || null,
+              title: i.title,
+              description: i.description || null,
+              materialCost: i.materialCost ?? 0,
+              laborCost: i.laborCost ?? 0,
+            })),
+          }
+        : undefined,
     },
   });
 

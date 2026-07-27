@@ -7,6 +7,14 @@ import { canManage } from "@/lib/auth";
 import { STATIONS } from "@/lib/constants";
 import type { Station } from "@prisma/client";
 
+const itemSchema = z.object({
+  serviceId: z.string().optional().nullable(),
+  title: z.string().min(1),
+  description: z.string().optional().nullable(),
+  materialCost: z.coerce.number().min(0).optional(),
+  laborCost: z.coerce.number().min(0).optional(),
+});
+
 const schema = z.object({
   status: z.enum(["OPEN", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).optional(),
@@ -35,6 +43,8 @@ const schema = z.object({
   vendorPaidAt: z.string().optional().nullable(),
   vendorPaymentMethod: z.string().optional().nullable(),
   vendorPaymentRef: z.string().optional().nullable(),
+  // Replacing the full set of line items (e.g. editing a logged invoice).
+  items: z.array(itemSchema).optional(),
 });
 
 export async function PATCH(
@@ -63,9 +73,16 @@ export async function PATCH(
     }
   }
 
-  // Recompute costs if any cost component changed.
+  // Recompute costs if any cost component changed. Line items, when provided,
+  // take precedence: the parent totals become the rolled-up sums.
+  const hasItems = d.items !== undefined;
   let costFields: { materialCost?: number; laborHours?: number; laborRate?: number; laborCost?: number; cost?: number } = {};
-  if (
+  if (hasItems) {
+    const items = d.items ?? [];
+    const materialCost = items.reduce((s, i) => s + (i.materialCost ?? 0), 0);
+    const laborCost = items.reduce((s, i) => s + (i.laborCost ?? 0), 0);
+    costFields = { materialCost, laborCost, cost: materialCost + laborCost };
+  } else if (
     d.materialCost !== undefined ||
     d.laborHours !== undefined ||
     d.laborRate !== undefined ||
@@ -108,6 +125,21 @@ export async function PATCH(
     }
   }
 
+  // Replacing line items wholesale keeps the child rows in sync with an edited
+  // invoice; we delete the old ones and recreate in the same update.
+  const itemsData = hasItems
+    ? {
+        deleteMany: {},
+        create: (d.items ?? []).map((i) => ({
+          serviceId: i.serviceId || null,
+          title: i.title,
+          description: i.description || null,
+          materialCost: i.materialCost ?? 0,
+          laborCost: i.laborCost ?? 0,
+        })),
+      }
+    : undefined;
+
   const order = await prisma.workOrder.update({
     where: { id },
     data: {
@@ -115,6 +147,7 @@ export async function PATCH(
       priority: d.priority,
       ...costFields,
       ...paymentFields,
+      items: itemsData,
       vendor: d.vendor === undefined ? undefined : d.vendor || null,
       vehicleId: d.vehicleId === undefined ? undefined : d.vehicleId || null,
       vehicleOther: d.vehicleOther === undefined ? undefined : d.vehicleOther || null,

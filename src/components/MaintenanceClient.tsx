@@ -394,6 +394,15 @@ export function MaintenanceClient({
                         {cat ? SERVICE_CATEGORY[cat as keyof typeof SERVICE_CATEGORY].label + " · " : ""}
                         {titleCase(o.type)}
                       </p>
+                      {o.items && o.items.length > 1 && (
+                        <ul className="mt-0.5 space-y-0.5">
+                          {o.items.map((it) => (
+                            <li key={it.id} className="text-xs text-slate-500">
+                              • {it.service?.name ?? it.title} — {formatCurrency(it.materialCost + it.laborCost)}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                       {!isVendor && o.assignedTo && (
                         <p className="text-xs font-medium text-blue-600">Assigned: {o.assignedTo.name}</p>
                       )}

@@ -134,19 +134,33 @@ export async function GET(req: NextRequest) {
     orderBy: { station: "asc" },
   });
 
-  // Get all completed work orders with odometerAt
+  // Get all completed work orders with odometerAt, including their service line
+  // items so multi-service invoices clear each PM row independently.
   const completedWOs = await prisma.workOrder.findMany({
     where: { status: "COMPLETED" },
-    select: { vehicleId: true, title: true, completedAt: true, odometerAt: true },
+    select: {
+      vehicleId: true,
+      title: true,
+      completedAt: true,
+      odometerAt: true,
+      items: { select: { title: true, service: { select: { name: true } } } },
+    },
     orderBy: { completedAt: "desc" },
   });
 
-  // Group by vehicle
-  const woByVehicle: Record<string, { title: string; completedAt: Date | null; odometerAt: number | null }[]> = {};
+  // Group by vehicle. `serviceTexts` collects every string that could identify
+  // a PM service for this work order: the parent title plus each line item's
+  // title and linked service name.
+  const woByVehicle: Record<string, { serviceTexts: string[]; completedAt: Date | null; odometerAt: number | null }[]> = {};
   for (const wo of completedWOs) {
     if (!wo.vehicleId) continue;
     if (!woByVehicle[wo.vehicleId]) woByVehicle[wo.vehicleId] = [];
-    woByVehicle[wo.vehicleId].push(wo);
+    const serviceTexts = [wo.title];
+    for (const it of wo.items) {
+      serviceTexts.push(it.title);
+      if (it.service?.name) serviceTexts.push(it.service.name);
+    }
+    woByVehicle[wo.vehicleId].push({ serviceTexts, completedAt: wo.completedAt, odometerAt: wo.odometerAt });
   }
 
   // Get all dismissals (gracefully handle if table doesn't exist yet)
@@ -169,13 +183,21 @@ export async function GET(req: NextRequest) {
       const odo = v.odometer;
       const vehicleWOs = woByVehicle[v.id] ?? [];
 
-      // For each service type, find the LAST completed WO matching that service
+      // For each service type, find the LAST completed WO matching that service.
+      // WOs are newest-first, so the first match per service wins. A single WO
+      // can satisfy several PM services via its line items.
       const lastPerformed: Record<string, { odometerAt: number; completedAt: Date }> = {};
       for (const wo of vehicleWOs) {
-        const serviceName = matchService(wo.title);
-        if (!serviceName) continue;
-        if (!lastPerformed[serviceName] && wo.odometerAt != null && wo.completedAt) {
-          lastPerformed[serviceName] = { odometerAt: wo.odometerAt, completedAt: wo.completedAt };
+        if (wo.odometerAt == null || !wo.completedAt) continue;
+        const matched = new Set<string>();
+        for (const text of wo.serviceTexts) {
+          const serviceName = matchService(text);
+          if (serviceName) matched.add(serviceName);
+        }
+        for (const serviceName of matched) {
+          if (!lastPerformed[serviceName]) {
+            lastPerformed[serviceName] = { odometerAt: wo.odometerAt, completedAt: wo.completedAt };
+          }
         }
       }
 

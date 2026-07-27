@@ -8,6 +8,8 @@ import {
   ChevronDown,
   ChevronUp,
   Image as ImageIcon,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import {
   Card,
@@ -37,6 +39,20 @@ import { formatCurrency, formatDate, todayInputDate } from "@/lib/utils";
 function todayStr() {
   return todayInputDate();
 }
+
+type RequestLine = {
+  serviceId: string;
+  partsNeeded: string[];
+  serviceHours: string;
+  vendorEstimate: string;
+};
+
+const emptyRequestLine = (): RequestLine => ({
+  serviceId: "",
+  partsNeeded: [],
+  serviceHours: "",
+  vendorEstimate: "",
+});
 
 function StatusBadge({ status }: { status: string }) {
   const s = WO_REQUEST_STATUS[status as keyof typeof WO_REQUEST_STATUS] ?? {
@@ -85,15 +101,13 @@ export function WorkOrderRequestsClient({
     vehicleId: "",
     vehicleOther: "",
     odometer: "",
-    serviceId: "",
-    partsNeeded: [] as string[],
     requestedDate: todayStr(),
     expectedCompletion: "",
     comments: "",
-    serviceHours: "",
-    vendorEstimate: "",
     requesterEmail: "",
   });
+  // One or more requested services sharing a single PO. Legacy = one line.
+  const [lines, setLines] = useState<RequestLine[]>([emptyRequestLine()]);
   const [file, setFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
@@ -166,19 +180,37 @@ export function WorkOrderRequestsClient({
     }));
   }
 
-  function togglePart(part: string) {
-    setForm((f) => ({
-      ...f,
-      partsNeeded: f.partsNeeded.includes(part)
-        ? f.partsNeeded.filter((p) => p !== part)
-        : [...f.partsNeeded, part],
-    }));
+  function updateLine(idx: number, patch: Partial<RequestLine>) {
+    setLines((ls) => ls.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
+  }
+
+  function togglePart(idx: number, part: string) {
+    setLines((ls) =>
+      ls.map((l, i) =>
+        i === idx
+          ? {
+              ...l,
+              partsNeeded: l.partsNeeded.includes(part)
+                ? l.partsNeeded.filter((p) => p !== part)
+                : [...l.partsNeeded, part],
+            }
+          : l,
+      ),
+    );
+  }
+
+  function addLine() {
+    setLines((ls) => [...ls, emptyRequestLine()]);
+  }
+
+  function removeLine(idx: number) {
+    setLines((ls) => (ls.length <= 1 ? ls : ls.filter((_, i) => i !== idx)));
   }
 
   const valid =
     form.station &&
     (form.vehicleId || form.vehicleOther.trim()) &&
-    form.serviceId &&
+    lines.every((l) => l.serviceId) &&
     form.requestedDate &&
     form.requesterEmail.trim();
 
@@ -203,20 +235,23 @@ export function WorkOrderRequestsClient({
       photoUrl = (upData as { url: string }).url;
     }
 
+    const items = lines.map((l) => ({
+      serviceId: l.serviceId,
+      partsNeeded: l.partsNeeded.join(", ") || null,
+      serviceHours: l.serviceHours || null,
+      vendorEstimate: l.vendorEstimate || null,
+    }));
     const payload = {
       station: form.station,
       vehicleId: form.vehicleId || null,
       vehicleOther: form.vehicleOther.trim() || null,
       odometer: form.odometer || null,
-      serviceId: form.serviceId,
-      partsNeeded: form.partsNeeded.join(", ") || null,
       requestedDate: form.requestedDate || null,
       expectedCompletion: form.expectedCompletion || null,
       comments: form.comments.trim() || null,
       photoUrl,
-      serviceHours: form.serviceHours || null,
-      vendorEstimate: form.vendorEstimate || null,
       requesterEmail: form.requesterEmail.trim() || null,
+      items,
     };
 
     const res = await apiSend("/api/work-order-requests", "POST", payload);
@@ -228,15 +263,12 @@ export function WorkOrderRequestsClient({
         vehicleId: "",
         vehicleOther: "",
         odometer: "",
-        serviceId: "",
-        partsNeeded: [],
         requestedDate: todayStr(),
         expectedCompletion: "",
         comments: "",
-        serviceHours: "",
-        vendorEstimate: "",
         requesterEmail: "",
       });
+      setLines([emptyRequestLine()]);
       setFile(null);
       if (fileRef.current) fileRef.current.value = "";
       setShowForm(false);
@@ -525,47 +557,92 @@ export function WorkOrderRequestsClient({
             />
           </Field>
 
-          {/* Section 4: Service */}
-          <Field label="Service Requested" required>
-            <Select
-              value={form.serviceId}
-              onChange={(e) => setForm({ ...form, serviceId: e.target.value })}
-              options={[
-                { value: "", label: "Choose..." },
-                ...allServices.map((s) => ({
-                  value: s.id,
-                  label: `${s.name} (${s.category})`,
-                })),
-              ]}
-            />
-          </Field>
-
-          {/* Section 5: Parts needed */}
-          <div className="sm:col-span-2">
-            <span className="text-xs font-medium text-[var(--color-muted)]">
-              Parts Needed
-            </span>
-            <div className="mt-1 flex max-h-32 flex-wrap gap-1.5 overflow-y-auto rounded-lg border border-[var(--color-border)] p-2">
-              {PARTS_LIST.map((part) => (
-                <button
-                  key={part}
-                  type="button"
-                  onClick={() => togglePart(part)}
-                  className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-                    form.partsNeeded.includes(part)
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-slate-50 text-slate-500 hover:bg-slate-100"
-                  }`}
-                >
-                  {part}
-                </button>
-              ))}
+          {/* Section 4+5: Services requested (one or more, one shared PO) */}
+          <div className="sm:col-span-2 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-[var(--color-muted)]">
+                Services Requested<span className="text-red-500"> *</span>
+                <span className="ml-1 font-normal text-slate-400">(one PO covers all)</span>
+              </span>
+              <button
+                type="button"
+                onClick={addLine}
+                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <Plus size={13} /> Add service
+              </button>
             </div>
-            {form.partsNeeded.length > 0 && (
-              <p className="mt-1 text-xs text-slate-500">
-                Selected: {form.partsNeeded.join(", ")}
-              </p>
-            )}
+            {lines.map((line, idx) => (
+              <div key={idx} className="rounded-lg border border-slate-200 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-500">Service {idx + 1}</span>
+                  {lines.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeLine(idx)}
+                      className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 size={13} /> Remove
+                    </button>
+                  )}
+                </div>
+                <Field label="Service Requested" required>
+                  <Select
+                    value={line.serviceId}
+                    onChange={(e) => updateLine(idx, { serviceId: e.target.value })}
+                    options={[
+                      { value: "", label: "Choose..." },
+                      ...allServices.map((s) => ({
+                        value: s.id,
+                        label: `${s.name} (${s.category})`,
+                      })),
+                    ]}
+                  />
+                </Field>
+                <div>
+                  <span className="text-xs font-medium text-[var(--color-muted)]">Parts Needed</span>
+                  <div className="mt-1 flex max-h-32 flex-wrap gap-1.5 overflow-y-auto rounded-lg border border-[var(--color-border)] p-2">
+                    {PARTS_LIST.map((part) => (
+                      <button
+                        key={part}
+                        type="button"
+                        onClick={() => togglePart(idx, part)}
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                          line.partsNeeded.includes(part)
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-slate-50 text-slate-500 hover:bg-slate-100"
+                        }`}
+                      >
+                        {part}
+                      </button>
+                    ))}
+                  </div>
+                  {line.partsNeeded.length > 0 && (
+                    <p className="mt-1 text-xs text-slate-500">Selected: {line.partsNeeded.join(", ")}</p>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Service Hours (estimated)">
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={line.serviceHours}
+                      onChange={(e) => updateLine(idx, { serviceHours: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Vendor Estimate ($)">
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={line.vendorEstimate}
+                      onChange={(e) => updateLine(idx, { vendorEstimate: e.target.value })}
+                    />
+                  </Field>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Section 6: Dates */}
@@ -595,30 +672,6 @@ export function WorkOrderRequestsClient({
               value={form.comments}
               onChange={(e) => setForm({ ...form, comments: e.target.value })}
               placeholder="Describe the issue or reason for the request"
-            />
-          </Field>
-
-          <Field label="Service Hours (estimated)">
-            <Input
-              type="number"
-              min="0"
-              step="0.5"
-              value={form.serviceHours}
-              onChange={(e) =>
-                setForm({ ...form, serviceHours: e.target.value })
-              }
-            />
-          </Field>
-
-          <Field label="Vendor Estimate ($)">
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.vendorEstimate}
-              onChange={(e) =>
-                setForm({ ...form, vendorEstimate: e.target.value })
-              }
             />
           </Field>
 
@@ -909,14 +962,33 @@ function RequestDetail({ r }: { r: WorkOrderRequestDTO }) {
         <p className="text-xs font-medium text-slate-400">Odometer</p>
         <p>{r.odometer != null ? r.odometer.toLocaleString() : "—"}</p>
       </div>
-      <div>
-        <p className="text-xs font-medium text-slate-400">Service</p>
-        <p>{r.service?.name ?? "—"}</p>
-      </div>
-      <div>
-        <p className="text-xs font-medium text-slate-400">Parts Needed</p>
-        <p>{r.partsNeeded || "—"}</p>
-      </div>
+      {r.items && r.items.length > 1 ? (
+        <div className="sm:col-span-2 lg:col-span-3">
+          <p className="text-xs font-medium text-slate-400">Services ({r.items.length})</p>
+          <ul className="mt-1 space-y-1">
+            {r.items.map((it) => (
+              <li key={it.id} className="rounded-md bg-slate-50 px-2 py-1">
+                <span className="font-medium">{it.service?.name ?? it.title}</span>
+                {it.partsNeeded ? <span className="text-slate-500"> — parts: {it.partsNeeded}</span> : null}
+                {it.vendorEstimate != null ? (
+                  <span className="text-slate-500"> · est. {formatCurrency(it.vendorEstimate)}</span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <>
+          <div>
+            <p className="text-xs font-medium text-slate-400">Service</p>
+            <p>{r.service?.name ?? "—"}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-slate-400">Parts Needed</p>
+            <p>{r.partsNeeded || "—"}</p>
+          </div>
+        </>
+      )}
       <div>
         <p className="text-xs font-medium text-slate-400">Requested Date</p>
         <p>{formatDate(r.requestedDate)}</p>

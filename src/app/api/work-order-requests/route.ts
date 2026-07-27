@@ -18,17 +18,27 @@ export async function GET() {
       service: true,
       requestedBy: { select: userSelect },
       reviewedBy: { select: userSelect },
+      items: { include: { service: true } },
     },
   });
   return NextResponse.json(requests);
 }
+
+const itemSchema = z.object({
+  serviceId: z.string().min(1),
+  partsNeeded: z.string().optional().nullable(),
+  vendorEstimate: z.coerce.number().min(0).optional().nullable(),
+  serviceHours: z.coerce.number().min(0).optional().nullable(),
+});
 
 const schema = z.object({
   station: z.string().refine((s) => STATIONS.includes(s), "Invalid station"),
   vehicleId: z.string().optional().nullable(),
   vehicleOther: z.string().optional().nullable(),
   odometer: z.coerce.number().min(0).optional().nullable(),
-  serviceId: z.string().min(1),
+  // Legacy single-service fields remain accepted; multi-service requests send
+  // an `items` array instead (one shared PO covering several services).
+  serviceId: z.string().optional().nullable(),
   partsNeeded: z.string().optional().nullable(),
   requestedDate: z.string().optional().nullable(),
   expectedCompletion: z.string().optional().nullable(),
@@ -37,6 +47,7 @@ const schema = z.object({
   serviceHours: z.coerce.number().min(0).optional().nullable(),
   vendorEstimate: z.coerce.number().min(0).optional().nullable(),
   requesterEmail: z.string().email().optional().nullable(),
+  items: z.array(itemSchema).optional(),
 });
 
 export async function POST(req: Request) {
@@ -62,7 +73,31 @@ export async function POST(req: Request) {
   }
   const poNumber = `${prefix}${String(nextSeq).padStart(3, "0")}`;
 
-  const service = await prisma.service.findUnique({ where: { id: d.serviceId }, select: { name: true } });
+  // Normalize to a list of requested service lines. A legacy single-service
+  // request (just `serviceId`) becomes a one-line list; multi-service requests
+  // send `items`. At least one line is required.
+  const lines = d.items && d.items.length > 0
+    ? d.items
+    : d.serviceId
+      ? [{ serviceId: d.serviceId, partsNeeded: d.partsNeeded ?? null, vendorEstimate: d.vendorEstimate ?? null, serviceHours: d.serviceHours ?? null }]
+      : [];
+  if (lines.length === 0) return badRequest("At least one service is required");
+
+  const serviceIds = [...new Set(lines.map((l) => l.serviceId))];
+  const services = await prisma.service.findMany({
+    where: { id: { in: serviceIds } },
+    select: { id: true, name: true },
+  });
+  const serviceName = (id: string) => services.find((s) => s.id === id)?.name ?? "Service";
+
+  // The parent keeps the first line's service for legacy compatibility and
+  // rolls up the estimate/parts across all lines.
+  const first = lines[0];
+  const totalEstimate = lines.reduce((s, l) => s + (l.vendorEstimate ?? 0), 0);
+  const parentParts = lines
+    .map((l) => (l.partsNeeded ? `${serviceName(l.serviceId)}: ${l.partsNeeded}` : null))
+    .filter(Boolean)
+    .join("\n") || d.partsNeeded || null;
 
   const record = await prisma.workOrderRequest.create({
     data: {
@@ -71,22 +106,32 @@ export async function POST(req: Request) {
       vehicleId: d.vehicleId || null,
       vehicleOther: d.vehicleOther || null,
       odometer: d.odometer ?? null,
-      serviceId: d.serviceId,
-      partsNeeded: d.partsNeeded || null,
+      serviceId: first.serviceId,
+      partsNeeded: parentParts,
       requestedDate: d.requestedDate ? new Date(d.requestedDate) : null,
       expectedCompletion: d.expectedCompletion ? new Date(d.expectedCompletion) : null,
       comments: d.comments || null,
       photoUrl: d.photoUrl || null,
-      serviceHours: d.serviceHours ?? null,
-      vendorEstimate: d.vendorEstimate ?? null,
+      serviceHours: first.serviceHours ?? null,
+      vendorEstimate: totalEstimate || null,
       requesterEmail: d.requesterEmail || null,
       requestedById: auth.user.id,
+      items: {
+        create: lines.map((l) => ({
+          serviceId: l.serviceId,
+          title: serviceName(l.serviceId),
+          partsNeeded: l.partsNeeded || null,
+          vendorEstimate: l.vendorEstimate ?? null,
+          serviceHours: l.serviceHours ?? null,
+        })),
+      },
     },
     include: {
       vehicle: true,
       service: true,
       requestedBy: { select: userSelect },
       reviewedBy: { select: userSelect },
+      items: { include: { service: true } },
     },
   });
 
@@ -94,8 +139,10 @@ export async function POST(req: Request) {
   const vehicleLabel = record.vehicle
     ? `${record.vehicle.licensePlate} - ${record.vehicle.name}`
     : record.vehicleOther ?? "Unknown vehicle";
-  const serviceName = service?.name ?? "Unknown service";
-  const alertMessage = `New WO Request ${poNumber}: ${serviceName} for ${vehicleLabel} at ${d.station} — requested by ${auth.user.name}`;
+  const serviceSummary = lines.length > 1
+    ? `${serviceName(first.serviceId)} +${lines.length - 1} more`
+    : serviceName(first.serviceId);
+  const alertMessage = `New WO Request ${poNumber}: ${serviceSummary} for ${vehicleLabel} at ${d.station} — requested by ${auth.user.name}`;
 
   await prisma.alert.create({
     data: {
