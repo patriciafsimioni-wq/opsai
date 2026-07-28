@@ -8,8 +8,6 @@ import {
   STATION_LABEL,
 } from "@/lib/constants";
 
-const ALL_RULES = [...DOT_FEDERAL_RULES, ...DOT_STATE_RULES];
-
 const DAY = 24 * 60 * 60 * 1000;
 
 function esc(s: unknown): string {
@@ -46,13 +44,12 @@ export async function GET() {
   const auth = await requireApiUser();
   if ("error" in auth) return auth.error;
 
-  const [drivers, companyDocs, audits, trucks] = await Promise.all([
+  const [drivers, audits, trucks] = await Promise.all([
     prisma.driver.findMany({
       where: { vehicleType: { in: ["BOX_TRUCK", "TRACTOR_TRUCK"] }, status: { not: "INACTIVE" } },
       orderBy: [{ station: "asc" }, { firstName: "asc" }],
       include: { vehicles: { select: { name: true, dxNumber: true, licensePlate: true, vin: true } } },
     }),
-    prisma.dotDocument.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.dotAudit.findMany({ orderBy: { auditDate: "desc" } }),
     prisma.vehicle.findMany({
       where: {
@@ -191,17 +188,6 @@ export async function GET() {
     <thead><tr><th>Date</th><th>Officer</th><th>Agency</th><th>Result</th><th>Report</th></tr></thead>
     <tbody>
       ${audits.length ? audits.map((a) => `<tr><td class="item">${fmt(a.auditDate)}</td><td>${esc(a.officerName ?? "—")}</td><td>${esc(a.agency ?? "—")}</td><td>${esc(a.result ?? "—")}</td><td>${docCell(a.docUrl)}</td></tr>`).join("") : '<tr><td colspan="5">No DOT audit logged.</td></tr>'}
-    </tbody>
-  </table>
-
-  <h3>Company / Fleet Documents on File</h3>
-  <table class="rules">
-    <thead><tr><th>Requirement</th><th>Documents</th></tr></thead>
-    <tbody>
-      ${ALL_RULES.map((r) => {
-        const docs = companyDocs.filter((d) => d.requirement === r.key);
-        return `<tr><td class="item">${esc(r.item)}</td><td>${docs.length ? docs.map((d) => `<div class="docrow">${esc(d.title)}${docCell(d.docUrl)}</div>`).join("") : '<span class="badge missing">NOT ON FILE</span>'}</td></tr>`;
-      }).join("")}
     </tbody>
   </table>
 
