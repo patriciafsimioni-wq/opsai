@@ -68,10 +68,12 @@ export async function POST() {
     const source = obdMeters ? "obd" : "gps";
 
     // Update vehicle
+    // Note: camera presence is owned by the camera-check endpoint (which reads
+    // real cameraSerials and matches by VIN); reporting telemetry here does not
+    // imply a camera is installed, so we must not force hasSamsaraCamera=true.
     const updateData: Record<string, unknown> = {
       odometer: miles,
       samsaraId: s.id,
-      hasSamsaraCamera: true,
       lastSeen: new Date(),
     };
 
