@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireManager, badRequest } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import * as XLSX from "xlsx";
-import { Station, VehicleType, FuelType } from "@prisma/client";
+import { Station, VehicleType, FuelType, PurchaseType } from "@prisma/client";
 import { STATIONS, stationFromRouteId } from "@/lib/constants";
 
 const MAX_BYTES = 20 * 1024 * 1024;
@@ -71,6 +71,17 @@ export async function POST(req: Request) {
 
   if (cat === "Fleet / Vehicles") {
     return importVehicles(rows);
+  }
+
+  if (cat === "Fuel Log") {
+    // WEX fuel-card exports are positional (no reliable header row), so read the
+    // sheet as a matrix of cells rather than keyed objects.
+    const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+      header: 1,
+      defval: "",
+      blankrows: false,
+    });
+    return importFuelLogs(matrix);
   }
 
   return badRequest(`Import not supported for category: ${cat}`);
@@ -502,6 +513,165 @@ async function importFareyeRoutes(rows: Record<string, unknown>[]) {
     skipped,
     unmatched: 0,
     total: rows.length,
+    errors: errors.slice(0, 20),
+  });
+}
+
+// WEX fuel-card export column layout (0-based). This matches the positional
+// format the seed reads (product description in col 26 / "AA", price-per-gallon
+// in col 50 / "AY"), since the export has no reliable header row.
+const FUEL_COL = {
+  driver: 3,
+  unit: 4, // DX / vehicle unit number
+  odometer: 14,
+  date: 15, // "20-Jul-26"
+  time: 16, // "16:51:00"
+  amount: 19, // gross cost ($)
+  quantity: 20, // gallons
+  company: 23,
+  category: 24, // "FUEL" | "NON-FUEL"
+  product: 26, // "Diesel", "Unleaded E10 Reg", "Diesel Exh Fluid Dispensed", ...
+  merchant: 7,
+  city: 10,
+  station: 38,
+  pricePerGallon: 50,
+  card: 29,
+} as const;
+
+function cell(row: unknown[], idx: number): string {
+  const v = row[idx];
+  return v === undefined || v === null ? "" : String(v).trim();
+}
+
+// Map a WEX product/category to the app's PurchaseType. DEF is checked first
+// because "Diesel Exh Fluid Dispensed" also contains the word "diesel".
+function fuelPurchaseType(category: string, product: string): PurchaseType {
+  const p = product.toLowerCase();
+  if (/exh|def\b|exhaust fluid/.test(p)) return PurchaseType.DEF;
+  if (category.toUpperCase().includes("NON-FUEL") && !p.includes("diesel") && !p.includes("unleaded")) {
+    return PurchaseType.NON_FUEL;
+  }
+  if (p.includes("diesel")) return PurchaseType.DIESEL;
+  if (p.includes("unleaded") || p.includes("gasoline") || p.includes("gas") || p.includes("reg") || p.includes("prem")) {
+    return PurchaseType.UNLEADED;
+  }
+  return PurchaseType.NON_FUEL;
+}
+
+// Parse "DD-Mon-YY" (optionally with a "HH:MM:SS" time) into a Date anchored at
+// local noon so it never shifts across a day boundary when displayed.
+function parseFuelDate(dateStr: string, timeStr: string): Date | null {
+  if (!dateStr) return null;
+  const d = new Date(`${dateStr} ${timeStr || "12:00:00"}`);
+  if (isNaN(d.getTime())) {
+    const fallback = parseDate(dateStr);
+    return fallback;
+  }
+  return d;
+}
+
+async function importFuelLogs(matrix: unknown[][]) {
+  const vehicles = await prisma.vehicle.findMany({
+    select: { id: true, dxNumber: true, station: true, assignedDriverId: true },
+  });
+  const byDx = new Map(
+    vehicles.filter((v) => v.dxNumber).map((v) => [v.dxNumber!.toUpperCase(), v]),
+  );
+
+  // Dedupe against fuel logs already stored (same day + unit + cost + gallons).
+  const existing = await prisma.fuelLog.findMany({
+    select: { vehicleId: true, vehicleLabel: true, date: true, totalCost: true, liters: true },
+  });
+  const dupeKey = (
+    label: string,
+    vehicleId: string | null,
+    date: Date,
+    cost: number,
+    gallons: number,
+  ) => `${vehicleId ?? label.toUpperCase()}|${date.toISOString().slice(0, 10)}|${cost.toFixed(2)}|${gallons.toFixed(3)}`;
+  const dupeSet = new Set(
+    existing.map((f) => dupeKey(f.vehicleLabel ?? "", f.vehicleId, f.date, f.totalCost, f.liters)),
+  );
+
+  let imported = 0;
+  let skipped = 0;
+  let unmatched = 0;
+  const errors: string[] = [];
+
+  for (let i = 0; i < matrix.length; i++) {
+    const row = matrix[i];
+    if (!Array.isArray(row) || row.length === 0) { skipped++; continue; }
+
+    const unit = cell(row, FUEL_COL.unit).toUpperCase();
+    const amount = parseNum(cell(row, FUEL_COL.amount));
+    const gallons = parseNum(cell(row, FUEL_COL.quantity));
+    const dateStr = cell(row, FUEL_COL.date);
+
+    // Skip a header row or any row without the core transaction fields.
+    const looksLikeData = /^\d/.test(cell(row, FUEL_COL.date)) || /\d/.test(unit);
+    if (!looksLikeData && amount === 0 && gallons === 0) { skipped++; continue; }
+    if (!unit && !dateStr) { skipped++; continue; }
+
+    const date = parseFuelDate(dateStr, cell(row, FUEL_COL.time));
+    if (!date) {
+      skipped++;
+      errors.push(`Row ${i + 1}: could not parse date "${dateStr}"`);
+      continue;
+    }
+
+    const product = cell(row, FUEL_COL.product);
+    const category = cell(row, FUEL_COL.category);
+    const purchaseType = fuelPurchaseType(category, product);
+    const ppg = parseNum(cell(row, FUEL_COL.pricePerGallon)) || (gallons > 0 ? amount / gallons : 0);
+
+    const vehicle = byDx.get(unit) ?? null;
+    if (!vehicle) unmatched++;
+
+    const stationRaw = cell(row, FUEL_COL.station).toUpperCase();
+    const station =
+      (VALID_STATIONS.has(stationRaw) ? stationRaw : vehicle?.station ?? null);
+
+    const merchant = cell(row, FUEL_COL.merchant);
+    const city = cell(row, FUEL_COL.city);
+    const location = [merchant, city].filter(Boolean).join(", ") || null;
+
+    const key = dupeKey(unit, vehicle?.id ?? null, date, amount, gallons);
+    if (dupeSet.has(key)) { skipped++; continue; }
+    dupeSet.add(key);
+
+    try {
+      await prisma.fuelLog.create({
+        data: {
+          vehicleId: vehicle?.id ?? null,
+          vehicleLabel: unit || null,
+          driverId: vehicle?.assignedDriverId ?? null,
+          driverName: cell(row, FUEL_COL.driver) || null,
+          station,
+          date,
+          liters: gallons,
+          pricePerLiter: Math.round(ppg * 1000) / 1000,
+          totalCost: amount,
+          odometer: parseNum(cell(row, FUEL_COL.odometer)) || null,
+          location,
+          transactionTime: cell(row, FUEL_COL.time) || null,
+          purchaseType,
+          cardNumber: cell(row, FUEL_COL.card) || null,
+        },
+      });
+      imported++;
+    } catch (e) {
+      skipped++;
+      errors.push(`Row ${i + 1}: ${String(e instanceof Error ? e.message : e).slice(0, 140)}`);
+    }
+  }
+
+  return NextResponse.json({
+    success: true,
+    imported,
+    updated: 0,
+    skipped,
+    unmatched,
+    total: matrix.length,
     errors: errors.slice(0, 20),
   });
 }
