@@ -96,17 +96,49 @@ function AssignmentNote({ action, note }: { action: string | null; note: string 
   return null;
 }
 
-function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss, onInspect }: {
+function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss, onInspect, onBulkAssign }: {
   vehicle: VehicleSchedule;
   onClose: () => void;
   onDismiss: (vehicleId: string, service: string, action: "done" | "skip" | "assigned", note?: string) => void;
   onUndismiss: (vehicleId: string, service: string) => void;
   onInspect: (vehicleId: string, service: string, nextDueMileage: number, inspectedAt: string) => void;
+  onBulkAssign: (vehicleId: string, services: string[], assigneeId: string, assigneeName: string) => Promise<void> | void;
 }) {
   const [showAll, setShowAll] = useState(false);
-  const services = showAll
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [assigneeId, setAssigneeId] = useState("");
+  const [assigning, setAssigning] = useState(false);
+  const { data: users } = useData<UserOption[]>("/api/users");
+  const assignableUsers = (users ?? []).filter(
+    (u) => u.role === "VENDOR" || u.role === "MECHANIC" || u.role === "FLEET_MANAGER" || u.role === "STATION_MANAGER"
+  );
+  const actionable = (st: string) => st === "never_performed" || st === "overdue" || st === "upcoming";
+  const services = (showAll
     ? vehicle.mileageServices
-    : vehicle.mileageServices.filter((s) => s.status !== "on_track");
+    : vehicle.mileageServices.filter((s) => s.status !== "on_track")
+  ).filter((s) => !query || s.service.toLowerCase().includes(query.toLowerCase()));
+  const timeServices = vehicle.timeServices.filter((t) => !query || t.service.toLowerCase().includes(query.toLowerCase()));
+  const selectableServices = Array.from(new Set([
+    ...timeServices.filter((t) => actionable(t.status)).map((t) => t.service),
+    ...services.filter((s) => actionable(s.status)).map((s) => s.service),
+  ]));
+  const allSelected = selectableServices.length > 0 && selectableServices.every((n) => selected.has(n));
+  const toggle = (name: string) =>
+    setSelected((prev) => {
+      const n = new Set(prev);
+      if (n.has(name)) n.delete(name);
+      else n.add(name);
+      return n;
+    });
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(selectableServices));
+  async function submitBulk() {
+    if (!assigneeId || selected.size === 0) return;
+    setAssigning(true);
+    const name = assignableUsers.find((u) => u.id === assigneeId)?.name ?? "";
+    await onBulkAssign(vehicle.id, Array.from(selected), assigneeId, name);
+    setAssigning(false);
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-16">
@@ -145,13 +177,30 @@ function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss, onInspect }: 
           )}
         </div>
 
+        {/* Selection + filter toolbar */}
+        <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 px-5 py-2">
+          <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+            <input type="checkbox" checked={allSelected} onChange={toggleAll} disabled={selectableServices.length === 0} /> Select all due/overdue
+          </label>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filter services…"
+            className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs"
+          />
+          {selected.size > 0 && <span className="text-xs text-slate-500">{selected.size} selected</span>}
+        </div>
+
         {/* Time-based services */}
-        {vehicle.timeServices.length > 0 && (
+        {timeServices.length > 0 && (
           <div className="border-b border-slate-200 px-5 py-3">
             <h3 className="mb-2 text-xs font-bold uppercase text-slate-400">Time-Based Services</h3>
-            {vehicle.timeServices.map((ts, i) => (
+            {timeServices.map((ts, i) => (
               <div key={i} className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-slate-50">
                 <div className="flex items-center gap-3">
+                  {actionable(ts.status) && (
+                    <input type="checkbox" checked={selected.has(ts.service)} onChange={() => toggle(ts.service)} />
+                  )}
                   <StatusBadge status={ts.status} action={ts.dismissedAction} />
                   <span className="flex items-center text-sm font-medium text-slate-800">{ts.service}
                     {ts.status === "dismissed" && <AssignmentNote action={ts.dismissedAction} note={ts.dismissedNote} />}
@@ -197,6 +246,7 @@ function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss, onInspect }: 
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-white">
                 <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
+                  <th className="px-3 py-2 w-8"></th>
                   <th className="px-3 py-2">Status</th>
                   <th className="px-3 py-2">Service</th>
                   <th className="px-3 py-2 text-right">Interval</th>
@@ -209,6 +259,11 @@ function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss, onInspect }: 
               <tbody>
                 {services.map((s, i) => (
                   <tr key={`${s.service}-${s.nextDue}-${i}`} className={`border-b border-slate-100 hover:bg-slate-50 ${s.status === "never_performed" ? "bg-red-50/50" : s.status === "dismissed" ? "opacity-50" : ""}`}>
+                    <td className="px-3 py-2">
+                      {actionable(s.status) && (
+                        <input type="checkbox" checked={selected.has(s.service)} onChange={() => toggle(s.service)} />
+                      )}
+                    </td>
                     <td className="px-3 py-2"><StatusBadge status={s.status} action={s.dismissedAction} /></td>
                     <td className="px-3 py-2 font-medium text-slate-700">
                       <span className="flex items-center">{s.service}
@@ -251,13 +306,40 @@ function VehicleDetail({ vehicle, onClose, onDismiss, onUndismiss, onInspect }: 
                 ))}
                 {services.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-3 py-6 text-center text-slate-400">All services on track</td>
+                    <td colSpan={8} className="px-3 py-6 text-center text-slate-400">All services on track</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
         </div>
+
+        {/* Bulk assign bar */}
+        {selected.size > 0 && (
+          <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 bg-slate-50 px-5 py-3">
+            <span className="text-sm font-medium text-slate-700">
+              {selected.size} service{selected.size > 1 ? "s" : ""} selected
+            </span>
+            <select
+              value={assigneeId}
+              onChange={(e) => setAssigneeId(e.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            >
+              <option value="">Assign to…</option>
+              {assignableUsers.map((u) => (
+                <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+              ))}
+            </select>
+            <button
+              onClick={submitBulk}
+              disabled={!assigneeId || assigning}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {assigning ? "Assigning…" : `Assign ${selected.size} to person`}
+            </button>
+            <button onClick={() => setSelected(new Set())} className="text-xs text-slate-500 hover:underline">Clear</button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -448,6 +530,37 @@ export function MaintenanceScheduleClient() {
     }
   }
 
+  // Assign several selected services to one person in a single work order (one
+  // line item per service), then mark each schedule row as assigned.
+  async function handleBulkAssign(vehicleId: string, services: string[], assigneeId: string, assigneeName: string) {
+    if (services.length === 0 || !assigneeId) return;
+    const vehicle = data?.vehicles.find((v) => v.id === vehicleId);
+    const vehicleName = vehicle?.dxNumber ?? vehicle?.name ?? "";
+    const station = vehicle?.station ?? "AUS";
+    await fetch("/api/maintenance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        vehicleId,
+        station,
+        type: "SCHEDULED_SERVICE",
+        priority: "MEDIUM",
+        status: "SCHEDULED",
+        title: `PM: ${services.length} service${services.length > 1 ? "s" : ""}${vehicleName ? ` — ${vehicleName}` : ""}`,
+        description: `Scheduled maintenance — ${services.join(", ")} for ${vehicleName}`,
+        performedBy: assigneeName,
+        vendor: assigneeName,
+        assignedToId: assigneeId,
+        items: services.map((s) => ({ title: `PM: ${s}` })),
+      }),
+    });
+    for (const service of services) {
+      await apiSend("/api/maintenance-schedule/dismiss", "POST", { vehicleId, service, action: "assigned", note: assigneeName });
+    }
+    reload();
+    setSelectedVehicle(null);
+  }
+
   if (loading) return <div className="flex h-64 items-center justify-center text-slate-400">Loading schedule...</div>;
   if (!data) return null;
 
@@ -601,6 +714,7 @@ export function MaintenanceScheduleClient() {
           onDismiss={handleDismiss}
           onUndismiss={handleUndismiss}
           onInspect={handleInspect}
+          onBulkAssign={handleBulkAssign}
         />
       )}
     </div>
