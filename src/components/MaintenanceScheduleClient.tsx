@@ -911,22 +911,23 @@ export function MaintenanceScheduleClient() {
             )}
           </tbody>
         </table>
-        {vehSelected.size > 0 && (
-          <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 bg-slate-50 px-4 py-3">
-            <span className="text-sm font-medium text-slate-700">{vehSelected.size} vehicle{vehSelected.size > 1 ? "s" : ""} selected — all due/overdue services will be assigned</span>
-            <select value={vehAssigneeId} onChange={(e) => setVehAssigneeId(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-              <option value="">Assign to…</option>
-              {assignableUsers.map((u) => (
-                <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
-              ))}
-            </select>
-            <button onClick={handleVehicleBulkAssign} disabled={!vehAssigneeId || vehAssigning} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
-              {vehAssigning ? "Assigning…" : `Assign ${vehSelected.size} vehicle${vehSelected.size > 1 ? "s" : ""} to person`}
-            </button>
-            <button onClick={() => setVehSelected(new Set())} className="text-xs text-slate-500 hover:underline">Clear</button>
-          </div>
-        )}
       </div>
+      )}
+
+      {viewMode === "vehicle" && vehSelected.size > 0 && (
+        <div className="sticky bottom-4 z-40 mx-auto flex max-w-3xl flex-wrap items-center gap-3 rounded-xl border border-blue-200 bg-white px-4 py-3 shadow-lg">
+          <span className="text-sm font-medium text-slate-700">{vehSelected.size} vehicle{vehSelected.size > 1 ? "s" : ""} selected — all due/overdue services will be assigned</span>
+          <select value={vehAssigneeId} onChange={(e) => setVehAssigneeId(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+            <option value="">Assign to…</option>
+            {assignableUsers.map((u) => (
+              <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+            ))}
+          </select>
+          <button onClick={handleVehicleBulkAssign} disabled={!vehAssigneeId || vehAssigning} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+            {vehAssigning ? "Assigning…" : `Assign ${vehSelected.size} vehicle${vehSelected.size > 1 ? "s" : ""} to person`}
+          </button>
+          <button onClick={() => setVehSelected(new Set())} className="text-xs text-slate-500 hover:underline">Clear</button>
+        </div>
       )}
 
       {selectedVehicle && (
