@@ -500,11 +500,145 @@ function InspectButton({ service, vehicleName, currentOdometer, onInspect }: {
   );
 }
 
+// Flat, filterable list of every due/overdue/upcoming service across the
+// (already station/severity-filtered) vehicles, with checkboxes so several can
+// be assigned to one person at once. Selections spanning multiple vehicles are
+// grouped into one work order per vehicle.
+function ServiceBulkView({ vehicles, onBulkAssign }: {
+  vehicles: VehicleSchedule[];
+  onBulkAssign: (vehicleId: string, services: string[], assigneeId: string, assigneeName: string) => Promise<void> | void;
+}) {
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "never_performed" | "overdue" | "upcoming">("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [assigneeId, setAssigneeId] = useState("");
+  const [assigning, setAssigning] = useState(false);
+  const { data: users } = useData<UserOption[]>("/api/users");
+  const assignableUsers = (users ?? []).filter(
+    (u) => u.role === "VENDOR" || u.role === "MECHANIC" || u.role === "FLEET_MANAGER" || u.role === "STATION_MANAGER"
+  );
+  const actionable = (st: string) => st === "never_performed" || st === "overdue" || st === "upcoming";
+
+  type Row = { key: string; vehicleId: string; vehicleName: string; station: string; service: string; status: string; milesUntil: number | null };
+  const rows: Row[] = [];
+  for (const v of vehicles) {
+    const name = v.dxNumber ?? v.name;
+    for (const s of v.mileageServices) {
+      if (actionable(s.status)) rows.push({ key: `${v.id}::${s.service}`, vehicleId: v.id, vehicleName: name, station: v.station, service: s.service, status: s.status, milesUntil: s.milesUntil });
+    }
+    for (const t of v.timeServices) {
+      if (actionable(t.status)) rows.push({ key: `${v.id}::${t.service}`, vehicleId: v.id, vehicleName: name, station: v.station, service: t.service, status: t.status, milesUntil: null });
+    }
+  }
+  const filtered = rows.filter(
+    (r) =>
+      (statusFilter === "all" || r.status === statusFilter) &&
+      (!query || r.service.toLowerCase().includes(query.toLowerCase()) || r.vehicleName.toLowerCase().includes(query.toLowerCase()))
+  );
+  const allSelected = filtered.length > 0 && filtered.every((r) => selected.has(r.key));
+  const toggle = (key: string) =>
+    setSelected((prev) => {
+      const n = new Set(prev);
+      if (n.has(key)) n.delete(key);
+      else n.add(key);
+      return n;
+    });
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(filtered.map((r) => r.key)));
+
+  async function submit() {
+    if (!assigneeId || selected.size === 0) return;
+    setAssigning(true);
+    const name = assignableUsers.find((u) => u.id === assigneeId)?.name ?? "";
+    const byVehicle = new Map<string, string[]>();
+    for (const r of rows) {
+      if (!selected.has(r.key)) continue;
+      const arr = byVehicle.get(r.vehicleId) ?? [];
+      arr.push(r.service);
+      byVehicle.set(r.vehicleId, arr);
+    }
+    for (const [vehicleId, services] of byVehicle) {
+      await onBulkAssign(vehicleId, services, assigneeId, name);
+    }
+    setSelected(new Set());
+    setAssigneeId("");
+    setAssigning(false);
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-white">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] bg-slate-50 px-4 py-2.5">
+        <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+          <input type="checkbox" checked={allSelected} onChange={toggleAll} disabled={filtered.length === 0} /> Select all
+        </label>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs">
+          <option value="all">All statuses</option>
+          <option value="never_performed">Never Performed</option>
+          <option value="overdue">Overdue</option>
+          <option value="upcoming">Upcoming</option>
+        </select>
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter by service or vehicle…" className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs" />
+        <span className="ml-auto text-xs text-slate-500">{filtered.length} service{filtered.length === 1 ? "" : "s"}{selected.size > 0 ? ` · ${selected.size} selected` : ""}</span>
+      </div>
+
+      <div className="max-h-[32rem] overflow-y-auto">
+        <table className="w-full text-sm">
+          <thead className="sticky top-0 bg-white">
+            <tr className="border-b border-[var(--color-border)] text-left text-xs font-semibold uppercase text-slate-500">
+              <th className="px-4 py-3 w-8"></th>
+              <th className="px-4 py-3">Vehicle</th>
+              <th className="px-4 py-3">Station</th>
+              <th className="px-4 py-3">Service</th>
+              <th className="px-4 py-3 text-center">Status</th>
+              <th className="px-4 py-3 text-right">Miles Until</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((r) => (
+              <tr key={r.key} className={`border-b border-slate-100 hover:bg-slate-50 ${selected.has(r.key) ? "bg-blue-50/40" : ""}`}>
+                <td className="px-4 py-2.5"><input type="checkbox" checked={selected.has(r.key)} onChange={() => toggle(r.key)} /></td>
+                <td className="px-4 py-2.5 font-medium text-slate-800">{r.vehicleName}</td>
+                <td className="px-4 py-2.5"><span className="rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{r.station}</span></td>
+                <td className="px-4 py-2.5 text-slate-700">{r.service}</td>
+                <td className="px-4 py-2.5 text-center"><StatusBadge status={r.status} /></td>
+                <td className={`px-4 py-2.5 text-right font-medium ${r.milesUntil == null ? "text-slate-400" : r.milesUntil < 0 ? "text-red-600" : r.milesUntil <= 2000 ? "text-amber-600" : "text-slate-500"}`}>
+                  {r.milesUntil == null ? "—" : r.milesUntil > 0 ? `${r.milesUntil.toLocaleString()} mi` : `${Math.abs(r.milesUntil).toLocaleString()} mi past`}
+                </td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">No due/overdue services match the current filter</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Bulk assign bar */}
+      {selected.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 bg-slate-50 px-4 py-3">
+          <span className="text-sm font-medium text-slate-700">{selected.size} service{selected.size > 1 ? "s" : ""} selected</span>
+          <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+            <option value="">Assign to…</option>
+            {assignableUsers.map((u) => (
+              <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+            ))}
+          </select>
+          <button onClick={submit} disabled={!assigneeId || assigning} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+            {assigning ? "Assigning…" : `Assign ${selected.size} to person`}
+          </button>
+          <button onClick={() => setSelected(new Set())} className="text-xs text-slate-500 hover:underline">Clear</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function MaintenanceScheduleClient() {
   const [station, setStation] = useState("ALL");
   const { data, loading, reload } = useData<ScheduleData>(`/api/maintenance-schedule?station=${station}`);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleSchedule | null>(null);
   const [filter, setFilter] = useState<"all" | "alerts" | "overdue" | "upcoming" | "never_performed">("all");
+  const [viewMode, setViewMode] = useState<"vehicle" | "service">("vehicle");
 
   async function handleDismiss(vehicleId: string, service: string, action: "done" | "skip" | "assigned", note?: string) {
     const res = await apiSend("/api/maintenance-schedule/dismiss", "POST", { vehicleId, service, action, note: note ?? null });
@@ -580,15 +714,31 @@ export function MaintenanceScheduleClient() {
           <h1 className="text-2xl font-bold text-slate-900">Maintenance Schedule</h1>
           <p className="text-sm text-slate-500">Vehicle lifecycle PM schedule — next service based on last completed mileage + interval</p>
         </div>
-        <select
-          value={station}
-          onChange={(e) => setStation(e.target.value)}
-          className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
-        >
-          {STATIONS.map((s) => (
-            <option key={s} value={s}>{s === "ALL" ? "All Stations" : s}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-3">
+          <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-white p-0.5 text-sm">
+            <button
+              onClick={() => setViewMode("vehicle")}
+              className={`rounded-md px-3 py-1.5 font-medium ${viewMode === "vehicle" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}
+            >
+              By Vehicle
+            </button>
+            <button
+              onClick={() => setViewMode("service")}
+              className={`rounded-md px-3 py-1.5 font-medium ${viewMode === "service" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}
+            >
+              By Service
+            </button>
+          </div>
+          <select
+            value={station}
+            onChange={(e) => setStation(e.target.value)}
+            className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
+          >
+            {STATIONS.map((s) => (
+              <option key={s} value={s}>{s === "ALL" ? "All Stations" : s}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -631,7 +781,13 @@ export function MaintenanceScheduleClient() {
         </button>
       </div>
 
+      {/* By Service view */}
+      {viewMode === "service" && (
+        <ServiceBulkView vehicles={filteredVehicles} onBulkAssign={handleBulkAssign} />
+      )}
+
       {/* Vehicle list */}
+      {viewMode === "vehicle" && (
       <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-white">
         <table className="w-full text-sm">
           <thead>
@@ -706,6 +862,7 @@ export function MaintenanceScheduleClient() {
           </tbody>
         </table>
       </div>
+      )}
 
       {selectedVehicle && (
         <VehicleDetail
