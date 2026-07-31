@@ -639,6 +639,13 @@ export function MaintenanceScheduleClient() {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleSchedule | null>(null);
   const [filter, setFilter] = useState<"all" | "alerts" | "overdue" | "upcoming" | "never_performed">("all");
   const [viewMode, setViewMode] = useState<"vehicle" | "service">("vehicle");
+  const [vehSelected, setVehSelected] = useState<Set<string>>(new Set());
+  const [vehAssigneeId, setVehAssigneeId] = useState("");
+  const [vehAssigning, setVehAssigning] = useState(false);
+  const { data: users } = useData<UserOption[]>("/api/users");
+  const assignableUsers = (users ?? []).filter(
+    (u) => u.role === "VENDOR" || u.role === "MECHANIC" || u.role === "FLEET_MANAGER" || u.role === "STATION_MANAGER"
+  );
 
   async function handleDismiss(vehicleId: string, service: string, action: "done" | "skip" | "assigned", note?: string) {
     const res = await apiSend("/api/maintenance-schedule/dismiss", "POST", { vehicleId, service, action, note: note ?? null });
@@ -695,6 +702,31 @@ export function MaintenanceScheduleClient() {
     setSelectedVehicle(null);
   }
 
+  // Distinct due/overdue/upcoming service names for a vehicle.
+  function actionableServicesOf(v: VehicleSchedule) {
+    const act = (st: string) => st === "never_performed" || st === "overdue" || st === "upcoming";
+    return Array.from(new Set([
+      ...v.mileageServices.filter((s) => act(s.status)).map((s) => s.service),
+      ...v.timeServices.filter((t) => act(t.status)).map((t) => t.service),
+    ]));
+  }
+
+  async function handleVehicleBulkAssign() {
+    if (!vehAssigneeId || vehSelected.size === 0) return;
+    setVehAssigning(true);
+    const name = assignableUsers.find((u) => u.id === vehAssigneeId)?.name ?? "";
+    for (const id of vehSelected) {
+      const v = data!.vehicles.find((x) => x.id === id);
+      if (!v) continue;
+      const services = actionableServicesOf(v);
+      if (services.length === 0) continue;
+      await handleBulkAssign(id, services, vehAssigneeId, name);
+    }
+    setVehSelected(new Set());
+    setVehAssigneeId("");
+    setVehAssigning(false);
+  }
+
   if (loading) return <div className="flex h-64 items-center justify-center text-slate-400">Loading schedule...</div>;
   if (!data) return null;
 
@@ -705,6 +737,16 @@ export function MaintenanceScheduleClient() {
     if (filter === "never_performed") return v.neverPerformedCount > 0;
     return true;
   });
+  const selectableVehicles = filteredVehicles.filter((v) => actionableServicesOf(v).length > 0);
+  const allVehSelected = selectableVehicles.length > 0 && selectableVehicles.every((v) => vehSelected.has(v.id));
+  const toggleVeh = (id: string) =>
+    setVehSelected((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const toggleAllVeh = () => setVehSelected(allVehSelected ? new Set() : new Set(selectableVehicles.map((v) => v.id)));
 
   return (
     <div className="space-y-6">
@@ -792,6 +834,9 @@ export function MaintenanceScheduleClient() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--color-border)] bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
+              <th className="px-4 py-3 w-8">
+                <input type="checkbox" checked={allVehSelected} onChange={toggleAllVeh} disabled={selectableVehicles.length === 0} title="Select all with due services" />
+              </th>
               <th className="px-4 py-3">Vehicle</th>
               <th className="px-4 py-3">Station</th>
               <th className="px-4 py-3 text-right">Odometer</th>
@@ -803,7 +848,12 @@ export function MaintenanceScheduleClient() {
           </thead>
           <tbody>
             {filteredVehicles.map((v) => (
-              <tr key={v.id} className={`border-b border-slate-100 hover:bg-slate-50 ${v.neverPerformedCount > 0 ? "bg-red-50/30" : ""}`}>
+              <tr key={v.id} className={`border-b border-slate-100 hover:bg-slate-50 ${vehSelected.has(v.id) ? "bg-blue-50/40" : v.neverPerformedCount > 0 ? "bg-red-50/30" : ""}`}>
+                <td className="px-4 py-3">
+                  {actionableServicesOf(v).length > 0 && (
+                    <input type="checkbox" checked={vehSelected.has(v.id)} onChange={() => toggleVeh(v.id)} />
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   <div>
                     <p className="font-medium text-slate-900">{v.dxNumber ?? v.name}</p>
@@ -856,11 +906,26 @@ export function MaintenanceScheduleClient() {
             ))}
             {filteredVehicles.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-slate-400">No vehicles match the current filter</td>
+                <td colSpan={8} className="px-4 py-8 text-center text-slate-400">No vehicles match the current filter</td>
               </tr>
             )}
           </tbody>
         </table>
+        {vehSelected.size > 0 && (
+          <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 bg-slate-50 px-4 py-3">
+            <span className="text-sm font-medium text-slate-700">{vehSelected.size} vehicle{vehSelected.size > 1 ? "s" : ""} selected — all due/overdue services will be assigned</span>
+            <select value={vehAssigneeId} onChange={(e) => setVehAssigneeId(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+              <option value="">Assign to…</option>
+              {assignableUsers.map((u) => (
+                <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+              ))}
+            </select>
+            <button onClick={handleVehicleBulkAssign} disabled={!vehAssigneeId || vehAssigning} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+              {vehAssigning ? "Assigning…" : `Assign ${vehSelected.size} vehicle${vehSelected.size > 1 ? "s" : ""} to person`}
+            </button>
+            <button onClick={() => setVehSelected(new Set())} className="text-xs text-slate-500 hover:underline">Clear</button>
+          </div>
+        )}
       </div>
       )}
 
