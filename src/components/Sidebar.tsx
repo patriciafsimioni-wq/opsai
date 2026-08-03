@@ -35,6 +35,7 @@ import {
   MessageSquare,
   Menu,
   X,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IS_TROVA } from "@/lib/constants";
@@ -48,7 +49,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   return <SidebarContext.Provider value={{ open, toggle }}>{children}</SidebarContext.Provider>;
 }
 
-type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; roles?: string[]; trovaOnly?: boolean };
+type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; roles?: string[]; trovaOnly?: boolean; external?: boolean };
 type NavSection = { title: string; items: NavItem[]; roles?: string[] };
 
 const NAV_SECTIONS: NavSection[] = [
@@ -106,6 +107,12 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/compliance", label: "Compliance Audit", icon: ShieldCheck, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "DATA_ENTRY"] },
       { href: "/issues", label: "Issue Tracker", icon: Flag },
       { href: "/activity", label: "Activity Log", icon: History, roles: ["ADMIN", "GENERAL_MANAGER", "FLEET_MANAGER", "STATION_MANAGER", "MANAGER", "DATA_ENTRY"] },
+    ],
+  },
+  {
+    title: "Accountability",
+    items: [
+      { href: "https://synctruck-dashboard.vercel.app", label: "Portal", icon: ExternalLink, external: true },
     ],
   },
   {
@@ -173,17 +180,35 @@ export function Sidebar({ alertCount, messageCount, userRole }: { alertCount: nu
                     ? pathname === "/"
                     : pathname.startsWith(item.href);
                 const Icon = item.icon;
+                const itemClassName = cn(
+                  "flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-blue-50 text-blue-700"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                );
+                if (item.external) {
+                  return (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={toggle}
+                      className={itemClassName}
+                    >
+                      <span className="flex items-center gap-3">
+                        <Icon size={18} />
+                        {item.label}
+                      </span>
+                    </a>
+                  );
+                }
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={toggle}
-                    className={cn(
-                      "flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                      active
-                        ? "bg-blue-50 text-blue-700"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-                    )}
+                    className={itemClassName}
                   >
                     <span className="flex items-center gap-3">
                       <Icon size={18} />
