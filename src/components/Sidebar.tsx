@@ -38,7 +38,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { IS_TROVA } from "@/lib/constants";
+import { IS_TROVA, IS_SYNCTX } from "@/lib/constants";
 import { BrandSwitcher } from "@/components/BrandSwitcher";
 
 const SidebarContext = createContext<{ open: boolean; toggle: () => void }>({ open: false, toggle: () => {} });
@@ -49,7 +49,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   return <SidebarContext.Provider value={{ open, toggle }}>{children}</SidebarContext.Provider>;
 }
 
-type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; roles?: string[]; trovaOnly?: boolean; external?: boolean };
+type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; roles?: string[]; trovaOnly?: boolean; synctxOnly?: boolean; external?: boolean };
 type NavSection = { title: string; items: NavItem[]; roles?: string[] };
 
 const NAV_SECTIONS: NavSection[] = [
@@ -112,7 +112,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: "Accountability",
     items: [
-      { href: "https://synctruck-dashboard.vercel.app", label: "Portal", icon: ExternalLink, external: true },
+      { href: "https://synctruck-dashboard.vercel.app", label: "Portal", icon: ExternalLink, external: true, synctxOnly: true },
     ],
   },
   {
@@ -142,7 +142,7 @@ export function Sidebar({ alertCount, messageCount, userRole }: { alertCount: nu
     .filter((section) => !section.roles || section.roles.includes(role))
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => (!item.roles || item.roles.includes(role)) && (!item.trovaOnly || IS_TROVA)),
+      items: section.items.filter((item) => (!item.roles || item.roles.includes(role)) && (!item.trovaOnly || IS_TROVA) && (!item.synctxOnly || IS_SYNCTX)),
     }))
     .filter((section) => section.items.length > 0);
 
