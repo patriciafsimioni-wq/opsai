@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Search, Pencil, Trash2, Wrench, ClipboardList, AlertTriangle, CheckCircle2, Upload } from "lucide-react";
+import { Search, Pencil, Trash2, Wrench, ClipboardList, AlertTriangle, CheckCircle2, Upload, FileDown } from "lucide-react";
 import { Card, Button, Badge, Table, Th, Td, SortTh, EmptyState, StatCard } from "@/components/ui";
 import { Field, Input, Select, Textarea, Modal } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
@@ -22,6 +22,7 @@ import {
   IS_TROVA,
 } from "@/lib/constants";
 import { formatCurrency, formatDate, todayInputDate } from "@/lib/utils";
+import { downloadCsv } from "@/lib/csv";
 import { compressImage } from "@/lib/image";
 
 const DEFAULT_RATE = "95";
@@ -228,6 +229,32 @@ export function MaintenanceClient({
     reload();
   }
 
+  function downloadSelected() {
+    // Download the checked rows, or the full filtered set when nothing is checked.
+    const rows = selectedIds.size > 0 ? filtered.filter((o) => selectedIds.has(o.id)) : filtered;
+    if (rows.length === 0) return;
+    const fmt = (d: string | Date | null | undefined) =>
+      d ? new Date(d).toISOString().slice(0, 10) : "";
+    downloadCsv(`work-orders-${new Date().toISOString().slice(0, 10)}.csv`, rows, [
+      { header: "WO#", value: (o) => o.id.slice(-6).toUpperCase() },
+      { header: "PO#", value: (o) => o.poNumber ?? "" },
+      { header: "Date", value: (o) => fmt(o.createdAt) },
+      { header: "Work Order", value: (o) => o.title },
+      { header: "Type", value: (o) => titleCase(o.type) },
+      { header: "Vehicle", value: (o) => o.vehicle?.name ?? o.vehicleOther ?? "" },
+      { header: "Station", value: (o) => o.station ?? "" },
+      { header: "Requested By", value: (o) => o.requestedBy ?? "" },
+      { header: "Vendor", value: (o) => o.vendor ?? o.assignedTo?.name ?? "" },
+      { header: "Mileage", value: (o) => o.odometerAt ?? "" },
+      { header: "Material", value: (o) => o.materialCost },
+      { header: "Labor", value: (o) => o.laborCost },
+      { header: "Total", value: (o) => o.cost },
+      { header: "Status", value: (o) => WO_STATUS[o.status as keyof typeof WO_STATUS]?.label ?? o.status },
+      { header: "Scheduled For", value: (o) => fmt(o.scheduledFor) },
+      { header: "Completed At", value: (o) => fmt(o.completedAt) },
+    ]);
+  }
+
   return (
     <div className="space-y-4">
       {/* Pending WO Requests banner */}
@@ -318,6 +345,9 @@ export function MaintenanceClient({
               <option key={s} value={s}>{WO_STATUS[s].label}</option>
             ))}
           </select>
+          <Button variant="secondary" onClick={downloadSelected} disabled={filtered.length === 0}>
+            <FileDown size={16} /> Download CSV
+          </Button>
         </div>
 
         {canManage && selectedIds.size > 0 && (
@@ -338,6 +368,12 @@ export function MaintenanceClient({
               className="rounded-lg bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
               {bulkProcessing ? "Updating..." : "Update All"}
+            </button>
+            <button
+              onClick={downloadSelected}
+              className="inline-flex items-center gap-1 rounded-lg border border-blue-300 bg-white px-3 py-1 text-sm font-medium text-blue-700 hover:bg-blue-100"
+            >
+              <FileDown size={14} /> Download {selectedIds.size}
             </button>
             <button
               onClick={() => setSelectedIds(new Set())}

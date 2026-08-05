@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ClipboardCheck, Lock, Upload, Pencil, X, Plus, Trash2 } from "lucide-react";
+import { ClipboardCheck, Lock, Upload, Pencil, X, Plus, Trash2, FileDown } from "lucide-react";
 import { Card, CardHeader, Button, Badge, Table, Th, Td, SortTh, EmptyState } from "@/components/ui";
 import { Field, Input, Select, Textarea } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
@@ -9,6 +9,7 @@ import { useTableSort } from "@/lib/use-sort";
 import type { WorkOrderDTO, VehicleDTO, ServiceDTO } from "@/lib/types";
 import { FORM_STATIONS, STATION_LABEL } from "@/lib/constants";
 import { formatCurrency, formatDate, todayInputDate } from "@/lib/utils";
+import { downloadCsv } from "@/lib/csv";
 import { compressImage } from "@/lib/image";
 
 function todayStr() {
@@ -148,6 +149,7 @@ export function LogServiceClient({
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
   const [search, setSearch] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editParamHandled, setEditParamHandled] = useState(false);
 
   // Support deep-linking to edit a specific service (e.g. from a vehicle's
@@ -197,6 +199,40 @@ export function LogServiceClient({
       : list;
     return sort.sortRows(filtered);
   }, [orders, sort, search]);
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  const allSelected = recent.length > 0 && recent.every((o) => selectedIds.has(o.id));
+  function toggleSelectAll() {
+    setSelectedIds(allSelected ? new Set() : new Set(recent.map((o) => o.id)));
+  }
+
+  function downloadServices() {
+    const rows = selectedIds.size > 0 ? recent.filter((o) => selectedIds.has(o.id)) : recent;
+    if (rows.length === 0) return;
+    const fmt = (d: string | Date | null | undefined) =>
+      d ? new Date(d).toISOString().slice(0, 10) : "";
+    downloadCsv(`logged-services-${new Date().toISOString().slice(0, 10)}.csv`, rows, [
+      { header: "Date", value: (o) => fmt(o.completedAt) },
+      { header: "Service", value: (o) => o.title },
+      { header: "Vehicle", value: (o) => o.vehicle?.name ?? o.vehicleOther ?? "" },
+      { header: "VIN", value: (o) => o.vin ?? "" },
+      { header: "Station", value: (o) => o.station ?? "" },
+      { header: "Odometer", value: (o) => o.odometerAt ?? "" },
+      { header: "Vendor", value: (o) => o.vendor ?? "" },
+      { header: "PO", value: (o) => o.poNumber ?? "" },
+      { header: "Invoice #", value: (o) => o.invoiceNumber ?? "" },
+      { header: "Material", value: (o) => o.materialCost },
+      { header: "Labor", value: (o) => o.laborCost },
+      { header: "Total", value: (o) => o.cost },
+      { header: "Description", value: (o) => o.description ?? "" },
+    ]);
+  }
 
   function onSelectVehicle(vehicleId: string) {
     const v = (vehicles ?? []).find((x) => x.id === vehicleId);
@@ -575,14 +611,19 @@ export function LogServiceClient({
       <Card className="lg:col-span-3">
         <CardHeader
           title="Logged services"
-          subtitle={`${recent.length} service${recent.length === 1 ? "" : "s"} shown`}
+          subtitle={`${recent.length} service${recent.length === 1 ? "" : "s"} shown${selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ""}`}
           action={
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search service, vehicle, vendor, PO, station…"
-              className="h-8 w-64"
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search service, vehicle, vendor, PO, station…"
+                className="h-8 w-64"
+              />
+              <Button variant="secondary" onClick={downloadServices} disabled={recent.length === 0} className="h-8">
+                <FileDown size={14} /> Download{selectedIds.size > 0 ? ` ${selectedIds.size}` : ""}
+              </Button>
+            </div>
           }
         />
         {loading ? (
@@ -594,6 +635,15 @@ export function LogServiceClient({
             <Table>
               <thead>
                 <tr>
+                  <Th>
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={toggleSelectAll}
+                      className="h-4 w-4 rounded border-slate-300"
+                      title="Select all"
+                    />
+                  </Th>
                   <SortTh label="Service" col="service" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
                   <SortTh label="Vehicle" col="vehicle" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
                   <SortTh label="Station" col="station" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
@@ -606,7 +656,15 @@ export function LogServiceClient({
               </thead>
               <tbody>
                 {recent.map((o) => (
-                  <tr key={o.id} className="hover:bg-slate-50">
+                  <tr key={o.id} className={`hover:bg-slate-50 ${selectedIds.has(o.id) ? "bg-blue-50" : ""}`}>
+                    <Td>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(o.id)}
+                        onChange={() => toggleSelect(o.id)}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
+                    </Td>
                     <Td>
                       <p className="font-medium">{o.title}</p>
                       {o.vendor && <p className="text-xs text-slate-400">{o.vendor}</p>}
