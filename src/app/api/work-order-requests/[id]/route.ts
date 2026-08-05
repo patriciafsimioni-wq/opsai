@@ -131,6 +131,7 @@ export async function PATCH(
           odometerAt: updated.odometer ?? null,
           poNumber: updated.poNumber || null,
           invoiceUrl: updated.photoUrl || null,
+          requestedBy: updated.requestedBy?.name ?? updated.requesterEmail ?? null,
           assignedToId: requesterIsVendor ? updated.requestedById : null,
           vendor: requesterIsVendor ? updated.requestedBy?.name ?? null : null,
           scheduledFor: updated.expectedCompletion ?? updated.requestedDate ?? null,

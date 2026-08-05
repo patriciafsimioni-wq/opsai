@@ -21,7 +21,7 @@ import {
   titleCase,
   IS_TROVA,
 } from "@/lib/constants";
-import { formatCurrency, todayInputDate } from "@/lib/utils";
+import { formatCurrency, formatDate, todayInputDate } from "@/lib/utils";
 import { compressImage } from "@/lib/image";
 
 const DEFAULT_RATE = "95";
@@ -39,6 +39,7 @@ const emptyForm = {
   laborHours: "0",
   laborRate: DEFAULT_RATE,
   vendor: "",
+  requestedBy: "",
   scheduledFor: "",
 };
 
@@ -75,20 +76,23 @@ export function MaintenanceClient({
   const [bulkStatus, setBulkStatus] = useState("COMPLETED");
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
-  const sort = useTableSort<WorkOrderDTO, "wo" | "po" | "title" | "vehicle" | "station" | "mileage" | "material" | "labor" | "total" | "status">(
+  const sort = useTableSort<WorkOrderDTO, "wo" | "po" | "date" | "title" | "vehicle" | "station" | "requestedBy" | "vendor" | "mileage" | "material" | "labor" | "total" | "status">(
     {
       wo: (o) => o.id.slice(-6).toLowerCase(),
       po: (o) => (o.poNumber ?? "").toLowerCase(),
+      date: (o) => (o.createdAt ? new Date(o.createdAt).getTime() : null),
       title: (o) => o.title.toLowerCase(),
       vehicle: (o) => (o.vehicle?.name ?? o.vehicleOther ?? "").toLowerCase(),
       station: (o) => o.station ?? "",
+      requestedBy: (o) => (o.requestedBy ?? "").toLowerCase(),
+      vendor: (o) => (o.vendor ?? o.assignedTo?.name ?? "").toLowerCase(),
       mileage: (o) => o.odometerAt ?? null,
       material: (o) => o.materialCost,
       labor: (o) => o.laborCost,
       total: (o) => o.cost,
       status: (o) => o.status,
     },
-    "title",
+    "date",
   );
 
   const filtered = useMemo(() => {
@@ -96,7 +100,11 @@ export function MaintenanceClient({
     const q = search.toLowerCase();
     const result = orders.filter((o) => {
       const matchSearch =
-        !q || o.title.toLowerCase().includes(q) || (o.vehicle?.name ?? o.vehicleOther ?? "").toLowerCase().includes(q);
+        !q ||
+        o.title.toLowerCase().includes(q) ||
+        (o.vehicle?.name ?? o.vehicleOther ?? "").toLowerCase().includes(q) ||
+        (o.requestedBy ?? "").toLowerCase().includes(q) ||
+        (o.vendor ?? o.assignedTo?.name ?? "").toLowerCase().includes(q);
       return (
         matchSearch &&
         (!statusFilter || o.status === statusFilter) &&
@@ -159,6 +167,7 @@ export function MaintenanceClient({
       laborHours: String(o.laborHours ?? "0"),
       laborRate: String(o.laborRate ?? DEFAULT_RATE),
       vendor: o.vendor ?? "",
+      requestedBy: o.requestedBy ?? "",
       scheduledFor: o.scheduledFor ? String(o.scheduledFor).slice(0, 10) : "",
     });
     setError("");
@@ -360,9 +369,12 @@ export function MaintenanceClient({
                 )}
                 <SortTh label="WO#" col="wo" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
                 <SortTh label="PO#" col="po" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Date" col="date" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
                 <SortTh label="Work Order" col="title" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
                 <SortTh label="Vehicle" col="vehicle" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
                 <SortTh label="Station" col="station" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Requested By" col="requestedBy" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
+                <SortTh label="Vendor" col="vendor" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
                 <SortTh label="Mileage" col="mileage" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
                 <SortTh label="Material" col="material" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
                 <SortTh label="Labor" col="labor" sortKey={sort.sortKey} sortDir={sort.sortDir} onSort={sort.toggle} />
@@ -388,6 +400,7 @@ export function MaintenanceClient({
                     )}
                     <Td className="font-mono text-xs text-slate-500">{o.id.slice(-6).toUpperCase()}</Td>
                     <Td className="font-mono text-xs font-semibold text-slate-700">{o.poNumber ?? "—"}</Td>
+                    <Td className="whitespace-nowrap text-xs text-slate-600">{formatDate(o.createdAt)}</Td>
                     <Td>
                       <p className="font-medium">{o.title}</p>
                       <p className="text-xs text-slate-400">
@@ -411,6 +424,8 @@ export function MaintenanceClient({
                     <Td>
                       <Badge bg="#eef2ff" fg="#3730a3">{o.station}</Badge>
                     </Td>
+                    <Td className="text-slate-600">{o.requestedBy || <span className="text-slate-300">—</span>}</Td>
+                    <Td className="text-slate-600">{o.vendor || o.assignedTo?.name || <span className="text-slate-300">—</span>}</Td>
                     <Td className="text-slate-600">
                       {o.odometerAt ? `${Number(o.odometerAt).toLocaleString()} mi` : <span className="text-slate-300">—</span>}
                     </Td>
@@ -576,6 +591,13 @@ export function MaintenanceClient({
           </Field>
           <Field label="Vendor">
             <Input value={form.vendor} onChange={(e) => setForm({ ...form, vendor: e.target.value })} />
+          </Field>
+          <Field label="Requested By">
+            <Input
+              value={form.requestedBy}
+              placeholder="Who requested this"
+              onChange={(e) => setForm({ ...form, requestedBy: e.target.value })}
+            />
           </Field>
           <Field label="Description" className="col-span-2">
             <Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />

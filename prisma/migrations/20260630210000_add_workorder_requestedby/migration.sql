@@ -1,0 +1,1 @@
+ALTER TABLE "WorkOrder" ADD COLUMN IF NOT EXISTS "requestedBy" TEXT;

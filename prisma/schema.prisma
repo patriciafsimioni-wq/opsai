@@ -448,6 +448,7 @@ model WorkOrder {
   laborCost    Float           @default(0)
   cost         Float           @default(0)
   performedBy  String?
+  requestedBy  String?
   odometerAt   Float?
   vendor       String?
   assignedTo   User?           @relation("assignedWorkOrders", fields: [assignedToId], references: [id])
