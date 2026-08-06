@@ -1,0 +1,771 @@
+// Fleet Management — Prisma schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  GENERAL_MANAGER
+  FLEET_MANAGER
+  STATION_MANAGER
+  MECHANIC
+  VENDOR
+  MANAGER
+  DRIVER
+  DATA_ENTRY
+}
+
+enum VehicleType {
+  TRUCK
+  VAN
+  CAR
+  BUS
+  PICKUP
+  TRAILER
+}
+
+enum VehicleStatus {
+  ACTIVE
+  IDLE
+  MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+enum FuelType {
+  DIESEL
+  GASOLINE
+  ELECTRIC
+  HYBRID
+  CNG
+}
+
+enum DriverStatus {
+  ACTIVE
+  ON_TRIP
+  OFF_DUTY
+  INACTIVE
+}
+
+enum TripStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum MaintenanceType {
+  SCHEDULED_SERVICE
+  REPAIR
+  INSPECTION
+  TIRE
+  OIL_CHANGE
+  RECALL
+}
+
+enum WorkOrderStatus {
+  OPEN
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum Station {
+  AUS
+  ACT
+  IAH
+  CLL
+  BPT
+  HRL
+  LRD
+  ORF
+  RNH
+}
+
+enum ServiceCategory {
+  PREVENTIVE
+  CORRECTIVE
+}
+
+enum GeofenceType {
+  DEPOT
+  CUSTOMER
+  SERVICE
+  RESTRICTED
+}
+
+enum WORequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AlertType {
+  SPEEDING
+  GEOFENCE_ENTER
+  GEOFENCE_EXIT
+  MAINTENANCE_DUE
+  DOCUMENT_EXPIRY
+  LOW_FUEL
+  IDLE
+  HARSH_DRIVING
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum PurchaseType {
+  UNLEADED
+  DIESEL
+  DEF
+  NON_FUEL
+}
+
+model User {
+  id                String             @id @default(cuid())
+  email             String             @unique
+  name              String
+  passwordHash      String
+  role              Role               @default(MANAGER)
+  station           String?
+  driver            Driver?            @relation(fields: [driverId], references: [id])
+  driverId          String?            @unique
+  woRequests        WorkOrderRequest[] @relation("requestedBy")
+  woReviews         WorkOrderRequest[] @relation("reviewedBy")
+  dvirReports       DvirReport[]
+  issuesCreated     Issue[]            @relation("issueCreatedBy")
+  issuesAssigned    Issue[]            @relation("issueAssignedTo")
+  issueComments     IssueComment[]
+  assignedWorkOrders WorkOrder[]       @relation("assignedWorkOrders")
+  sentMessages      UserMessage[]      @relation("sentMessages")
+  receivedMessages  UserMessage[]      @relation("receivedMessages")
+  createdAt         DateTime           @default(now())
+  lastActiveAt      DateTime?
+}
+
+// Audit trail: one row per meaningful change, so the dashboard can show
+// "who changed what, and when" across the whole portal.
+model ActivityLog {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  userId      String?
+  userName    String
+  action      String
+  entity      String
+  entityLabel String
+  station     String?
+  detail      String?
+
+  @@index([createdAt])
+  @@index([station])
+}
+
+// Direct in-app message from one user to another, with threaded replies.
+model UserMessage {
+  id          String        @id @default(cuid())
+  body        String
+  sender      User          @relation("sentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  senderId    String
+  recipient   User          @relation("receivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+  recipientId String
+  read        Boolean       @default(false)
+  parent      UserMessage?  @relation("replies", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId    String?
+  replies     UserMessage[] @relation("replies")
+  createdAt   DateTime      @default(now())
+
+  @@index([recipientId])
+  @@index([senderId])
+  @@index([parentId])
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum IssuePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Issue {
+  id            String         @id @default(cuid())
+  title         String
+  description   String?
+  status        IssueStatus    @default(OPEN)
+  priority      IssuePriority  @default(MEDIUM)
+  category      String?
+  station       String?
+  module        String?
+  referenceId   String?
+  referenceData String?
+  createdBy     User           @relation("issueCreatedBy", fields: [createdById], references: [id])
+  createdById   String
+  assignedTo    User?          @relation("issueAssignedTo", fields: [assignedToId], references: [id])
+  assignedToId  String?
+  resolvedAt    DateTime?
+  comments      IssueComment[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([status])
+  @@index([assignedToId])
+  @@index([station])
+}
+
+model IssueComment {
+  id        String   @id @default(cuid())
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  issueId   String
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([issueId])
+}
+
+model Driver {
+  id            String       @id @default(cuid())
+  firstName     String
+  lastName      String
+  email         String       @unique
+  phone         String?
+  licenseNumber String
+  licenseClass  String?
+  licenseExpiry DateTime
+  status        DriverStatus @default(ACTIVE)
+  hireDate      DateTime     @default(now())
+  rating        Float        @default(4.5)
+  safetyScore   Int          @default(85)
+  avatarColor   String       @default("#2563eb")
+  user          User?
+  vehicles      Vehicle[]
+  trips         Trip[]
+  fuelLogs      FuelLog[]
+  alerts        Alert[]
+  samsaraId     String?
+  station       String?
+  vehicleType   String?      // CARGO_VAN | BOX_TRUCK | TRACTOR_TRUCK
+  // DOT driver-file compliance (relevant for Box Truck / Tractor Truck drivers)
+  medicalCardExpiry DateTime?
+  mvrCheckedAt      DateTime?
+  drugTestStatus    String?  // PASS | PENDING | FAIL
+  annualReviewAt    DateTime?
+  // Uploaded DOT document files (image/PDF URLs from /api/uploads)
+  medicalCardDocUrl String?
+  licenseDocUrl     String?
+  mvrDocUrl         String?
+  drugTestDocUrl    String?
+  annualReviewDocUrl String?
+  createdAt     DateTime     @default(now())
+}
+
+// Company/fleet-level DOT compliance documents, one requirement can have many
+// (e.g. HOS/ELD program, VA Intrastate Registration, Vehicle Safety Inspection).
+model DotDocument {
+  id          String    @id @default(cuid())
+  requirement String    // requirement key (slug) from the DOT rules reference
+  title       String
+  docUrl      String
+  issuedAt    DateTime?
+  expiresAt   DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+
+  @@index([requirement])
+}
+
+// On-site DOT audit / safety review performed by an officer.
+model DotAudit {
+  id          String    @id @default(cuid())
+  auditDate   DateTime
+  officerName String?
+  agency      String?
+  result      String?   // SATISFACTORY | CONDITIONAL | UNSATISFACTORY | NOT_RATED
+  notes       String?
+  docUrl      String?
+  createdAt   DateTime  @default(now())
+}
+
+model Vehicle {
+  id                 String         @id @default(cuid())
+  name               String
+  dxNumber           String?        @unique
+  make               String
+  model              String
+  year               Int
+  vin                String         @unique
+  licensePlate       String
+  type               VehicleType    @default(TRUCK)
+  status             VehicleStatus  @default(ACTIVE)
+  fuelType           FuelType       @default(DIESEL)
+  odometer           Float          @default(0)
+  fuelLevel          Float          @default(100)
+  tankCapacity       Float          @default(200)
+  station            Station        @default(AUS)
+  leasingCompany     String?
+  leaseType          String?
+  leaseTerm          Int?
+  leaseStartDate     DateTime?
+  leaseEndDate       DateTime?
+  monthsInService    Int?
+  contractMileage    Float?
+  deliveredPrice     Float?
+  depAmtPerMonth     Float?
+  leaseChargePerMonth Float?
+  totalRentPerMonth  Float?
+  serviceChargePerMonth Float?
+  currentBookValue   Float?
+  excessMileageRate  Float?
+  openEndCapCost     Float?
+  openEndDeprRate    Float?
+  openEndNetBookValue Float?
+  currentMarketValue Float?
+  monthsLeftPayoff   Int?
+  paidOff            Boolean        @default(false)
+  branding           String?        // "YELLOW_DHL" or "WHITE"
+  offboardedDate     DateTime?
+  offboardReason     String?
+  offboardStatus     String?        // "IN_PROGRESS" | "COMPLETED"
+  offboardMileage    Float?
+  offboardBrandingRemoved Boolean   @default(false)
+  offboardCameraRemoved   Boolean   @default(false)
+  offboardPickupRequested Boolean   @default(false)
+  offboardPickupDate DateTime?
+  offboardSoldAmount Float?
+  // Fleet grouping so a specialty fleet (tractor trucks + trailers) can be
+  // kept separate from the regular van fleet in views. "REGULAR" | "TRACTOR_TRAILER"
+  fleetGroup         String          @default("REGULAR")
+  onboardPhotos      String?        // JSON array of photo URLs
+  samsaraId          String?
+  hasSamsaraCamera   Boolean         @default(false)
+  onboardedDate      DateTime?
+  registrationMonth  String?
+  registrationExpiry DateTime?
+  insuranceExpiry    DateTime?
+  // DOT Annual Safety Inspection (trucks) — 49 CFR 396.17
+  dotInspectionDate   DateTime?
+  dotInspectionExpiry DateTime?
+  dotInspectionDocUrl String?
+  purchaseDate       DateTime?
+  purchasePrice      Float?
+  // Vehicle Lifecycle
+  lifecycleStatus    String          @default("ACTIVE") // PLANNING, ACQUISITION_APPROVED, ORDERED, IN_TRANSIT, RECEIVED, UPFITTING, REGISTERED, ASSIGNED, ACTIVE, TEMP_OUT, LONG_TERM_REPAIR, READY_DISPOSAL, SOLD_RETURNED, ARCHIVED
+  // Financial - Initial Investment
+  taxesAndFees       Float?
+  brandingCost       Float?
+  gpsCamerasCost     Float?
+  upfittingCost      Float?
+  registrationCost   Float?
+  initialInsurance   Float?
+  monthlyPayment     Float?
+  allowedMileage     Float?
+  residualValue      Float?
+  purchaseOption     Float?
+  earlyTermFee       Float?
+  // live telemetry
+  lat                Float?
+  lng                Float?
+  heading            Float          @default(0)
+  speed              Float          @default(0)
+  engineOn           Boolean        @default(false)
+  engineOnAt         DateTime?
+  lastSeen           DateTime?
+  assignedDriver     Driver?        @relation(fields: [assignedDriverId], references: [id])
+  assignedDriverId   String?
+  trips              Trip[]
+  maintenance        WorkOrder[]
+  schedules          MaintenanceSchedule[]
+  fuelLogs           FuelLog[]
+  alerts             Alert[]
+  telemetry          TelemetryLog[]
+  woRequests         WorkOrderRequest[]
+  pmDismissals       PmAlertDismissal[]
+  dvirReports        DvirReport[]
+  createdAt          DateTime       @default(now())
+}
+
+model Trip {
+  id            String     @id @default(cuid())
+  vehicle       Vehicle    @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId     String
+  driver        Driver?    @relation(fields: [driverId], references: [id])
+  driverId      String?
+  origin        String
+  destination   String
+  originLat     Float?
+  originLng     Float?
+  destLat       Float?
+  destLng       Float?
+  status        TripStatus @default(SCHEDULED)
+  scheduledStart DateTime
+  startedAt     DateTime?
+  endedAt       DateTime?
+  distanceKm    Float      @default(0)
+  cargo         String?
+  notes         String?
+  createdAt     DateTime   @default(now())
+}
+
+model WorkOrder {
+  id           String          @id @default(cuid())
+  vehicle      Vehicle?        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId    String?
+  vehicleOther String?
+  service      Service?        @relation(fields: [serviceId], references: [id])
+  serviceId    String?
+  station      Station         @default(AUS)
+  type         MaintenanceType @default(SCHEDULED_SERVICE)
+  title        String
+  description  String?
+  status       WorkOrderStatus @default(OPEN)
+  priority     Priority        @default(MEDIUM)
+  materialCost Float           @default(0)
+  laborHours   Float           @default(0)
+  laborRate    Float           @default(0)
+  laborCost    Float           @default(0)
+  cost         Float           @default(0)
+  performedBy  String?
+  requestedBy  String?
+  odometerAt   Float?
+  vendor       String?
+  assignedTo   User?           @relation("assignedWorkOrders", fields: [assignedToId], references: [id])
+  assignedToId String?
+  vin          String?
+  poNumber     String?
+  invoiceNumber String?
+  invoiceUrl   String?
+  scheduledFor DateTime?
+  completedAt  DateTime?
+  vendorPaid          Boolean   @default(false)
+  vendorPaidAt        DateTime?
+  vendorPaymentMethod String?
+  vendorPaymentRef    String?
+  items        WorkOrderItem[]
+  createdAt    DateTime        @default(now())
+}
+
+// A single service line on a work order. A work order may cover several
+// services on one invoice (e.g. oil change + brakes); each line carries its
+// own parts/labor cost and drives its own PM-schedule match. The parent work
+// order's materialCost/laborCost/cost are the rolled-up totals of its lines.
+model WorkOrderItem {
+  id           String    @id @default(cuid())
+  workOrder    WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  workOrderId  String
+  service      Service?  @relation(fields: [serviceId], references: [id])
+  serviceId    String?
+  title        String
+  description  String?
+  materialCost Float     @default(0)
+  laborCost    Float     @default(0)
+  createdAt    DateTime  @default(now())
+
+  @@index([workOrderId])
+}
+
+model Service {
+  id           String          @id @default(cuid())
+  name         String          @unique
+  category     ServiceCategory @default(PREVENTIVE)
+  group        String?
+  materialCost Float           @default(0)
+  laborCost    Float           @default(0)
+  active       Boolean         @default(true)
+  workOrders   WorkOrder[]
+  woRequests   WorkOrderRequest[]
+  workOrderItems WorkOrderItem[]
+  woRequestItems WoRequestItem[]
+  createdAt    DateTime        @default(now())
+}
+
+// Fleet-level parts & supplies purchases (e.g. AutoZone / O'Reilly) that are
+// NOT tied to a specific vehicle. Allocated to a station (or shared) and shown
+// as their own "Parts & Supplies" category in the Finance Report / Service Costs.
+model PartsExpense {
+  id            String   @id @default(cuid())
+  date          DateTime
+  vendor        String
+  station       String?  // ORF / RNH / AUS… or null = Shared/Unassigned
+  amount        Float    @default(0)
+  category      String   @default("PARTS") // PARTS | SUPPLIES
+  description   String?
+  poNumber      String?
+  invoiceNumber String?
+  invoiceUrl    String?
+  createdAt     DateTime @default(now())
+
+  @@index([date])
+  @@index([station])
+}
+
+model MaintenanceSchedule {
+  id               String   @id @default(cuid())
+  vehicle          Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId        String
+  taskName         String
+  intervalKm       Float?
+  intervalDays     Int?
+  lastServiceOdo   Float?
+  lastServiceDate  DateTime?
+  nextDueOdo       Float?
+  nextDueDate      DateTime?
+  createdAt        DateTime @default(now())
+}
+
+model FuelLog {
+  id            String       @id @default(cuid())
+  vehicle       Vehicle?     @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId     String?
+  vehicleLabel  String?
+  driver        Driver?      @relation(fields: [driverId], references: [id])
+  driverId      String?
+  driverName    String?
+  station       String?
+  date          DateTime     @default(now())
+  liters        Float
+  pricePerLiter Float
+  totalCost     Float
+  odometer      Float?
+  location      String?
+  transactionTime String?
+  purchaseType  PurchaseType @default(DIESEL)
+  cardNumber    String?
+  createdAt     DateTime     @default(now())
+
+  @@index([station])
+}
+
+model Geofence {
+  id        String       @id @default(cuid())
+  name      String
+  type      GeofenceType @default(DEPOT)
+  centerLat Float
+  centerLng Float
+  radiusM   Float        @default(500)
+  color     String       @default("#2563eb")
+  createdAt DateTime     @default(now())
+}
+
+model Alert {
+  id         String        @id @default(cuid())
+  type       AlertType
+  severity   AlertSeverity @default(WARNING)
+  message    String
+  vehicle    Vehicle?      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId  String?
+  driver     Driver?       @relation(fields: [driverId], references: [id])
+  driverId   String?
+  read       Boolean       @default(false)
+  resolvedAt DateTime?
+  createdAt  DateTime      @default(now())
+}
+
+model TelemetryLog {
+  id        String   @id @default(cuid())
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId String
+  lat       Float
+  lng       Float
+  speed     Float
+  heading   Float
+  createdAt DateTime @default(now())
+}
+
+model PmBudget {
+  id       String  @id @default(cuid())
+  year     Int
+  month    Int
+  station  Station
+  category String
+  amount   Float
+
+  @@unique([year, month, station, category])
+}
+
+model FareyeRoute {
+  id                       String   @id @default(cuid())
+  date                     DateTime
+  routeId                  String
+  driverName               String?
+  miles                    Float
+  travelMinutes            Int
+  routeDurationMinutes     Int
+  leaveByTime              String?
+  plannedEndTime           String?
+  stops                    Int
+  jobs                     Int      @default(0)
+  totalWeight              Float    @default(0)
+  totalPallets             Int      @default(0)
+  totalVolume              Float    @default(0)
+  vehicleCapacity          Float    @default(0)
+  weightCapacityUtil       Float    @default(0)
+  palletsCapacityUtil      Float    @default(0)
+  volumetricCapacityUtil   Float    @default(0)
+  vehicleType              String
+  vehicleTag               String?
+  vehicleUtilization       Float
+  shiftUtilization         Float    @default(0)
+  sporh                    Float
+  plannedHours             Float
+  breakDuration            Int      @default(0)
+  breakTime                String?
+  waitingTime              Int      @default(0)
+  totalLoadingTime         Int      @default(0)
+  totalRuns                Int      @default(0)
+  cost                     Float    @default(0)
+  co2Emit                  Float    @default(0)
+  co2Saved                 Float    @default(0)
+  serviceProvider          String?
+  lat                      Float?
+  lng                      Float?
+  station                  Station  @default(IAH)
+  createdAt                DateTime @default(now())
+
+  @@index([date])
+  @@index([station])
+}
+
+model PmAlertDismissal {
+  id        String   @id @default(cuid())
+  vehicleId String
+  service   String
+  action    String   @default("done") // "done" | "skip" | "assigned" | "inspected"
+  note      String?
+  mileageAt Float?
+  // Set when action = "inspected": the service was checked and still has life,
+  // so the next-due is pushed to this odometer instead of being marked complete.
+  nextDueMileage Float?
+  inspectedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@unique([vehicleId, service])
+  @@index([vehicleId])
+}
+
+model WorkOrderRequest {
+  id                 String          @id @default(cuid())
+  poNumber           String?         @unique
+  station            Station         @default(AUS)
+  vehicle            Vehicle?        @relation(fields: [vehicleId], references: [id])
+  vehicleId          String?
+  vehicleOther       String?
+  odometer           Float?
+  service            Service?        @relation(fields: [serviceId], references: [id])
+  serviceId          String?
+  partsNeeded        String?
+  requestedDate      DateTime?
+  expectedCompletion DateTime?
+  comments           String?
+  photoUrl           String?
+  serviceHours       Float?
+  vendorEstimate     Float?
+  requesterEmail     String?
+  status             WORequestStatus @default(PENDING)
+  requestedBy        User            @relation("requestedBy", fields: [requestedById], references: [id])
+  requestedById      String
+  reviewedBy         User?           @relation("reviewedBy", fields: [reviewedById], references: [id])
+  reviewedById       String?
+  reviewNote         String?
+  reviewedAt         DateTime?
+  items              WoRequestItem[]
+  createdAt          DateTime        @default(now())
+}
+
+// A requested service line on a work order request. A request may ask for
+// several services on the same vehicle in one submission; on approval each
+// line becomes a line on the created work order.
+model WoRequestItem {
+  id             String           @id @default(cuid())
+  request        WorkOrderRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  requestId      String
+  service        Service?         @relation(fields: [serviceId], references: [id])
+  serviceId      String?
+  title          String
+  partsNeeded    String?
+  vendorEstimate Float?
+  serviceHours   Float?
+  createdAt      DateTime         @default(now())
+
+  @@index([requestId])
+}
+
+model DvirReport {
+  id              String   @id @default(cuid())
+  vehicle         Vehicle  @relation(fields: [vehicleId], references: [id])
+  vehicleId       String
+  submittedBy     User     @relation(fields: [submittedById], references: [id])
+  submittedById   String
+  odometer        Float?
+  // Inspection items: PASS, FAIL, NA
+  tires           String   @default("PASS")
+  brakes          String   @default("PASS")
+  lights          String   @default("PASS")
+  mirrors         String   @default("PASS")
+  windshield      String   @default("PASS")
+  wipers          String   @default("PASS")
+  horn            String   @default("PASS")
+  seatbelts       String   @default("PASS")
+  fluids          String   @default("PASS")
+  bodyDamage      String   @default("PASS")
+  exhaust         String   @default("PASS")
+  steering        String   @default("PASS")
+  suspension      String   @default("PASS")
+  ac              String   @default("PASS")
+  // Overall
+  overallStatus   String   @default("PASS") // PASS or FAIL
+  notes           String?
+  photos          String?  // JSON array of photo URLs
+  hasAlert        Boolean  @default(false)
+  alertResolved   Boolean  @default(false)
+  createdAt       DateTime @default(now())
+}
+
+model ServiceProvider {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
+// Rental vehicles: track short-term rented vehicles per station, the rental
+// window (pickup/return), the amount/cost, and photos of the charged invoices.
+model RentalVehicle {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  vehicleName   String
+  rentalCompany String?
+  station       String?
+  status        String   @default("ACTIVE") // ACTIVE | RETURNED
+  pickupDate    DateTime?
+  returnDate    DateTime?
+  cost          Float?   // total cost = sum of invoice amounts
+  invoices      String?  // JSON array of { amount, url, note } — one per charge
+  notes         String?
+
+  @@index([station])
+}
