@@ -372,22 +372,33 @@ export async function GET(req: NextRequest) {
     cumB += monthlyBudget[i]; ytdBudgetCum.push(Math.round(cumB));
   }
 
-  // Monthly variance %
+  // Variance % lines: only plot months that have actuals, and skip months
+  // whose prior-year baseline is too small to yield a meaningful YoY %
+  // (near-zero denominators otherwise produce absurd spikes like +18,000%).
+  const lastActualMonth = monthlyActual.reduce((last, v, i) => (v > 0 ? i : last), -1);
+  const MIN_BASELINE = 250; // dollars; below this a YoY % is not meaningful
+
   const monthlyVariancePct = monthlyActual.map((a, i) => {
+    if (i > lastActualMonth) return null;
     const p = monthlyPrev[i];
-    return p > 0 ? Math.round(((a - p) / p) * 100) : 0;
+    if (p < MIN_BASELINE) return null;
+    return Math.round(((a - p) / p) * 100);
   });
   const ytdVariancePctArr = ytdActualCum.map((a, i) => {
+    if (i > lastActualMonth) return null;
     const p = ytdPrevCum[i];
-    return p > 0 ? Math.round(((a - p) / p) * 100) : 0;
+    if (p < MIN_BASELINE) return null;
+    return Math.round(((a - p) / p) * 100);
   });
   const budgetVariancePctArr = monthlyActual.map((a, i) => {
+    if (i > lastActualMonth) return null;
     const b = monthlyBudget[i];
-    return b > 0 ? Math.round(((a - b) / b) * 100) : 0;
+    return b > 0 ? Math.round(((a - b) / b) * 100) : null;
   });
   const ytdBudgetVarPctArr = ytdActualCum.map((a, i) => {
+    if (i > lastActualMonth) return null;
     const b = ytdBudgetCum[i];
-    return b > 0 ? Math.round(((a - b) / b) * 100) : 0;
+    return b > 0 ? Math.round(((a - b) / b) * 100) : null;
   });
 
   const trendsSlide = {

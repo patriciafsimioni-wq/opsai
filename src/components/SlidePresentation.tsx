@@ -115,13 +115,13 @@ type TrendsChartsSlide = {
     monthlyActual: number[];
     monthlyPrev: number[];
     monthlyBudget: number[];
-    monthlyVariancePct: number[];
+    monthlyVariancePct: (number | null)[];
     ytdActual: number[];
     ytdPrev: number[];
     ytdBudget: number[];
-    ytdVariancePct: number[];
-    budgetVariancePct: number[];
-    ytdBudgetVariancePct: number[];
+    ytdVariancePct: (number | null)[];
+    budgetVariancePct: (number | null)[];
+    ytdBudgetVariancePct: (number | null)[];
   };
 };
 
