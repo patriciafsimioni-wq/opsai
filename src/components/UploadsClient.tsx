@@ -374,7 +374,7 @@ export function UploadsClient({ canManage }: { canManage: boolean }) {
                         <div className="mt-2 space-y-2">
                           <p className="text-xs font-semibold text-slate-600">Sheets detected:</p>
                           {f.sheetClassifications.filter((sc) => sc.rowCount > 0).map((sc) => {
-                            const importable = ["Service History", "FareEye Routes", "Fleet / Vehicles"].includes(sc.category);
+                            const importable = ["Service History", "FareEye Routes", "Fleet / Vehicles", "Fuel Log"].includes(sc.category);
                             return (
                               <div key={sc.sheetName} className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                                 <div className="flex items-center gap-2">
@@ -405,7 +405,7 @@ export function UploadsClient({ canManage }: { canManage: boolean }) {
                       )}
 
                       {/* Single-sheet import button */}
-                      {(!f.sheetClassifications || f.sheetClassifications.length <= 1) && ["Service History", "FareEye Routes", "Fleet / Vehicles"].includes(f.category) && f.rowCount > 0 && (
+                      {(!f.sheetClassifications || f.sheetClassifications.length <= 1) && ["Service History", "FareEye Routes", "Fleet / Vehicles", "Fuel Log"].includes(f.category) && f.rowCount > 0 && (
                         <button
                           onClick={() => importFile(f)}
                           className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
