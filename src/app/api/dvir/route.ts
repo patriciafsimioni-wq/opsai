@@ -38,6 +38,10 @@ export async function GET() {
     include: {
       vehicle: { select: { id: true, name: true, dxNumber: true, station: true } },
       submittedBy: { select: { id: true, name: true } },
+      repairs: {
+        orderBy: { fixedAt: "asc" },
+        include: { recordedBy: { select: { id: true, name: true } } },
+      },
     },
   });
   return NextResponse.json(reports);

@@ -149,6 +149,7 @@ model User {
   woRequests        WorkOrderRequest[] @relation("requestedBy")
   woReviews         WorkOrderRequest[] @relation("reviewedBy")
   dvirReports       DvirReport[]
+  dvirRepairs       DvirRepair[]       @relation("dvirRepairsRecorded")
   issuesCreated     Issue[]            @relation("issueCreatedBy")
   issuesAssigned    Issue[]            @relation("issueAssignedTo")
   issueComments     IssueComment[]
@@ -746,6 +747,29 @@ model DvirReport {
   hasAlert        Boolean  @default(false)
   alertResolved   Boolean  @default(false)
   createdAt       DateTime @default(now())
+  repairs         DvirRepair[]
+}
+
+// Repair recorded against a single failed DVIR inspection item: what was done,
+// what it cost, and when. A report is fully repaired once every failed item
+// has one of these.
+model DvirRepair {
+  id            String     @id @default(cuid())
+  report        DvirReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reportId      String
+  item          String     // inspection item key, e.g. "brakes"
+  description   String     // how it was fixed
+  cost          Float      @default(0)
+  fixedAt       DateTime
+  vendor        String?
+  invoiceNumber String?
+  photos        String?    // JSON array of photo URLs
+  recordedBy    User?      @relation("dvirRepairsRecorded", fields: [recordedById], references: [id])
+  recordedById  String?
+  createdAt     DateTime   @default(now())
+
+  @@unique([reportId, item])
+  @@index([reportId])
 }
 
 model ServiceProvider {
