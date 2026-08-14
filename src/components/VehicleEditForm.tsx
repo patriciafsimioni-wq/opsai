@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Pencil, X, Save } from "lucide-react";
 import { apiSend } from "@/lib/use-data";
-import { STATIONS } from "@/lib/constants";
+import { STATIONS, STATION_GARAGE_ADDRESS, garageAddressFor } from "@/lib/constants";
 import { compressImage } from "@/lib/image";
 
 type VehicleData = {
@@ -17,6 +17,7 @@ type VehicleData = {
   licensePlate: string | null;
   type: string;
   station: string;
+  garageAddress: string | null;
   fuelType: string;
   odometer: number;
   tankCapacity: number;
@@ -54,6 +55,16 @@ export function VehicleEditForm({ vehicle }: { vehicle: VehicleData }) {
   const set = (field: string, value: string | number | null) =>
     setForm((f) => ({ ...f, [field]: value }));
 
+  // Picking a station fills in that station's garage address, unless the
+  // address was hand-edited to something custom.
+  function changeStation(station: string) {
+    setForm((f) => {
+      const addr = (f.garageAddress ?? "").trim();
+      const isDefault = addr === "" || Object.values(STATION_GARAGE_ADDRESS).includes(addr);
+      return { ...f, station, garageAddress: isDefault ? garageAddressFor(station) : f.garageAddress };
+    });
+  }
+
   async function uploadInspection(rawFile: File) {
     setUploadError("");
     const file = await compressImage(rawFile);
@@ -90,6 +101,7 @@ export function VehicleEditForm({ vehicle }: { vehicle: VehicleData }) {
         licensePlate: form.licensePlate || null,
         type: form.type,
         station: form.station,
+        garageAddress: form.garageAddress || null,
         fuelType: form.fuelType,
         odometer: Number(form.odometer),
         tankCapacity: Number(form.tankCapacity),
@@ -147,7 +159,8 @@ export function VehicleEditForm({ vehicle }: { vehicle: VehicleData }) {
         <Field label="VIN" value={form.vin} onChange={(v) => set("vin", v)} />
         <Field label="License Plate" value={form.licensePlate ?? ""} onChange={(v) => set("licensePlate", v)} />
         <SelectField label="Type" value={form.type} options={TYPES} onChange={(v) => set("type", v)} />
-        <SelectField label="Station" value={form.station} options={[...STATIONS]} onChange={(v) => set("station", v)} />
+        <SelectField label="Station" value={form.station} options={[...STATIONS]} onChange={changeStation} />
+        <Field label="Garage Address" value={form.garageAddress ?? ""} onChange={(v) => set("garageAddress", v)} />
         <SelectField label="Fuel Type" value={form.fuelType} options={FUEL_TYPES} onChange={(v) => set("fuelType", v)} />
         <Field label="Odometer (mi)" value={String(form.odometer)} onChange={(v) => set("odometer", v)} type="number" />
         <Field label="Tank Capacity (L)" value={String(form.tankCapacity)} onChange={(v) => set("tankCapacity", v)} type="number" />

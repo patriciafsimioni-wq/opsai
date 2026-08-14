@@ -325,6 +325,9 @@ model Vehicle {
   fuelLevel          Float          @default(100)
   tankCapacity       Float          @default(200)
   station            Station        @default(AUS)
+  // Home base address. Defaults to the station's garage address, but can be
+  // overridden per vehicle when it is garaged elsewhere.
+  garageAddress      String?
   leasingCompany     String?
   leaseType          String?
   leaseTerm          Int?

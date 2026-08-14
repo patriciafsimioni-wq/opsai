@@ -29,6 +29,8 @@ import {
   FLEET_GROUP_LABEL,
   IS_TROVA,
   titleCase,
+  STATION_GARAGE_ADDRESS,
+  garageAddressFor,
 } from "@/lib/constants";
 import { useFleetView } from "@/lib/use-fleet-view";
 import { SISTER_BRAND } from "@/lib/brand";
@@ -43,7 +45,8 @@ const emptyForm = {
   licensePlate: "",
   type: "TRUCK",
   status: "ACTIVE",
-  station: "IAH",
+  station: STATIONS[0],
+  garageAddress: garageAddressFor(STATIONS[0]),
   fuelType: "DIESEL",
   odometer: "0",
   fuelLevel: "100",
@@ -51,6 +54,12 @@ const emptyForm = {
   assignedDriverId: "",
   fleetGroup: "REGULAR",
 };
+
+/** True when the address is still a station default (i.e. not hand-edited). */
+function isDefaultGarageAddress(addr: string) {
+  const a = addr.trim();
+  return a === "" || Object.values(STATION_GARAGE_ADDRESS).includes(a);
+}
 
 type SortKey = "name" | "station" | "type" | "status" | "leasing" | "odometer" | "fuel" | "camera";
 
@@ -166,6 +175,7 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
       { header: "Status", value: (v) => VEHICLE_STATUS[v.status as keyof typeof VEHICLE_STATUS]?.label ?? v.status },
       { header: "Fleet", value: (v) => FLEET_GROUP_LABEL[v.fleetGroup ?? "REGULAR"] ?? (v.fleetGroup ?? "REGULAR") },
       { header: "Station", value: (v) => STATION_LABEL[v.station]?.split(" — ")[0] ?? v.station },
+      { header: "Garage Address", value: (v) => v.garageAddress ?? garageAddressFor(v.station) },
       { header: "Fuel Type", value: (v) => titleCase(v.fuelType) },
       { header: "Odometer", value: (v) => v.odometer ?? 0 },
       { header: "Leasing Company", value: (v) => v.leasingCompany ?? "" },
@@ -255,7 +265,8 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
       licensePlate: v.licensePlate,
       type: v.type,
       status: v.status,
-      station: v.station ?? "IAH",
+      station: v.station ?? STATIONS[0],
+      garageAddress: v.garageAddress ?? garageAddressFor(v.station),
       fuelType: v.fuelType,
       odometer: String(v.odometer),
       fuelLevel: String(v.fuelLevel),
@@ -265,6 +276,18 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
     });
     setError("");
     setModalOpen(true);
+  }
+
+  // Picking a station fills in that station's garage address, unless the
+  // address was hand-edited to something custom.
+  function changeStation(station: string) {
+    setForm((f) => ({
+      ...f,
+      station,
+      garageAddress: isDefaultGarageAddress(f.garageAddress)
+        ? garageAddressFor(station)
+        : f.garageAddress,
+    }));
   }
 
   async function save() {
@@ -694,11 +717,18 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
           <Field label="Station">
             <Select
               value={form.station}
-              onChange={(e) => setForm({ ...form, station: e.target.value })}
+              onChange={(e) => changeStation(e.target.value)}
               options={STATIONS.map((s) => ({
                 value: s,
                 label: STATION_LABEL[s as keyof typeof STATION_LABEL] ?? s,
               }))}
+            />
+          </Field>
+          <Field label="Garage Address">
+            <Input
+              value={form.garageAddress}
+              onChange={(e) => setForm({ ...form, garageAddress: e.target.value })}
+              placeholder="Fills in from the station — edit to override"
             />
           </Field>
           <Field label="Fuel Type">

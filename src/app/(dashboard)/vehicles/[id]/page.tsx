@@ -22,6 +22,7 @@ import {
   PRIORITY,
   TIME_SCHEDULE,
   titleCase,
+  garageAddressFor,
 } from "@/lib/constants";
 import {
   formatNumber,
@@ -309,6 +310,7 @@ export default async function VehicleDetailPage({
             licensePlate: v.licensePlate,
             type: v.type,
             station: v.station,
+            garageAddress: v.garageAddress ?? garageAddressFor(v.station),
             fuelType: v.fuelType,
             odometer: v.odometer,
             tankCapacity: v.tankCapacity,
@@ -377,6 +379,7 @@ export default async function VehicleDetailPage({
             {([
               ["VIN", v.vin],
               ["DX #", v.dxNumber ?? "—"],
+              ["Garage Address", v.garageAddress || garageAddressFor(v.station) || "—"],
               ["Fuel type", titleCase(v.fuelType)],
               ["Tank capacity", `${v.tankCapacity} L`],
               ["Leasing Company", v.leasingCompany ?? "—"],

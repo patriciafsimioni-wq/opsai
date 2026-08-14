@@ -106,6 +106,24 @@ export const STATION_LABEL: Record<string, string> = {
   RNH: "RNH — Richmond",
 };
 
+// Garage (home base) address per station. A vehicle's garage address defaults
+// to its station's address, so picking the station in the vehicle form fills it
+// in and the fleet CSV export can report it.
+export const STATION_GARAGE_ADDRESS: Record<string, string> = {
+  IAH: "18705 Lee rd Humble TX",
+  LRD: "2822 E Bustamante Laredo TX",
+  HRL: "3302 Heritage way Harlingen TX",
+  AUS: "9401A Cargo Ave Austin TX",
+  CLL: "1501 Earl Rudder fwy College Station TX",
+  BPT: "705 Langham rd Beaumont TX",
+  ACT: "8191 Old Hwy 81 Temple TX",
+};
+
+/** The garage address for a station, or "" when none is on file. */
+export function garageAddressFor(station: string | null | undefined): string {
+  return STATION_GARAGE_ADDRESS[(station ?? "").toUpperCase()] ?? "";
+}
+
 // Contracted fleet plan — target vehicles per station.
 export const STATION_TARGETS: Record<string, number> = IS_TROVA
   ? { RNH: 18, ORF: 14 } // RNH 17 + 1 spare, ORF 13 + 1 spare
