@@ -1,0 +1,2 @@
+ALTER TABLE "Vehicle"
+ADD COLUMN IF NOT EXISTS "garageAddress" TEXT;
