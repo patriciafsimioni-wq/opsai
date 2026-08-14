@@ -51,6 +51,7 @@ const createSchema = z.object({
   tankCapacity: z.coerce.number().min(0),
   assignedDriverId: z.string().optional().nullable(),
   garageAddress: z.string().optional().nullable(),
+  onboardedDate: z.string().optional().nullable(),
   registrationExpiry: z.string().optional().nullable(),
   insuranceExpiry: z.string().optional().nullable(),
 });
@@ -82,6 +83,9 @@ export async function POST(req: Request) {
       tankCapacity: d.tankCapacity,
       assignedDriverId: d.assignedDriverId || null,
       garageAddress: d.garageAddress?.trim() || null,
+      // Adding a vehicle is its onboarding, so date it today unless told
+      // otherwise — the fleet turnover report counts by this date.
+      onboardedDate: d.onboardedDate ? new Date(d.onboardedDate) : new Date(),
       registrationExpiry: d.registrationExpiry ? new Date(d.registrationExpiry) : null,
       insuranceExpiry: d.insuranceExpiry ? new Date(d.insuranceExpiry) : null,
       lat: 37.7749 + (Math.random() - 0.5) * 0.2,

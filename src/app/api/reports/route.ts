@@ -212,6 +212,66 @@ export async function GET(req: NextRequest) {
       : 0,
   }));
 
+  // Fleet turnover — vehicles onboarded vs offboarded per month, for the 12
+  // months ending in the selected month. Uses the same station/fleet scope as
+  // the rest of the report. A vehicle counts as "out" in the month it left the
+  // fleet (offboardedDate), whether or not its disposal is finished; the ones
+  // still awaiting disposal are also reported as pending.
+  const TURNOVER_MONTHS = 12;
+  const turnoverBuckets: { y: number; m: number; label: string }[] = [];
+  for (let i = TURNOVER_MONTHS - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(refDate.getUTCFullYear(), refDate.getUTCMonth() - i, 1));
+    turnoverBuckets.push({
+      y: d.getUTCFullYear(),
+      m: d.getUTCMonth(),
+      label: d.toLocaleDateString("en-US", { month: "short", year: "2-digit", timeZone: "UTC" }),
+    });
+  }
+  const turnoverIndex = (date: Date) =>
+    turnoverBuckets.findIndex(
+      (b) => b.y === date.getUTCFullYear() && b.m === date.getUTCMonth(),
+    );
+
+  const onboardedByMonth = new Array(TURNOVER_MONTHS).fill(0);
+  const offboardedByMonth = new Array(TURNOVER_MONTHS).fill(0);
+  let onboardedNoDate = 0;
+  let offboardedNoDate = 0;
+  let pendingOffboards = 0;
+  for (const v of vehicles) {
+    if (v.onboardedDate) {
+      const b = turnoverIndex(new Date(v.onboardedDate));
+      if (b >= 0) onboardedByMonth[b] += 1;
+    } else {
+      onboardedNoDate += 1;
+    }
+    if (v.offboardStatus === "IN_PROGRESS") pendingOffboards += 1;
+    if (v.offboardStatus) {
+      if (v.offboardedDate) {
+        const b = turnoverIndex(new Date(v.offboardedDate));
+        if (b >= 0) offboardedByMonth[b] += 1;
+      } else {
+        offboardedNoDate += 1;
+      }
+    }
+  }
+
+  const turnoverTrend = turnoverBuckets.map((b, i) => ({
+    label: b.label,
+    month: `${b.y}-${String(b.m + 1).padStart(2, "0")}`,
+    Onboarded: onboardedByMonth[i],
+    Offboarded: offboardedByMonth[i],
+    net: onboardedByMonth[i] - offboardedByMonth[i],
+  }));
+
+  const turnover = {
+    trend: turnoverTrend,
+    onboardedTotal: onboardedByMonth.reduce((s, n) => s + n, 0),
+    offboardedTotal: offboardedByMonth.reduce((s, n) => s + n, 0),
+    onboardedNoDate,
+    offboardedNoDate,
+    pendingOffboards,
+  };
+
   // Mileage distribution (vehicle odometer ranges)
   const mileageRanges = [
     { label: "0-25K", min: 0, max: 25000 },
@@ -244,6 +304,7 @@ export async function GET(req: NextRequest) {
     costTrend,
     fuelTrend,
     avgPriceTrend,
+    turnover,
     statusCounts,
     typeCounts,
     costPerVehicle,

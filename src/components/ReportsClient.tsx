@@ -19,6 +19,7 @@ import {
   AreaChartCard,
   DonutChart,
   MultiLineChart,
+  GroupedBarChart,
 } from "@/components/charts";
 import { useData } from "@/lib/use-data";
 import { useFleetView } from "@/lib/use-fleet-view";
@@ -44,6 +45,14 @@ type ReportsApiResponse = {
   costTrend: { label: string; Fuel: number; Maintenance: number; Parts: number; Total: number }[];
   fuelTrend: { label: string; spend: number; volume: number; fillUps: number }[];
   avgPriceTrend: { label: string; value: number }[];
+  turnover: {
+    trend: { label: string; month: string; Onboarded: number; Offboarded: number; net: number }[];
+    onboardedTotal: number;
+    offboardedTotal: number;
+    onboardedNoDate: number;
+    offboardedNoDate: number;
+    pendingOffboards: number;
+  };
   statusCounts: Record<string, number>;
   typeCounts: Record<string, number>;
   costPerVehicle: { label: string; fuel: number; maint: number; value: number }[];
@@ -88,6 +97,8 @@ export function ReportsClient() {
   const costTrend = data?.costTrend ?? [];
   const fuelTrend = data?.fuelTrend ?? [];
   const avgPriceTrend = data?.avgPriceTrend ?? [];
+  const turnover = data?.turnover;
+  const turnoverTrend = turnover?.trend ?? [];
   const costPerVehicle = data?.costPerVehicle ?? [];
   const fuelStationData = data?.fuelStationData ?? [];
   const maintServiceData = data?.maintServiceData ?? [];
@@ -296,6 +307,93 @@ export function ReportsClient() {
               </div>
             </Card>
           </div>
+
+          {/* Fleet turnover — onboarded vs offboarded per month */}
+          <Card>
+            <CardHeader
+              title="Fleet Turnover"
+              subtitle={`Vehicles onboarded vs offboarded per month · 12 months ending ${
+                turnoverTrend.length ? turnoverTrend[turnoverTrend.length - 1].label : ""
+              }`}
+              action={
+                <ExportButton
+                  rows={turnoverTrend.map((r) => ({
+                    Month: r.month,
+                    Onboarded: r.Onboarded,
+                    Offboarded: r.Offboarded,
+                    Net: r.net,
+                  }))}
+                  filename="fleet-turnover.csv"
+                  label="Download CSV"
+                />
+              }
+            />
+            <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <GroupedBarChart
+                  data={turnoverTrend}
+                  bars={[
+                    { key: "Onboarded", color: "#16a34a", name: "Onboarded" },
+                    { key: "Offboarded", color: "#dc2626", name: "Offboarded" },
+                  ]}
+                />
+              </div>
+              <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium">Month</th>
+                      <th className="px-3 py-2 text-right font-medium">In</th>
+                      <th className="px-3 py-2 text-right font-medium">Out</th>
+                      <th className="px-3 py-2 text-right font-medium">Net</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...turnoverTrend].reverse().map((r) => (
+                      <tr key={r.month} className="border-t border-[var(--color-border)]">
+                        <td className="px-3 py-1.5 text-slate-700">{r.label}</td>
+                        <td className="px-3 py-1.5 text-right text-green-700">{r.Onboarded || "—"}</td>
+                        <td className="px-3 py-1.5 text-right text-red-700">{r.Offboarded || "—"}</td>
+                        <td
+                          className={`px-3 py-1.5 text-right font-medium ${
+                            r.net > 0 ? "text-green-700" : r.net < 0 ? "text-red-700" : "text-slate-400"
+                          }`}
+                        >
+                          {r.net > 0 ? `+${r.net}` : r.net || "—"}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="border-t-2 border-[var(--color-border)] bg-slate-50 font-semibold">
+                      <td className="px-3 py-2 text-slate-700">Total</td>
+                      <td className="px-3 py-2 text-right text-green-700">{turnover?.onboardedTotal ?? 0}</td>
+                      <td className="px-3 py-2 text-right text-red-700">{turnover?.offboardedTotal ?? 0}</td>
+                      <td className="px-3 py-2 text-right">
+                        {(turnover?.onboardedTotal ?? 0) - (turnover?.offboardedTotal ?? 0)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                {turnover && (turnover.pendingOffboards > 0 || turnover.onboardedNoDate > 0 || turnover.offboardedNoDate > 0) && (
+                  <div className="space-y-0.5 border-t border-[var(--color-border)] px-3 py-2 text-xs text-slate-400">
+                    {turnover.pendingOffboards > 0 && (
+                      <p>{turnover.pendingOffboards} offboarded, disposal still in progress</p>
+                    )}
+                    {(turnover.onboardedNoDate > 0 || turnover.offboardedNoDate > 0) && (
+                      <p>
+                        Not counted:{" "}
+                        {[
+                          turnover.onboardedNoDate > 0 ? `${turnover.onboardedNoDate} with no onboard date` : null,
+                          turnover.offboardedNoDate > 0 ? `${turnover.offboardedNoDate} with no offboard date` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
 
           {/* Fuel trends row */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

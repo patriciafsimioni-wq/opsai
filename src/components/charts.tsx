@@ -77,6 +77,32 @@ export function BarChartCard({
   );
 }
 
+/** Side-by-side bars for comparing a few whole-number series per period. */
+export function GroupedBarChart({
+  data,
+  bars,
+}: {
+  data: Record<string, number | string>[];
+  bars: { key: string; color: string; name: string }[];
+}) {
+  return (
+    <div className="h-64">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+          <XAxis dataKey="label" tick={AXIS} axisLine={false} tickLine={false} />
+          <YAxis tick={AXIS} axisLine={false} tickLine={false} allowDecimals={false} />
+          <Tooltip cursor={{ fill: "#f8fafc" }} />
+          <Legend wrapperStyle={{ fontSize: 12 }} />
+          {bars.map((b) => (
+            <Bar key={b.key} dataKey={b.key} name={b.name} fill={b.color} radius={[4, 4, 0, 0]} />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 export function AreaChartCard({
   data,
   color = "#2563eb",

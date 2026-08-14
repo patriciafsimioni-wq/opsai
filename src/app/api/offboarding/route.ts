@@ -106,6 +106,12 @@ export async function POST(req: NextRequest) {
         lifecycleStatus: "SOLD_RETURNED",
       },
     });
+    // Vehicles offboarded outside the normal flow may have no date; without one
+    // they can't be counted in the monthly turnover report.
+    await prisma.vehicle.updateMany({
+      where: { id: vehicleId, offboardedDate: null },
+      data: { offboardedDate: new Date() },
+    });
     return NextResponse.json({ ok: true });
   }
 
