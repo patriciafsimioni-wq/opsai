@@ -74,6 +74,40 @@ export async function getSamsaraVehicleStats(): Promise<SamsaraVehicleStat[]> {
   return all;
 }
 
+export interface SamsaraStatHistory {
+  id: string;
+  name: string;
+  obdOdometerMeters?: { time: string; value: number }[];
+  gpsOdometerMeters?: { time: string; value: number }[];
+}
+
+/** Historical odometer readings for the whole fleet over a window. Samsara
+ *  samples every ~30s and retains roughly 90 days, so callers should keep the
+ *  window short and down-sample what they store. */
+export async function getSamsaraOdometerHistory(
+  start: Date,
+  end: Date,
+): Promise<SamsaraStatHistory[]> {
+  const all: SamsaraStatHistory[] = [];
+  let cursor: string | undefined;
+  do {
+    const params: Record<string, string> = {
+      types: "obdOdometerMeters,gpsOdometerMeters",
+      startTime: start.toISOString(),
+      endTime: end.toISOString(),
+      limit: "100",
+    };
+    if (cursor) params.after = cursor;
+    const res = await samsaraFetch<{
+      data: SamsaraStatHistory[];
+      pagination: { endCursor: string; hasNextPage: boolean };
+    }>("/fleet/vehicles/stats/history", params);
+    all.push(...res.data);
+    cursor = res.pagination.hasNextPage ? res.pagination.endCursor : undefined;
+  } while (cursor);
+  return all;
+}
+
 const METERS_TO_MILES = 0.000621371;
 
 export function metersToMiles(meters: number): number {

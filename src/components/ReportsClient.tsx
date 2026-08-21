@@ -26,6 +26,7 @@ import { useFleetView } from "@/lib/use-fleet-view";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { STATION_LABEL, VEHICLE_STATUS, titleCase } from "@/lib/constants";
 import { ExportButton } from "@/components/ReportsExport";
+import { MileageReport } from "@/components/MileageReport";
 
 type ReportsApiResponse = {
   stations: string[];
@@ -307,6 +308,9 @@ export function ReportsClient() {
               </div>
             </Card>
           </div>
+
+          {/* Actual miles driven per week/month + cost per mile */}
+          <MileageReport range={range} refDate={refDate} station={station} />
 
           {/* Fleet turnover — onboarded vs offboarded per month */}
           <Card>

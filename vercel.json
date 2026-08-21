@@ -3,6 +3,10 @@
     {
       "path": "/api/alerts/compliance",
       "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/mileage/sync",
+      "schedule": "0 7 * * *"
     }
   ]
 }
