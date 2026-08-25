@@ -10,6 +10,7 @@ import {
   User,
   AlertTriangle,
   Flag,
+  Download,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { Card, CardHeader, Badge, Table, Th, Td, ProgressBar } from "@/components/ui";
@@ -794,7 +795,18 @@ export default async function VehicleDetailPage({
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Maintenance History" />
+          <CardHeader
+            title="Maintenance History"
+            subtitle={`${v.maintenance.length} work order${v.maintenance.length === 1 ? "" : "s"}`}
+            action={
+              <a
+                href={`/api/maintenance-history?vehicleId=${v.id}`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+              >
+                <Download size={13} /> Download CSV
+              </a>
+            }
+          />
           {v.maintenance.length === 0 ? (
             <p className="p-6 text-center text-sm text-slate-400">No records.</p>
           ) : (
