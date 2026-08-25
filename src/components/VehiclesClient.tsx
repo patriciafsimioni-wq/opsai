@@ -460,6 +460,17 @@ export function VehiclesClient({ canManage }: { canManage: boolean }) {
         <Button variant="secondary" onClick={downloadCsv} disabled={filtered.length === 0}>
           <FileDown size={16} /> Download CSV
         </Button>
+        <Button
+          variant="secondary"
+          onClick={() =>
+            window.open(
+              `/api/maintenance-history${stationFilter ? `?station=${stationFilter}` : ""}`,
+              "_blank",
+            )
+          }
+        >
+          <FileDown size={16} /> Maintenance History
+        </Button>
         {canManage && (
           <>
             <Button variant="secondary" onClick={() => window.open("/api/vehicles/lease-return-report", "_blank")}>
