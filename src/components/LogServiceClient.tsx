@@ -10,6 +10,7 @@ import type { WorkOrderDTO, VehicleDTO, ServiceDTO } from "@/lib/types";
 import { FORM_STATIONS, STATION_LABEL } from "@/lib/constants";
 import { formatCurrency, formatDate, todayInputDate } from "@/lib/utils";
 import { downloadCsv } from "@/lib/csv";
+import { ServiceDetailModal } from "@/components/ServiceDetailModal";
 import { compressImage } from "@/lib/image";
 
 function todayStr() {
@@ -150,6 +151,7 @@ export function LogServiceClient({
   const [savedMsg, setSavedMsg] = useState("");
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [detail, setDetail] = useState<WorkOrderDTO | null>(null);
   const [editParamHandled, setEditParamHandled] = useState(false);
 
   // Support deep-linking to edit a specific service (e.g. from a vehicle's
@@ -656,8 +658,12 @@ export function LogServiceClient({
               </thead>
               <tbody>
                 {recent.map((o) => (
-                  <tr key={o.id} className={`hover:bg-slate-50 ${selectedIds.has(o.id) ? "bg-blue-50" : ""}`}>
-                    <Td>
+                  <tr
+                    key={o.id}
+                    onClick={() => setDetail(o)}
+                    className={`cursor-pointer hover:bg-slate-50 ${selectedIds.has(o.id) ? "bg-blue-50" : ""}`}
+                  >
+                    <Td onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={selectedIds.has(o.id)}
@@ -681,7 +687,7 @@ export function LogServiceClient({
                     <Td className="text-slate-600">{o.poNumber ?? "—"}</Td>
                     <Td className="text-slate-600">{formatDate(o.completedAt)}</Td>
                     <Td className="font-semibold">{formatCurrency(o.cost)}</Td>
-                    <Td>
+                    <Td onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => startEdit(o)}
                         className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
@@ -696,6 +702,8 @@ export function LogServiceClient({
           </div>
         )}
       </Card>
+
+      <ServiceDetailModal order={detail} onClose={() => setDetail(null)} onEdit={startEdit} />
     </div>
   );
 }

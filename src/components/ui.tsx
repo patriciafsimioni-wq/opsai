@@ -325,12 +325,15 @@ export function SortTh<K extends string>({
 export function Td({
   children,
   className,
+  onClick,
 }: {
   children?: React.ReactNode;
   className?: string;
+  onClick?: React.MouseEventHandler<HTMLTableCellElement>;
 }) {
   return (
     <td
+      onClick={onClick}
       className={cn(
         "border-b border-[var(--color-border)] px-4 py-3 align-middle",
         className,

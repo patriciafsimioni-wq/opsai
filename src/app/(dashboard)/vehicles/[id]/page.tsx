@@ -17,6 +17,11 @@ import { Card, CardHeader, Badge, Table, Th, Td, ProgressBar } from "@/component
 import { VehicleActions } from "@/components/VehicleActions";
 import { VehicleEditForm } from "@/components/VehicleEditForm";
 import {
+  VehicleMaintenanceHistory,
+  type MaintenanceHistoryRow,
+} from "@/components/VehicleMaintenanceHistory";
+import type { ServiceDetailOrder } from "@/components/ServiceDetailModal";
+import {
   VEHICLE_STATUS,
   LIFECYCLE_STATUS,
   WO_STATUS,
@@ -84,7 +89,10 @@ export default async function VehicleDetailPage({
     where: { id },
     include: {
       assignedDriver: true,
-      maintenance: { orderBy: { createdAt: "desc" } },
+      maintenance: {
+        orderBy: { createdAt: "desc" },
+        include: { items: { orderBy: { createdAt: "asc" } }, service: true },
+      },
       fuelLogs: { orderBy: { date: "desc" } },
       trips: { orderBy: { scheduledStart: "desc" }, take: 8, include: { driver: true } },
     },
@@ -187,6 +195,16 @@ export default async function VehicleDetailPage({
     }
     return null;
   }
+
+  const maintenanceRows: MaintenanceHistoryRow[] = v.maintenance.map((w) => ({
+    order: JSON.parse(JSON.stringify(w)) as ServiceDetailOrder,
+    estimatedOdometer:
+      w.odometerAt && w.odometerAt > 0
+        ? null
+        : w.completedAt
+          ? estimateOdoAtDate(new Date(w.completedAt).getTime())
+          : null,
+  }));
 
   // Compute maintenance schedule for this vehicle
   const completedWOs = v.maintenance.filter((w) => w.status === "COMPLETED");
@@ -810,60 +828,7 @@ export default async function VehicleDetailPage({
           {v.maintenance.length === 0 ? (
             <p className="p-6 text-center text-sm text-slate-400">No records.</p>
           ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Work Order</Th>
-                  <Th>Mileage</Th>
-                  <Th>Status</Th>
-                  <Th>Priority</Th>
-                  <Th>Cost</Th>
-                  <Th></Th>
-                </tr>
-              </thead>
-              <tbody>
-                {v.maintenance.map((w) => (
-                  <tr key={w.id}>
-                    <Td>
-                      <p className="font-medium">{w.title}</p>
-                      <p className="text-xs text-slate-400">{titleCase(w.type)}{w.completedAt ? ` · ${formatDate(w.completedAt)}` : ""}</p>
-                    </Td>
-                    <Td className="text-slate-600">
-                      {w.odometerAt && w.odometerAt > 0
-                        ? `${Number(w.odometerAt).toLocaleString()} mi`
-                        : w.completedAt && estimateOdoAtDate(new Date(w.completedAt).getTime()) !== null
-                          ? <span className="text-blue-500" title="Estimated from date">~{estimateOdoAtDate(new Date(w.completedAt).getTime())!.toLocaleString()} mi</span>
-                          : <span className="text-slate-300">—</span>}
-                    </Td>
-                    <Td>
-                      <Badge
-                        bg={WO_STATUS[w.status as keyof typeof WO_STATUS].bg}
-                        fg={WO_STATUS[w.status as keyof typeof WO_STATUS].fg}
-                      >
-                        {WO_STATUS[w.status as keyof typeof WO_STATUS].label}
-                      </Badge>
-                    </Td>
-                    <Td>
-                      <Badge
-                        bg={PRIORITY[w.priority as keyof typeof PRIORITY].bg}
-                        fg={PRIORITY[w.priority as keyof typeof PRIORITY].fg}
-                      >
-                        {PRIORITY[w.priority as keyof typeof PRIORITY].label}
-                      </Badge>
-                    </Td>
-                    <Td>{formatCurrency(w.cost)}</Td>
-                    <Td>
-                      <Link
-                        href={`/log-service?edit=${w.id}`}
-                        className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                      >
-                        Edit
-                      </Link>
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+            <VehicleMaintenanceHistory rows={maintenanceRows} />
           )}
         </Card>
 
