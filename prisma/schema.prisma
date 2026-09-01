@@ -816,3 +816,16 @@ model RentalVehicle {
 
   @@index([station])
 }
+
+// Uploaded files (invoices, inspection docs, photos). Kept out of the records
+// that reference them so list queries never carry megabytes of file data:
+// every column that used to hold a base64 `data:` URL now holds
+// `/api/attachments/<id>.<ext>`, which streams the bytes on demand.
+model Attachment {
+  id        String   @id @default(cuid())
+  mimeType  String
+  filename  String?
+  size      Int      @default(0)
+  data      String   // base64-encoded file bytes
+  createdAt DateTime @default(now())
+}

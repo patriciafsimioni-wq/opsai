@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiUser, badRequest } from "@/lib/api";
+import { prisma } from "@/lib/db";
+import { attachmentUrl } from "@/lib/attachment";
 
 // Serverless request bodies are capped (~4.5 MB on Vercel); keep uploads under
 // that so the multipart POST isn't rejected before it reaches this handler.
@@ -17,8 +19,17 @@ export async function POST(req: Request) {
   if (!ALLOWED.includes(file.type)) return badRequest("Unsupported file type");
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const base64 = buffer.toString("base64");
-  const dataUrl = `data:${file.type};base64,${base64}`;
+  // Files live in their own table and are referenced by URL, so the records
+  // that point at them stay small enough to list without shipping megabytes.
+  const saved = await prisma.attachment.create({
+    data: {
+      mimeType: file.type,
+      filename: file.name || null,
+      size: buffer.byteLength,
+      data: buffer.toString("base64"),
+    },
+    select: { id: true },
+  });
 
-  return NextResponse.json({ url: dataUrl }, { status: 201 });
+  return NextResponse.json({ url: attachmentUrl(saved.id, file.type) }, { status: 201 });
 }

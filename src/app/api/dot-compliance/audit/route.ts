@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { requireApiUser } from "@/lib/api";
 import { BRAND } from "@/lib/brand";
+import { isImageAttachment } from "@/lib/attachment";
 import {
   DOT_STATE,
   DOT_FEDERAL_RULES,
@@ -21,14 +22,14 @@ function fmt(d: Date | null | undefined): string {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-// Render an uploaded document (data URL): embed images inline so they print in
+// Render an uploaded document: embed images inline so they print in
 // the packet; link PDFs/others so they can be opened from the browser.
 function docCell(url: string | null | undefined): string {
   if (!url) return '<span class="badge missing">NOT ON FILE</span>';
   // Browsers block top-level navigation to data: URLs, so a plain link opens a
   // blank tab. Carry the data URL in data-doc; a click handler (see script at
   // the end of the doc) turns it into a Blob URL and opens that instead.
-  if (url.startsWith("data:image/")) return `<a href="#" class="doclink" data-doc="${esc(url)}"><img class="doc" src="${esc(url)}" alt="document"/></a>`;
+  if (isImageAttachment(url)) return `<a href="#" class="doclink" data-doc="${esc(url)}"><img class="doc" src="${esc(url)}" alt="document"/></a>`;
   return `<a class="doclink" href="#" data-doc="${esc(url)}">Open document</a> <span class="badge valid">ON FILE</span>`;
 }
 

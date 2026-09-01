@@ -165,7 +165,11 @@ export async function GET(req: NextRequest) {
       scheduledFor: w.scheduledFor,
       completedAt: w.completedAt,
       createdAt: w.createdAt,
-      invoiceUrl: w.invoiceUrl?.startsWith("data:") ? "Attached" : (w.invoiceUrl ?? ""),
+      invoiceUrl: !w.invoiceUrl
+        ? ""
+        : w.invoiceUrl.startsWith("data:") || w.invoiceUrl.startsWith("/api/attachments/")
+          ? "Attached"
+          : w.invoiceUrl,
     };
 
     // A multi-service work order exports one row per service line so each

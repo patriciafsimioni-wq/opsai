@@ -1,4 +1,25 @@
-// Uploaded files are stored as base64 `data:` URLs. Chrome blocks opening a
+const EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "application/pdf": "pdf",
+};
+
+/** URL a record stores to reference an uploaded file. The extension lets the UI
+ *  tell an image from a PDF without downloading the file. */
+export function attachmentUrl(id: string, mimeType: string): string {
+  const ext = EXTENSIONS[mimeType.toLowerCase()];
+  return `/api/attachments/${id}${ext ? `.${ext}` : ""}`;
+}
+
+/** True when an attachment URL (or legacy `data:` URL) points at an image. */
+export function isImageAttachment(url: string): boolean {
+  return url.startsWith("data:image/") || /\.(png|jpe?g|webp|gif)$/i.test(url);
+}
+
+// Legacy uploads are stored as base64 `data:` URLs. Chrome blocks opening a
 // `data:` URL as a top-level tab navigation (it just shows a blank page), so we
 // convert to a Blob and open an object (`blob:`) URL instead, which is allowed.
 export function openAttachment(url: string, filename?: string) {
