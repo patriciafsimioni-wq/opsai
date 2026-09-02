@@ -1,0 +1,197 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/db";
+import { requireApiUser, requireManager, badRequest } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
+import { canManage } from "@/lib/auth";
+import { STATIONS } from "@/lib/constants";
+import type { Station } from "@prisma/client";
+
+const itemSchema = z.object({
+  serviceId: z.string().optional().nullable(),
+  title: z.string().min(1),
+  description: z.string().optional().nullable(),
+  materialCost: z.coerce.number().min(0).optional(),
+  laborCost: z.coerce.number().min(0).optional(),
+});
+
+const schema = z.object({
+  status: z.enum(["OPEN", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).optional(),
+  materialCost: z.coerce.number().min(0).optional(),
+  laborHours: z.coerce.number().min(0).optional(),
+  laborRate: z.coerce.number().min(0).optional(),
+  serviceCost: z.coerce.number().min(0).optional(),
+  vendor: z.string().optional().nullable(),
+  // Full-edit fields (used by Log Service edit)
+  vehicleId: z.string().optional().nullable(),
+  vehicleOther: z.string().optional().nullable(),
+  serviceId: z.string().optional().nullable(),
+  station: z.string().refine((s) => STATIONS.includes(s), "Invalid station").optional(),
+  type: z.enum(["SCHEDULED_SERVICE", "REPAIR", "INSPECTION", "TIRE", "OIL_CHANGE", "RECALL"]).optional(),
+  title: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  vin: z.string().optional().nullable(),
+  odometerAt: z.coerce.number().min(0).optional().nullable(),
+  poNumber: z.string().optional().nullable(),
+  invoiceNumber: z.string().optional().nullable(),
+  invoiceUrl: z.string().optional().nullable(),
+  performedBy: z.string().optional().nullable(),
+  completedAt: z.string().optional().nullable(),
+  // Vendor payment tracking (manager-only)
+  vendorPaid: z.boolean().optional(),
+  vendorPaidAt: z.string().optional().nullable(),
+  vendorPaymentMethod: z.string().optional().nullable(),
+  vendorPaymentRef: z.string().optional().nullable(),
+  // Replacing the full set of line items (e.g. editing a logged invoice).
+  items: z.array(itemSchema).optional(),
+});
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await requireApiUser();
+  if ("error" in auth) return auth.error;
+  const { id } = await params;
+  const body = await req.json().catch(() => null);
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Invalid input");
+  const d = parsed.data;
+
+  const current = await prisma.workOrder.findUnique({ where: { id } });
+  if (!current) return badRequest("Work order not found");
+
+  // Managers can edit any work order; a vendor may only complete/update a
+  // work order that is assigned to them.
+  if (!canManage(auth.user.role)) {
+    if (auth.user.role !== "VENDOR" || current.assignedToId !== auth.user.id) {
+      return NextResponse.json(
+        { error: "Forbidden — this work order is not assigned to you" },
+        { status: 403 },
+      );
+    }
+  }
+
+  // Recompute costs if any cost component changed. Line items, when provided,
+  // take precedence: the parent totals become the rolled-up sums.
+  const hasItems = d.items !== undefined;
+  let costFields: { materialCost?: number; laborHours?: number; laborRate?: number; laborCost?: number; cost?: number } = {};
+  if (hasItems) {
+    const items = d.items ?? [];
+    const materialCost = items.reduce((s, i) => s + (i.materialCost ?? 0), 0);
+    const laborCost = items.reduce((s, i) => s + (i.laborCost ?? 0), 0);
+    costFields = { materialCost, laborCost, cost: materialCost + laborCost };
+  } else if (
+    d.materialCost !== undefined ||
+    d.laborHours !== undefined ||
+    d.laborRate !== undefined ||
+    d.serviceCost !== undefined
+  ) {
+    const materialCost = d.materialCost ?? current.materialCost;
+    const laborHours = d.laborHours ?? current.laborHours;
+    const laborRate = d.laborRate ?? current.laborRate;
+    const laborCost = d.serviceCost != null ? d.serviceCost : laborHours * laborRate;
+    costFields = { materialCost, laborHours, laborRate, laborCost, cost: materialCost + laborCost };
+  }
+
+  // Determine completedAt: honor an explicit date; otherwise fall back to
+  // status-driven behavior (only when status changes).
+  let completedAt: Date | null | undefined = undefined;
+  if (d.completedAt !== undefined) {
+    completedAt = d.completedAt ? new Date(d.completedAt) : null;
+  } else if (d.status !== undefined) {
+    completedAt = d.status === "COMPLETED" ? current.completedAt ?? new Date() : null;
+  }
+
+  // Vendor payment fields are manager-only. When marking paid without an
+  // explicit date, default to now; clearing paid wipes the payment details.
+  let paymentFields: {
+    vendorPaid?: boolean;
+    vendorPaidAt?: Date | null;
+    vendorPaymentMethod?: string | null;
+    vendorPaymentRef?: string | null;
+  } = {};
+  if (canManage(auth.user.role) && d.vendorPaid !== undefined) {
+    if (d.vendorPaid) {
+      paymentFields = {
+        vendorPaid: true,
+        vendorPaidAt: d.vendorPaidAt ? new Date(d.vendorPaidAt) : current.vendorPaidAt ?? new Date(),
+        vendorPaymentMethod: d.vendorPaymentMethod ?? null,
+        vendorPaymentRef: d.vendorPaymentRef ?? null,
+      };
+    } else {
+      paymentFields = { vendorPaid: false, vendorPaidAt: null, vendorPaymentMethod: null, vendorPaymentRef: null };
+    }
+  }
+
+  // Replacing line items wholesale keeps the child rows in sync with an edited
+  // invoice; we delete the old ones and recreate in the same update.
+  const itemsData = hasItems
+    ? {
+        deleteMany: {},
+        create: (d.items ?? []).map((i) => ({
+          serviceId: i.serviceId || null,
+          title: i.title,
+          description: i.description || null,
+          materialCost: i.materialCost ?? 0,
+          laborCost: i.laborCost ?? 0,
+        })),
+      }
+    : undefined;
+
+  const order = await prisma.workOrder.update({
+    where: { id },
+    data: {
+      status: d.status,
+      priority: d.priority,
+      ...costFields,
+      ...paymentFields,
+      items: itemsData,
+      vendor: d.vendor === undefined ? undefined : d.vendor || null,
+      vehicleId: d.vehicleId === undefined ? undefined : d.vehicleId || null,
+      vehicleOther: d.vehicleOther === undefined ? undefined : d.vehicleOther || null,
+      serviceId: d.serviceId === undefined ? undefined : d.serviceId || null,
+      station: d.station as Station | undefined,
+      type: d.type,
+      title: d.title,
+      description: d.description === undefined ? undefined : d.description || null,
+      vin: d.vin === undefined ? undefined : d.vin || null,
+      odometerAt: d.odometerAt === undefined ? undefined : d.odometerAt ?? null,
+      poNumber: d.poNumber === undefined ? undefined : d.poNumber || null,
+      invoiceNumber: d.invoiceNumber === undefined ? undefined : d.invoiceNumber || null,
+      invoiceUrl: d.invoiceUrl === undefined ? undefined : d.invoiceUrl || null,
+      performedBy: d.performedBy === undefined ? undefined : d.performedBy || null,
+      completedAt,
+    },
+  });
+  const paidNow = paymentFields.vendorPaid;
+  await logActivity(auth.user, {
+    action: paidNow === true ? "marked paid" : paidNow === false ? "marked unpaid" : "updated",
+    entity: "Work Order",
+    entityLabel: order.poNumber ? `${order.title} (PO ${order.poNumber})` : order.title,
+    station: order.station,
+    detail: paidNow === true
+      ? `Vendor ${order.vendor ?? ""} paid${order.vendorPaymentMethod ? ` via ${order.vendorPaymentMethod}` : ""}`
+      : undefined,
+  });
+  return NextResponse.json(order);
+}
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await requireManager();
+  if ("error" in auth) return auth.error;
+  const { id } = await params;
+  const existing = await prisma.workOrder.findUnique({ where: { id }, select: { title: true, poNumber: true, station: true } });
+  await prisma.workOrder.delete({ where: { id } });
+  await logActivity(auth.user, {
+    action: "deleted",
+    entity: "Work Order",
+    entityLabel: existing ? (existing.poNumber ? `${existing.title} (PO ${existing.poNumber})` : existing.title) : id,
+    station: existing?.station ?? null,
+  });
+  return NextResponse.json({ ok: true });
+}

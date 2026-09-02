@@ -1,0 +1,118 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/db";
+import { requireApiUser, badRequest } from "@/lib/api";
+import { logActivity } from "@/lib/activity";
+
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await requireApiUser();
+  if ("error" in auth) return auth.error;
+  const { id } = await params;
+  const vehicle = await prisma.vehicle.findUnique({
+    where: { id },
+    include: { assignedDriver: true },
+  });
+  if (!vehicle) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json(vehicle);
+}
+
+const patchSchema = z.object({
+  name: z.string().min(1).optional(),
+  dxNumber: z.string().optional().nullable(),
+  make: z.string().min(1).optional(),
+  model: z.string().min(1).optional(),
+  year: z.coerce.number().int().optional(),
+  vin: z.string().min(1).optional(),
+  licensePlate: z.string().optional().nullable(),
+  type: z.enum(["TRUCK", "VAN", "CAR", "BUS", "PICKUP", "TRAILER"]).optional(),
+  fleetGroup: z.enum(["REGULAR", "TRACTOR_TRAILER"]).optional(),
+  status: z.enum(["ACTIVE", "IDLE", "MAINTENANCE", "OUT_OF_SERVICE"]).optional(),
+  station: z.enum(["IAH", "AUS", "HRL", "LRD", "ACT", "CLL", "BPT", "ORF", "RNH"]).optional(),
+  garageAddress: z.string().optional().nullable(),
+  fuelType: z.enum(["DIESEL", "GASOLINE", "ELECTRIC", "HYBRID", "CNG"]).optional(),
+  odometer: z.coerce.number().min(0).optional(),
+  fuelLevel: z.coerce.number().min(0).max(100).optional(),
+  tankCapacity: z.coerce.number().min(0).optional(),
+  leasingCompany: z.string().optional().nullable(),
+  leaseEndDate: z.string().optional().nullable(),
+  registrationMonth: z.string().optional().nullable(),
+  assignedDriverId: z.string().optional().nullable(),
+  registrationExpiry: z.string().optional().nullable(),
+  insuranceExpiry: z.string().optional().nullable(),
+  dotInspectionDate: z.string().optional().nullable(),
+  dotInspectionExpiry: z.string().optional().nullable(),
+  dotInspectionDocUrl: z.string().optional().nullable(),
+  branding: z.enum(["YELLOW_DHL", "WHITE"]).optional().nullable(),
+  offboardReason: z.string().optional().nullable(),
+  offboardedDate: z.string().optional().nullable(),
+  onboardPhotos: z.string().optional().nullable(),
+  onboardedDate: z.string().optional().nullable(),
+  lifecycleStatus: z.string().optional(),
+  purchasePrice: z.coerce.number().optional().nullable(),
+  taxesAndFees: z.coerce.number().optional().nullable(),
+  brandingCost: z.coerce.number().optional().nullable(),
+  gpsCamerasCost: z.coerce.number().optional().nullable(),
+  upfittingCost: z.coerce.number().optional().nullable(),
+  registrationCost: z.coerce.number().optional().nullable(),
+  initialInsurance: z.coerce.number().optional().nullable(),
+  monthlyPayment: z.coerce.number().optional().nullable(),
+  allowedMileage: z.coerce.number().optional().nullable(),
+  residualValue: z.coerce.number().optional().nullable(),
+  purchaseOption: z.coerce.number().optional().nullable(),
+  earlyTermFee: z.coerce.number().optional().nullable(),
+});
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await requireApiUser();
+  if ("error" in auth) return auth.error;
+  const { id } = await params;
+  const body = await req.json().catch(() => null);
+  const parsed = patchSchema.safeParse(body);
+  if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Invalid input");
+  const d = parsed.data;
+
+  const { assignedDriverId, registrationExpiry, insuranceExpiry, dotInspectionDate, dotInspectionExpiry, offboardedDate, onboardedDate, leaseEndDate, ...rest } = d;
+
+  const toDate = (val: string | null | undefined) =>
+    val === undefined ? undefined : val ? new Date(val) : null;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: Record<string, any> = {
+    ...rest,
+    registrationExpiry: toDate(registrationExpiry),
+    insuranceExpiry: toDate(insuranceExpiry),
+    dotInspectionDate: toDate(dotInspectionDate),
+    dotInspectionExpiry: toDate(dotInspectionExpiry),
+    offboardedDate: toDate(offboardedDate),
+    onboardedDate: toDate(onboardedDate),
+    leaseEndDate: toDate(leaseEndDate),
+  };
+  if (assignedDriverId !== undefined) {
+    data.assignedDriverId = assignedDriverId || null;
+  }
+
+  const vehicle = await prisma.vehicle.update({ where: { id }, data });
+  await logActivity(auth.user, {
+    action: "updated",
+    entity: "Vehicle",
+    entityLabel: vehicle.name,
+    station: vehicle.station,
+  });
+  return NextResponse.json(vehicle);
+}
+
+// Vehicle deletion is intentionally disabled — vehicles are retired via the
+// Offboard flow (which preserves the record and its history) instead of being
+// permanently destroyed.
+export async function DELETE() {
+  return NextResponse.json(
+    { error: "Deleting vehicles is disabled. Use Offboard to retire a vehicle instead." },
+    { status: 405 },
+  );
+}
