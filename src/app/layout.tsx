@@ -19,17 +19,20 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: "#1e40af",
+  // Fills the whole screen when launched from the iPad/iPhone home screen;
+  // `globals.css` keeps content clear of the safe areas.
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
   title: `${BRAND} — Fleet Management`,
   description:
     "Complete fleet management platform: live GPS tracking, maintenance, drivers, trips, fuel and analytics.",
-  manifest: "/manifest.json",
+  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "SyncFleet",
+    title: BRAND,
   },
   other: {
     "mobile-web-app-capable": "yes",
@@ -46,9 +49,6 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head>
-        <link rel="apple-touch-icon" href="/icon-192.png" />
-      </head>
       <body className="min-h-full flex flex-col">
         {children}
         <script

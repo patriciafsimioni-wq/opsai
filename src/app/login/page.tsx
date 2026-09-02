@@ -6,6 +6,7 @@ import { Truck, ShieldCheck, MapPin, Wrench } from "lucide-react";
 import { Button } from "@/components/ui";
 import { Input } from "@/components/form";
 import { BRAND } from "@/lib/brand";
+import { InstallHint } from "@/components/InstallHint";
 
 const DEMO = [
   { role: "Admin", email: "admin@livefleet.ai", password: "admin123" },
@@ -88,6 +89,10 @@ export default function LoginPage() {
           <p className="mt-1 text-sm text-[var(--color-muted)]">
             Welcome back. Enter your credentials to continue.
           </p>
+
+          <div className="mt-5">
+            <InstallHint />
+          </div>
 
           <form onSubmit={submit} className="mt-6 space-y-4">
             <div>

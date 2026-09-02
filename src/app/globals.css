@@ -58,3 +58,20 @@ body {
     opacity: 0;
   }
 }
+
+/* Installed-app (iPad/iPhone home screen) behaviour: no tap flash or
+   double-tap zoom, no rubber-band scroll of the whole shell, and content kept
+   clear of the home indicator. */
+html {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+@media (display-mode: standalone) {
+  body {
+    overscroll-behavior-y: none;
+  }
+  main {
+    padding-bottom: calc(1.75rem + env(safe-area-inset-bottom));
+  }
+}
