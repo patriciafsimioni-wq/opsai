@@ -7,9 +7,10 @@ import { Field, Input, Select, Textarea } from "@/components/form";
 import { useData, apiSend } from "@/lib/use-data";
 import { useTableSort } from "@/lib/use-sort";
 import type { WorkOrderDTO, VehicleDTO, ServiceDTO } from "@/lib/types";
-import { FORM_STATIONS, STATION_LABEL } from "@/lib/constants";
+import { FORM_STATIONS, STATION_LABEL, titleCase } from "@/lib/constants";
 import { formatCurrency, formatDate, todayInputDate } from "@/lib/utils";
 import { downloadCsv } from "@/lib/csv";
+import { workOrderLines } from "@/lib/work-order-lines";
 import { ServiceDetailModal } from "@/components/ServiceDetailModal";
 import { compressImage } from "@/lib/image";
 
@@ -219,20 +220,26 @@ export function LogServiceClient({
     if (rows.length === 0) return;
     const fmt = (d: string | Date | null | undefined) =>
       d ? new Date(d).toISOString().slice(0, 10) : "";
-    downloadCsv(`logged-services-${new Date().toISOString().slice(0, 10)}.csv`, rows, [
-      { header: "Date", value: (o) => fmt(o.completedAt) },
-      { header: "Service", value: (o) => o.title },
-      { header: "Vehicle", value: (o) => o.vehicle?.name ?? o.vehicleOther ?? "" },
-      { header: "VIN", value: (o) => o.vin ?? "" },
-      { header: "Station", value: (o) => o.station ?? "" },
-      { header: "Odometer", value: (o) => o.odometerAt ?? "" },
-      { header: "Vendor", value: (o) => o.vendor ?? "" },
-      { header: "PO", value: (o) => o.poNumber ?? "" },
-      { header: "Invoice #", value: (o) => o.invoiceNumber ?? "" },
-      { header: "Material", value: (o) => o.materialCost },
-      { header: "Labor", value: (o) => o.laborCost },
-      { header: "Total", value: (o) => o.cost },
-      { header: "Description", value: (o) => o.description ?? "" },
+    // One row per service performed so multi-service invoices list each line.
+    downloadCsv(`logged-services-${new Date().toISOString().slice(0, 10)}.csv`, workOrderLines(rows), [
+      { header: "Date", value: (l) => fmt(l.order.completedAt) },
+      { header: "Work Order", value: (l) => l.order.title },
+      { header: "Service", value: (l) => l.service },
+      { header: "Line", value: (l) => (l.count > 1 ? `${l.index} of ${l.count}` : "") },
+      { header: "Description", value: (l) => l.description },
+      { header: "Category", value: (l) => titleCase(l.category) },
+      { header: "Vehicle", value: (l) => l.order.vehicle?.name ?? l.order.vehicleOther ?? "" },
+      { header: "VIN", value: (l) => l.order.vin ?? "" },
+      { header: "Station", value: (l) => l.order.station ?? "" },
+      { header: "Odometer", value: (l) => l.order.odometerAt ?? "" },
+      { header: "Vendor", value: (l) => l.order.vendor ?? "" },
+      { header: "Performed By", value: (l) => l.order.performedBy ?? "" },
+      { header: "PO", value: (l) => l.order.poNumber ?? "" },
+      { header: "Invoice #", value: (l) => l.order.invoiceNumber ?? "" },
+      { header: "Material", value: (l) => l.materialCost },
+      { header: "Labor", value: (l) => l.laborCost },
+      { header: "Total", value: (l) => l.total },
+      { header: "WO Total", value: (l) => l.order.cost },
     ]);
   }
 
