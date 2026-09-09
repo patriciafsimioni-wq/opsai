@@ -23,6 +23,7 @@ import {
 } from "@/lib/constants";
 import { formatCurrency, formatDate, todayInputDate } from "@/lib/utils";
 import { downloadCsv } from "@/lib/csv";
+import { workOrderLines } from "@/lib/work-order-lines";
 import { compressImage } from "@/lib/image";
 
 const DEFAULT_RATE = "95";
@@ -235,23 +236,29 @@ export function MaintenanceClient({
     if (rows.length === 0) return;
     const fmt = (d: string | Date | null | undefined) =>
       d ? new Date(d).toISOString().slice(0, 10) : "";
-    downloadCsv(`work-orders-${new Date().toISOString().slice(0, 10)}.csv`, rows, [
-      { header: "WO#", value: (o) => o.id.slice(-6).toUpperCase() },
-      { header: "PO#", value: (o) => o.poNumber ?? "" },
-      { header: "Date", value: (o) => fmt(o.createdAt) },
-      { header: "Work Order", value: (o) => o.title },
-      { header: "Type", value: (o) => titleCase(o.type) },
-      { header: "Vehicle", value: (o) => o.vehicle?.name ?? o.vehicleOther ?? "" },
-      { header: "Station", value: (o) => o.station ?? "" },
-      { header: "Requested By", value: (o) => o.requestedBy ?? "" },
-      { header: "Vendor", value: (o) => o.vendor ?? o.assignedTo?.name ?? "" },
-      { header: "Mileage", value: (o) => o.odometerAt ?? "" },
-      { header: "Material", value: (o) => o.materialCost },
-      { header: "Labor", value: (o) => o.laborCost },
-      { header: "Total", value: (o) => o.cost },
-      { header: "Status", value: (o) => WO_STATUS[o.status as keyof typeof WO_STATUS]?.label ?? o.status },
-      { header: "Scheduled For", value: (o) => fmt(o.scheduledFor) },
-      { header: "Completed At", value: (o) => fmt(o.completedAt) },
+    // One row per service performed so multi-service orders list each line.
+    downloadCsv(`work-orders-${new Date().toISOString().slice(0, 10)}.csv`, workOrderLines(rows), [
+      { header: "WO#", value: (l) => l.order.id.slice(-6).toUpperCase() },
+      { header: "PO#", value: (l) => l.order.poNumber ?? "" },
+      { header: "Date", value: (l) => fmt(l.order.createdAt) },
+      { header: "Work Order", value: (l) => l.order.title },
+      { header: "Service", value: (l) => l.service },
+      { header: "Line", value: (l) => (l.count > 1 ? `${l.index} of ${l.count}` : "") },
+      { header: "Description", value: (l) => l.description },
+      { header: "Type", value: (l) => titleCase(l.order.type) },
+      { header: "Category", value: (l) => titleCase(l.category) },
+      { header: "Vehicle", value: (l) => l.order.vehicle?.name ?? l.order.vehicleOther ?? "" },
+      { header: "Station", value: (l) => l.order.station ?? "" },
+      { header: "Requested By", value: (l) => l.order.requestedBy ?? "" },
+      { header: "Vendor", value: (l) => l.order.vendor ?? l.order.assignedTo?.name ?? "" },
+      { header: "Mileage", value: (l) => l.order.odometerAt ?? "" },
+      { header: "Material", value: (l) => l.materialCost },
+      { header: "Labor", value: (l) => l.laborCost },
+      { header: "Total", value: (l) => l.total },
+      { header: "WO Total", value: (l) => l.order.cost },
+      { header: "Status", value: (l) => WO_STATUS[l.order.status as keyof typeof WO_STATUS]?.label ?? l.order.status },
+      { header: "Scheduled For", value: (l) => fmt(l.order.scheduledFor) },
+      { header: "Completed At", value: (l) => fmt(l.order.completedAt) },
     ]);
   }
 
