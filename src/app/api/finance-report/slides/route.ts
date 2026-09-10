@@ -425,6 +425,7 @@ export async function GET(req: NextRequest) {
       ytdVariancePct: ytdVariancePctArr,
       budgetVariancePct: budgetVariancePctArr,
       ytdBudgetVariancePct: ytdBudgetVarPctArr,
+      plotThrough: lastActualMonth,
     },
   };
 
