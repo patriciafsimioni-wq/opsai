@@ -15,6 +15,7 @@ import {
   Legend,
   ComposedChart,
   Line,
+  ReferenceLine,
 } from "recharts";
 
 type CoverSlide = {
@@ -122,6 +123,7 @@ type TrendsChartsSlide = {
     ytdVariancePct: (number | null)[];
     budgetVariancePct: (number | null)[];
     ytdBudgetVariancePct: (number | null)[];
+    plotThrough?: number;
   };
 };
 
@@ -343,35 +345,52 @@ function fmtK(n: number): string {
 
 function TrendsChartsSlideView({ slide, year }: { slide: TrendsChartsSlide; year: number }) {
   const c = slide.charts;
+  // Variance line is plotted in dollars on the same axis as the bars so it
+  // tracks them; the % is shown in the tooltip. Months past the last complete
+  // month (or with no baseline) are not plotted.
+  const plotThrough = c.plotThrough ?? c.monthlyVariancePct.reduce<number>((last, v, i) => (v != null ? i : last), -1);
+  const diff = (a: number, b: number, i: number) => (i <= plotThrough && b > 0 ? a - b : null);
   const monthlyData = slide.months.map((m, i) => ({
     month: m,
     prev: c.monthlyPrev[i],
     actual: c.monthlyActual[i],
-    variance: c.monthlyVariancePct[i],
+    variance: diff(c.monthlyActual[i], c.monthlyPrev[i], i),
+    pct: c.monthlyVariancePct[i],
   }));
   const ytdData = slide.months.map((m, i) => ({
     month: m,
     prev: c.ytdPrev[i],
     actual: c.ytdActual[i],
-    variance: c.ytdVariancePct[i],
+    variance: diff(c.ytdActual[i], c.ytdPrev[i], i),
+    pct: c.ytdVariancePct[i],
   }));
   const budgetData = slide.months.map((m, i) => ({
     month: m,
     actual: c.monthlyActual[i],
     budget: c.monthlyBudget[i],
-    variance: c.budgetVariancePct[i],
+    variance: diff(c.monthlyActual[i], c.monthlyBudget[i], i),
+    pct: c.budgetVariancePct[i],
   }));
   const ytdBudgetData = slide.months.map((m, i) => ({
     month: m,
     actual: c.ytdActual[i],
     budget: c.ytdBudget[i],
-    variance: c.ytdBudgetVariancePct[i],
+    variance: diff(c.ytdActual[i], c.ytdBudget[i], i),
+    pct: c.ytdBudgetVariancePct[i],
   }));
+  type Pt = { pct: number | null };
+  const tipFmt = (v: unknown, name: unknown, item: { payload?: Pt }) => {
+    const n = Number(v);
+    if (name === "Variance $") {
+      const pct = item?.payload?.pct;
+      return [`${n < 0 ? "-" : "+"}${fmtK(Math.abs(n))}${pct != null ? ` (${pct > 0 ? "+" : ""}${pct}%)` : ""}`, String(name)] as [string, string];
+    }
+    return [fmtK(n), String(name)] as [string, string];
+  };
 
   const chartProps = { margin: { top: 10, right: 40, left: 10, bottom: 0 } };
   const axisStyle = { fontSize: 9, fill: "#64748b" };
   const yTickFmt = (v: number) => fmtK(v);
-  const pctFmt = (v: number) => `${v}%`;
 
   return (
     <div className="flex h-full flex-col bg-white p-6">
@@ -386,12 +405,12 @@ function TrendsChartsSlideView({ slide, year }: { slide: TrendsChartsSlide; year
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="month" tick={axisStyle} />
               <YAxis yAxisId="left" tick={axisStyle} tickFormatter={yTickFmt} />
-              <YAxis yAxisId="right" orientation="right" tick={axisStyle} tickFormatter={pctFmt} />
-              <Tooltip formatter={(v, name) => [name === "variance" ? `${v}%` : fmtK(Number(v)), String(name)]} />
+              <Tooltip formatter={tipFmt} />
               <Legend wrapperStyle={{ fontSize: 9 }} />
               <Bar yAxisId="left" dataKey="prev" name={`A${slide.prevYear}`} fill="#94a3b8" barSize={12} />
               <Bar yAxisId="left" dataKey="actual" name={`A${year}`} fill="#3b82f6" barSize={12} />
-              <Line yAxisId="right" type="monotone" dataKey="variance" name="Variance %" stroke="#1e40af" strokeWidth={2} dot={{ r: 3 }} />
+              <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" />
+              <Line yAxisId="left" type="monotone" dataKey="variance" name="Variance $" stroke="#1e40af" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -403,12 +422,12 @@ function TrendsChartsSlideView({ slide, year }: { slide: TrendsChartsSlide; year
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="month" tick={axisStyle} />
               <YAxis yAxisId="left" tick={axisStyle} tickFormatter={yTickFmt} />
-              <YAxis yAxisId="right" orientation="right" tick={axisStyle} tickFormatter={pctFmt} />
-              <Tooltip formatter={(v, name) => [name === "variance" ? `${v}%` : fmtK(Number(v)), String(name)]} />
+              <Tooltip formatter={tipFmt} />
               <Legend wrapperStyle={{ fontSize: 9 }} />
               <Bar yAxisId="left" dataKey="prev" name={`A${slide.prevYear} YTD`} fill="#94a3b8" barSize={12} />
               <Bar yAxisId="left" dataKey="actual" name={`A${year} YTD`} fill="#3b82f6" barSize={12} />
-              <Line yAxisId="right" type="monotone" dataKey="variance" name="Variance %" stroke="#1e40af" strokeWidth={2} dot={{ r: 3 }} />
+              <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" />
+              <Line yAxisId="left" type="monotone" dataKey="variance" name="Variance $" stroke="#1e40af" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -420,12 +439,12 @@ function TrendsChartsSlideView({ slide, year }: { slide: TrendsChartsSlide; year
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="month" tick={axisStyle} />
               <YAxis yAxisId="left" tick={axisStyle} tickFormatter={yTickFmt} />
-              <YAxis yAxisId="right" orientation="right" tick={axisStyle} tickFormatter={pctFmt} />
-              <Tooltip formatter={(v, name) => [name === "variance" ? `${v}%` : fmtK(Number(v)), String(name)]} />
+              <Tooltip formatter={tipFmt} />
               <Legend wrapperStyle={{ fontSize: 9 }} />
               <Bar yAxisId="left" dataKey="actual" name={`A${year} Monthly`} fill="#3b82f6" barSize={12} />
               <Bar yAxisId="left" dataKey="budget" name={`Budget ${year}`} fill="#f59e0b" barSize={12} />
-              <Line yAxisId="right" type="monotone" dataKey="variance" name="Variance %" stroke="#1e40af" strokeWidth={2} dot={{ r: 3 }} />
+              <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" />
+              <Line yAxisId="left" type="monotone" dataKey="variance" name="Variance $" stroke="#1e40af" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -437,12 +456,12 @@ function TrendsChartsSlideView({ slide, year }: { slide: TrendsChartsSlide; year
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="month" tick={axisStyle} />
               <YAxis yAxisId="left" tick={axisStyle} tickFormatter={yTickFmt} />
-              <YAxis yAxisId="right" orientation="right" tick={axisStyle} tickFormatter={pctFmt} />
-              <Tooltip formatter={(v, name) => [name === "variance" ? `${v}%` : fmtK(Number(v)), String(name)]} />
+              <Tooltip formatter={tipFmt} />
               <Legend wrapperStyle={{ fontSize: 9 }} />
               <Bar yAxisId="left" dataKey="actual" name={`A${year} YTD`} fill="#3b82f6" barSize={12} />
               <Bar yAxisId="left" dataKey="budget" name={`Budget ${year} YTD`} fill="#f59e0b" barSize={12} />
-              <Line yAxisId="right" type="monotone" dataKey="variance" name="Variance %" stroke="#1e40af" strokeWidth={2} dot={{ r: 3 }} />
+              <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" />
+              <Line yAxisId="left" type="monotone" dataKey="variance" name="Variance $" stroke="#1e40af" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>

@@ -375,7 +375,14 @@ export async function GET(req: NextRequest) {
   // Variance % lines: only plot months that have actuals, and skip months
   // whose prior-year baseline is too small to yield a meaningful YoY %
   // (near-zero denominators otherwise produce absurd spikes like +18,000%).
-  const lastActualMonth = monthlyActual.reduce((last, v, i) => (v > 0 ? i : last), -1);
+  // The in-progress month is excluded: a partial month against a full month
+  // of budget/prior-year always reads as a bogus -100%-ish drop.
+  const now = new Date();
+  const lastCompleteMonth = year < now.getFullYear() ? 11 : year > now.getFullYear() ? -1 : now.getMonth() - 1;
+  const lastActualMonth = Math.min(
+    monthlyActual.reduce((last, v, i) => (v > 0 ? i : last), -1),
+    lastCompleteMonth,
+  );
   const MIN_BASELINE = 250; // dollars; below this a YoY % is not meaningful
 
   const monthlyVariancePct = monthlyActual.map((a, i) => {
@@ -418,6 +425,7 @@ export async function GET(req: NextRequest) {
       ytdVariancePct: ytdVariancePctArr,
       budgetVariancePct: budgetVariancePctArr,
       ytdBudgetVariancePct: ytdBudgetVarPctArr,
+      plotThrough: lastActualMonth,
     },
   };
 
