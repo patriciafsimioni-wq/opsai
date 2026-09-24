@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireApiUser } from "@/lib/api";
+import { requireApiUser, isCronAuthorized } from "@/lib/api";
 import { sendEmail, buildAlertDigestEmail, getAppUrl } from "@/lib/email";
 import { canManage } from "@/lib/auth";
 
@@ -198,7 +198,8 @@ export async function POST() {
 }
 
 // Cron-friendly GET (Vercel Cron sends GET requests).
-export async function GET() {
+export async function GET(req: NextRequest) {
+  if (!isCronAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const result = await generateComplianceAlerts();
   return NextResponse.json(result);
 }
