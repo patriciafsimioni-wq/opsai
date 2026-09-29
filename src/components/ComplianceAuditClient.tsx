@@ -6,6 +6,7 @@ import { ShieldCheck, ShieldAlert, ShieldX, Search, ChevronUp, ChevronDown, Chev
 import { Card, Table, Th, Td, EmptyState } from "@/components/ui";
 import { STATION_LABEL } from "@/lib/constants";
 import { daysUntil, cn } from "@/lib/utils";
+import { RenewDocButton, type RenewableDoc } from "@/components/RenewDocButton";
 
 type Row = {
   id: string;
@@ -77,8 +78,20 @@ function sortValue(v: Row, key: SortKey): string | number {
   }
 }
 
-export function ComplianceAuditClient({ vehicles }: { vehicles: Row[] }) {
+export function ComplianceAuditClient({ vehicles: initialVehicles, canRenew = false }: { vehicles: Row[]; canRenew?: boolean }) {
+  // Renewals saved from this page, applied on top of the server rows until
+  // the router refresh brings the updated data down.
+  const [renewed, setRenewed] = useState<Record<string, Partial<Row>>>({});
+  const vehicles = useMemo(
+    () => initialVehicles.map((r) => (renewed[r.id] ? { ...r, ...renewed[r.id] } : r)),
+    [initialVehicles, renewed],
+  );
   const [search, setSearch] = useState("");
+
+  function applyRenewal(id: string, doc: RenewableDoc, newExpiry: string) {
+    const field = doc === "registration" ? "registrationExpiry" : doc === "insurance" ? "insuranceExpiry" : "dotInspectionExpiry";
+    setRenewed((m) => ({ ...m, [id]: { ...m[id], [field]: newExpiry } }));
+  }
   const [station, setStation] = useState("");
   const [filter, setFilter] = useState<"" | DocState>("");
   const [sortKey, setSortKey] = useState<SortKey>("registration");
@@ -203,14 +216,31 @@ export function ComplianceAuditClient({ vehicles }: { vehicles: Row[] }) {
                   <Td className="text-slate-600">
                     {STATION_LABEL[v.station as keyof typeof STATION_LABEL]?.split(" - ")[0] ?? v.station ?? "—"}
                   </Td>
-                  <Td><DocBadge iso={v.registrationExpiry} /></Td>
-                  <Td><DocBadge iso={v.insuranceExpiry} /></Td>
+                  <Td>
+                    <div className="flex items-center gap-3">
+                      <DocBadge iso={v.registrationExpiry} />
+                      {canRenew && (
+                        <RenewDocButton vehicleId={v.id} doc="registration" currentExpiry={v.registrationExpiry} size="xs" onRenewed={(d) => applyRenewal(v.id, "registration", d)} />
+                      )}
+                    </div>
+                  </Td>
+                  <Td>
+                    <div className="flex items-center gap-3">
+                      <DocBadge iso={v.insuranceExpiry} />
+                      {canRenew && (
+                        <RenewDocButton vehicleId={v.id} doc="insurance" currentExpiry={v.insuranceExpiry} size="xs" onRenewed={(d) => applyRenewal(v.id, "insurance", d)} />
+                      )}
+                    </div>
+                  </Td>
                   <Td>
                     {v.type === "TRUCK" ? (
                       <div className="flex items-center gap-2">
                         <DocBadge iso={v.dotInspectionExpiry} />
                         {v.dotInspectionDocUrl && (
                           <a href={v.dotInspectionDocUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-blue-600 hover:underline">View</a>
+                        )}
+                        {canRenew && (
+                          <RenewDocButton vehicleId={v.id} doc="dotInspection" currentExpiry={v.dotInspectionExpiry} size="xs" onRenewed={(d) => applyRenewal(v.id, "dotInspection", d)} />
                         )}
                       </div>
                     ) : (

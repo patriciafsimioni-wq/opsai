@@ -16,6 +16,8 @@ import { prisma } from "@/lib/db";
 import { Card, CardHeader, Badge, Table, Th, Td, ProgressBar } from "@/components/ui";
 import { VehicleActions } from "@/components/VehicleActions";
 import { VehicleEditForm } from "@/components/VehicleEditForm";
+import { RenewDocButton, type RenewableDoc } from "@/components/RenewDocButton";
+import { getSession, canManage } from "@/lib/auth";
 import {
   VehicleMaintenanceHistory,
   type MaintenanceHistoryRow,
@@ -142,6 +144,8 @@ export default async function VehicleDetailPage({
   const regDays = daysUntil(v.registrationExpiry);
   const insDays = daysUntil(v.insuranceExpiry);
   const isTruck = v.type === "TRUCK";
+  const session = await getSession();
+  const canRenew = !!session && canManage(session.role);
   const dotDays = daysUntil(v.dotInspectionExpiry);
 
   // Build odometer estimation from known data points
@@ -422,11 +426,13 @@ export default async function VehicleDetailPage({
               label="Registration"
               date={v.registrationExpiry}
               days={regDays}
+              renew={canRenew ? { vehicleId: v.id, doc: "registration" } : undefined}
             />
             <ComplianceRow
               label="Insurance"
               date={v.insuranceExpiry}
               days={insDays}
+              renew={canRenew ? { vehicleId: v.id, doc: "insurance" } : undefined}
             />
             {isTruck && (
               <ComplianceRow
@@ -434,6 +440,7 @@ export default async function VehicleDetailPage({
                 date={v.dotInspectionExpiry}
                 days={dotDays}
                 docUrl={v.dotInspectionDocUrl}
+                renew={canRenew ? { vehicleId: v.id, doc: "dotInspection" } : undefined}
               />
             )}
           </div>
@@ -873,11 +880,13 @@ function ComplianceRow({
   date,
   days,
   docUrl,
+  renew,
 }: {
   label: string;
   date: Date | null;
   days: number | null;
   docUrl?: string | null;
+  renew?: { vehicleId: string; doc: RenewableDoc };
 }) {
   const expired = days != null && days < 0;
   const soon = days != null && days >= 0 && days < 30;
@@ -896,6 +905,10 @@ function ComplianceRow({
           </a>
         )}
       </div>
+      <div className="flex items-center gap-3">
+        {renew && (
+          <RenewDocButton vehicleId={renew.vehicleId} doc={renew.doc} currentExpiry={date?.toISOString() ?? null} />
+        )}
       <div className="text-right">
         <p className="text-sm font-medium">{date ? formatDate(date) : "Not on file"}</p>
         {days != null && (
@@ -908,6 +921,7 @@ function ComplianceRow({
             {expired ? `Expired ${-days}d ago` : `${days}d remaining`}
           </p>
         )}
+      </div>
       </div>
     </div>
   );
