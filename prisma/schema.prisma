@@ -607,6 +607,15 @@ model Alert {
   createdAt  DateTime      @default(now())
 }
 
+// One row per compliance item that has already been emailed, so a given
+// expiry/missing item is only ever notified once (even if its alert is
+// resolved and re-created later).
+model AlertNotification {
+  key     String   @id
+  station String?
+  sentAt  DateTime @default(now())
+}
+
 model TelemetryLog {
   id        String   @id @default(cuid())
   vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
