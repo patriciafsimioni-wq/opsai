@@ -409,7 +409,21 @@ model Vehicle {
   pmDismissals       PmAlertDismissal[]
   dvirReports        DvirReport[]
   odometerReadings   OdometerReading[]
+  vehicleNotes       VehicleNote[]
   createdAt          DateTime       @default(now())
+}
+
+model VehicleNote {
+  id         String   @id @default(cuid())
+  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId  String
+  body       String
+  authorId   String?
+  authorName String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([vehicleId, createdAt])
 }
 
 // Odometer history: one row per reading, so miles driven in any week/month can

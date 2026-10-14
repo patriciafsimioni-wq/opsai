@@ -17,6 +17,8 @@ import { Card, CardHeader, Badge, Table, Th, Td, ProgressBar } from "@/component
 import { VehicleActions } from "@/components/VehicleActions";
 import { VehicleEditForm } from "@/components/VehicleEditForm";
 import { RenewDocButton, type RenewableDoc } from "@/components/RenewDocButton";
+import { VehicleNotes } from "@/components/VehicleNotes";
+import { canEditNote } from "@/lib/vehicle-notes";
 import { getSession, canManage } from "@/lib/auth";
 import {
   VehicleMaintenanceHistory,
@@ -97,6 +99,7 @@ export default async function VehicleDetailPage({
       },
       fuelLogs: { orderBy: { date: "desc" } },
       trips: { orderBy: { scheduledStart: "desc" }, take: 8, include: { driver: true } },
+      vehicleNotes: { orderBy: { createdAt: "desc" } },
     },
   });
   if (!v) notFound();
@@ -146,6 +149,14 @@ export default async function VehicleDetailPage({
   const isTruck = v.type === "TRUCK";
   const session = await getSession();
   const canRenew = !!session && canManage(session.role);
+  const noteRows = v.vehicleNotes.map((n) => ({
+    id: n.id,
+    body: n.body,
+    authorName: n.authorName,
+    createdAt: n.createdAt.toISOString(),
+    updatedAt: n.updatedAt.toISOString(),
+    canEdit: !!session && canEditNote(session, n),
+  }));
   const dotDays = daysUntil(v.dotInspectionExpiry);
 
   // Build odometer estimation from known data points
@@ -470,6 +481,16 @@ export default async function VehicleDetailPage({
               <div className="flex justify-between"><span>Cost/Day</span><span className="font-medium text-slate-700">{formatCurrency(costPerDay)}</span></div>
             </div>
           </div>
+        </Card>
+      </div>
+
+      <div className="mt-6">
+        <Card>
+          <CardHeader
+            title="Notes"
+            subtitle={`${noteRows.length} note${noteRows.length === 1 ? "" : "s"}`}
+          />
+          <VehicleNotes vehicleId={v.id} notes={noteRows} />
         </Card>
       </div>
 
