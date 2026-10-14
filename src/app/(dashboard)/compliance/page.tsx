@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/ui";
 import { ComplianceAuditClient } from "@/components/ComplianceAuditClient";
+import { canManage } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,7 @@ export default async function CompliancePage() {
         subtitle="Registration, Insurance & DOT annual inspection (trucks) — expiry status across the active fleet."
       />
       <ComplianceAuditClient
+        canRenew={canManage(user.role)}
         vehicles={vehicles.map((v) => ({
           id: v.id,
           name: v.name,

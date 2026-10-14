@@ -1,12 +1,15 @@
-import { NextResponse } from "next/server";
-import { requireManager } from "@/lib/api";
+import { NextRequest, NextResponse } from "next/server";
+import { requireManager, isCronAuthorized } from "@/lib/api";
 import { getSamsaraVehicleStats, metersToMiles, isConfigured } from "@/lib/samsara";
 import {
+  backfillTelemetryHistory,
   buildSamsaraVehicleMatcher,
   ingestExistingOdometers,
   snapshotTelemetryReadings,
 } from "@/lib/mileage";
 
+
+export const maxDuration = 300;
 /** Records today's telematics odometer for every matched vehicle and pulls in
  *  any odometers newly captured on fuel logs, DVIRs and work orders, building
  *  the history the mileage report reads. Safe to run repeatedly. */
@@ -50,6 +53,16 @@ export async function POST() {
 
 // Cron-friendly GET (Vercel Cron sends GET requests), same as the nightly
 // compliance alert job.
-export async function GET() {
-  return NextResponse.json(await syncOdometerHistory());
+export async function GET(req: NextRequest) {
+  if (!isCronAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const result = await syncOdometerHistory();
+  // `?backfillDays=N` re-pulls Samsara's daily history for the last N days,
+  // filling gaps left when the nightly job did not run.
+  const backfillDays = Number(req.nextUrl.searchParams.get("backfillDays") ?? 0);
+  if (isConfigured() && backfillDays > 0 && backfillDays <= 90) {
+    const end = new Date();
+    const start = new Date(end.getTime() - backfillDays * 24 * 60 * 60 * 1000);
+    return NextResponse.json({ ...result, backfill: await backfillTelemetryHistory(start, end) });
+  }
+  return NextResponse.json(result);
 }
