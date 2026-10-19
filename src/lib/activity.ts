@@ -11,6 +11,7 @@ export const ACTIVITY_ACTION_STYLE: Record<string, { bg: string; fg: string }> =
   rejected: { bg: "#fee2e2", fg: "#991b1b" },
   flagged: { bg: "#ffedd5", fg: "#9a3412" },
   deleted: { bg: "#fee2e2", fg: "#991b1b" },
+  renewed: { bg: "#dcfce7", fg: "#166534" },
 };
 
 export type ActivityInput = {

@@ -93,10 +93,12 @@ export function buildAlertDigestEmail(params: {
   recipientName: string;
   alerts: { severity: string; message: string; context?: string | null }[];
   appUrl: string;
+  stationLabel?: string;
 }): { subject: string; html: string } {
-  const { recipientName, alerts, appUrl } = params;
+  const { recipientName, alerts, appUrl, stationLabel } = params;
   const criticalCount = alerts.filter((a) => a.severity === "CRITICAL").length;
-  const subject = `${alerts.length} flagged issue${alerts.length === 1 ? "" : "s"} on ${BRAND}${criticalCount ? ` (${criticalCount} critical)` : ""}`;
+  const where = stationLabel ? `${stationLabel} — ${BRAND}` : BRAND;
+  const subject = `${alerts.length} new flagged issue${alerts.length === 1 ? "" : "s"} at ${where}${criticalCount ? ` (${criticalCount} critical)` : ""}`;
   const rows = alerts
     .map((a) => {
       const color = a.severity === "CRITICAL" ? "#dc2626" : "#d97706";
@@ -112,7 +114,7 @@ export function buildAlertDigestEmail(params: {
     `
   <p style="font-size: 14px; line-height: 1.6;">Hi ${escapeHtml(recipientName)},</p>
   <p style="font-size: 14px; line-height: 1.6;">
-    The following <strong>${alerts.length}</strong> issue${alerts.length === 1 ? " was" : "s were"} flagged and need attention:
+    The following <strong>${alerts.length}</strong> new issue${alerts.length === 1 ? " was" : "s were"} flagged${stationLabel ? ` at <strong>${escapeHtml(stationLabel)}</strong>` : ""} and need attention:
   </p>
   <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px;">
     <thead><tr>

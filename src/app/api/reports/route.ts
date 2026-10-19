@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { fleetGroupWhere } from "@/lib/api";
+import { buildBuckets, computeMileage, type Reading } from "@/lib/mileage";
 
 function getMonday(d: Date): Date {
   const day = d.getDay();
@@ -105,12 +106,42 @@ export async function GET(req: NextRequest) {
   // Fleet summary
   const totalVehicles = vehicles.length;
   const activeVehicles = vehicles.filter((v) => v.status === "ACTIVE").length;
-  const avgMileage = totalVehicles > 0
-    ? Math.round(vehicles.reduce((s, v) => s + v.odometer, 0) / totalVehicles)
-    : 0;
+  // Miles driven (from odometer history), not lifetime odometer: the selected
+  // period plus each of the 6 trend months, averaged over vehicles that drove.
+  const monthBuckets = buildBuckets("month", 6, refDate);
+  const periodBucket = range === "week" ? buildBuckets("week", 1, refDate) : [monthBuckets[5]];
+  const readings = await prisma.odometerReading.findMany({
+    where: { vehicleId: { in: vehicles.map((v) => v.id) }, readAt: { lte: monthBuckets[5].end } },
+    select: { vehicleId: true, readAt: true, miles: true, source: true },
+    orderBy: { readAt: "asc" },
+  });
+  const readingsByVehicle = new Map<string, Reading[]>();
+  for (const r of readings) {
+    const arr = readingsByVehicle.get(r.vehicleId) ?? [];
+    arr.push({ readAt: r.readAt, miles: r.miles, source: r.source });
+    readingsByVehicle.set(r.vehicleId, arr);
+  }
+  const milesByMonth = new Array(6).fill(0);
+  const drivingByMonth = new Array(6).fill(0);
+  let periodMiles = 0;
+  let periodDriving = 0;
+  for (const vr of readingsByVehicle.values()) {
+    computeMileage(vr, monthBuckets).perBucket.forEach((m, i) => {
+      if (m > 0) {
+        milesByMonth[i] += m;
+        drivingByMonth[i] += 1;
+      }
+    });
+    const pm = computeMileage(vr, periodBucket).perBucket[0];
+    if (pm > 0) {
+      periodMiles += pm;
+      periodDriving += 1;
+    }
+  }
+  const avgMileage = periodDriving > 0 ? Math.round(periodMiles / periodDriving) : 0;
 
-  // 6-month trend
-  const now = new Date();
+  // 6-month trend, ending with the selected month
+  const now = refDate;
   const monthLabels: string[] = [];
   const months: { y: number; m: number }[] = [];
   for (let i = 5; i >= 0; i--) {
@@ -152,6 +183,14 @@ export async function GET(req: NextRequest) {
     Maintenance: Math.round(maintByMonth[i]),
     Parts: Math.round(partsByMonth[i]),
     Total: Math.round(fuelByMonth[i] + maintByMonth[i]),
+  }));
+
+  const monthlySummary = monthBuckets.map((b, i) => ({
+    label: b.label,
+    avgMiles: drivingByMonth[i] > 0 ? Math.round(milesByMonth[i] / drivingByMonth[i]) : 0,
+    vehiclesDriving: drivingByMonth[i],
+    fuel: Math.round(fuelByMonth[i]),
+    total: Math.round(fuelByMonth[i] + maintByMonth[i]),
   }));
 
   const fuelTrend = monthLabels.map((label, i) => ({
@@ -298,10 +337,12 @@ export async function GET(req: NextRequest) {
       totalVehicles,
       activeVehicles,
       avgMileage,
+      vehiclesDriving: periodDriving,
       totalParts: Math.round(totalParts),
       totalCost: totalFuel + totalMaint,
     },
     costTrend,
+    monthlySummary,
     fuelTrend,
     avgPriceTrend,
     turnover,
