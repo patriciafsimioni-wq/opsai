@@ -3,7 +3,8 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/ui";
 import { ComplianceAuditClient } from "@/components/ComplianceAuditClient";
-import { canManage } from "@/lib/auth";
+import { canManage, getUserStationFilter } from "@/lib/auth";
+import type { Station } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +15,10 @@ export default async function CompliancePage() {
 
   // Active fleet only — off-boarded/in-process and out-of-service vehicles are
   // excluded from the audit (a parked/OOS unit isn't operating on the road).
+  const stations = getUserStationFilter(user);
   const vehicles = await prisma.vehicle.findMany({
     where: {
+      ...(stations ? { station: { in: stations as Station[] } } : {}),
       status: { not: "OUT_OF_SERVICE" },
       OR: [
         { offboardStatus: null },

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireManager, badRequest, stationWhere } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
 import { FLEET_GROUPS } from "@/lib/constants";
+import { getUserStationFilter } from "@/lib/auth";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -46,7 +47,9 @@ export async function POST(req: Request) {
 
   const { count } = await prisma.vehicle.updateMany({ where, data });
 
-  const scope = [station || "all stations", fleetGroup].filter(Boolean).join(", ");
+  const userStations = getUserStationFilter(auth.user);
+  const stationScope = station || (userStations ? userStations.join(", ") || "no station" : "all stations");
+  const scope = [stationScope, fleetGroup].filter(Boolean).join(", ");
   const parts = [
     `${DOC_LABEL[doc]} renewed for ${count} vehicle${count === 1 ? "" : "s"} (${scope})`,
     `new expiry ${newExpiry}`,
@@ -57,7 +60,7 @@ export async function POST(req: Request) {
     action: "renewed",
     entity: "Vehicle",
     entityLabel: `Fleet ${DOC_LABEL[doc]}`,
-    station: station || null,
+    station: station || (userStations?.length === 1 ? userStations[0] : null),
     detail: parts.join(" · "),
   });
 
