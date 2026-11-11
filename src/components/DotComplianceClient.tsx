@@ -11,6 +11,7 @@ import type { DriverDTO, DotDocumentDTO, DotAuditDTO } from "@/lib/types";
 import { formatDate, daysUntil } from "@/lib/utils";
 import { DOT_STATE, DOT_FEDERAL_RULES, DOT_STATE_RULES, type DotRule } from "@/lib/constants";
 import { compressImage } from "@/lib/image";
+import { BulkRenewButton } from "@/components/BulkRenewButton";
 
 type UploadResult = { url: string } | { error: string };
 // Serverless request bodies are capped (~4.5 MB); base64-persisting the file
@@ -819,6 +820,7 @@ function TruckInspectionsSection({ canManage, uploadFile }: { canManage: boolean
             <option value="valid">Valid</option>
             <option value="missing">Not set</option>
           </select>
+          {canManage && allTrucks.length > 0 && <BulkRenewButton doc="dotInspection" vehicles={allTrucks} onDone={reload} />}
         </div>
       </div>
       {allTrucks.length === 0 ? (

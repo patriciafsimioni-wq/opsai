@@ -7,6 +7,7 @@ import { Card, Table, Th, Td, EmptyState } from "@/components/ui";
 import { STATION_LABEL } from "@/lib/constants";
 import { daysUntil, cn } from "@/lib/utils";
 import { RenewDocButton, type RenewableDoc } from "@/components/RenewDocButton";
+import { BulkRenewButton } from "@/components/BulkRenewButton";
 
 type Row = {
   id: string;
@@ -15,6 +16,7 @@ type Row = {
   licensePlate: string | null;
   station: string | null;
   type: string;
+  fleetGroup: string;
   registrationExpiry: string | null;
   insuranceExpiry: string | null;
   dotInspectionExpiry: string | null;
@@ -189,6 +191,7 @@ export function ComplianceAuditClient({ vehicles: initialVehicles, canRenew = fa
               Clear status filter
             </button>
           )}
+          {canRenew && <BulkRenewButton doc="insurance" vehicles={vehicles} onDone={() => setRenewed({})} />}
         </div>
 
         {filtered.length === 0 ? (
