@@ -3,6 +3,8 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/ui";
 import { ComplianceAuditClient } from "@/components/ComplianceAuditClient";
+import { canManage, getUserStationFilter } from "@/lib/auth";
+import type { Station } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +15,10 @@ export default async function CompliancePage() {
 
   // Active fleet only — off-boarded/in-process and out-of-service vehicles are
   // excluded from the audit (a parked/OOS unit isn't operating on the road).
+  const stations = getUserStationFilter(user);
   const vehicles = await prisma.vehicle.findMany({
     where: {
+      ...(stations ? { station: { in: stations as Station[] } } : {}),
       status: { not: "OUT_OF_SERVICE" },
       OR: [
         { offboardStatus: null },
@@ -28,6 +32,7 @@ export default async function CompliancePage() {
       licensePlate: true,
       station: true,
       type: true,
+      fleetGroup: true,
       registrationExpiry: true,
       insuranceExpiry: true,
       dotInspectionExpiry: true,
@@ -43,6 +48,7 @@ export default async function CompliancePage() {
         subtitle="Registration, Insurance & DOT annual inspection (trucks) — expiry status across the active fleet."
       />
       <ComplianceAuditClient
+        canRenew={canManage(user.role)}
         vehicles={vehicles.map((v) => ({
           id: v.id,
           name: v.name,
@@ -50,6 +56,7 @@ export default async function CompliancePage() {
           licensePlate: v.licensePlate,
           station: v.station,
           type: v.type,
+          fleetGroup: v.fleetGroup,
           registrationExpiry: v.registrationExpiry?.toISOString() ?? null,
           insuranceExpiry: v.insuranceExpiry?.toISOString() ?? null,
           dotInspectionExpiry: v.dotInspectionExpiry?.toISOString() ?? null,

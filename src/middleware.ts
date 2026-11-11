@@ -6,11 +6,17 @@ import { NextRequest, NextResponse } from "next/server";
 // "Add to Home Screen" installs with no name or icon.
 const PUBLIC_PATHS = ["/login", "/api/auth/login", "/guide", "/driver-dvir", "/api/dvir/public", "/api/vehicles/transfer/ingest", "/manifest.webmanifest", "/icon", "/apple-icon", "/sw.js"];
 
+// Vercel Cron calls these with a plain GET and no session cookie; their GET
+// handlers are idempotent sync jobs and verify CRON_SECRET themselves.
+const CRON_PATHS = ["/api/mileage/sync", "/api/alerts/compliance"];
+
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const hasSession = req.cookies.has("fleet_session");
 
-  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  const isPublic =
+    PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
+    (req.method === "GET" && CRON_PATHS.includes(pathname));
 
   if (!hasSession && !isPublic) {
     const url = req.nextUrl.clone();

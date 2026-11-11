@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Search, Trash2, Pencil, Fuel, ChevronLeft, ChevronRight, AlertTriangle, CreditCard, Flag, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Plus, Search, Trash2, Pencil, Fuel, ChevronLeft, ChevronRight, AlertTriangle, CreditCard, Flag, ChevronUp, ChevronDown, ChevronsUpDown, FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, Button, Table, Th, Td, EmptyState, StatCard } from "@/components/ui";
 import { Field, Input, Select, Modal } from "@/components/form";
@@ -10,6 +10,8 @@ import { useFleetView } from "@/lib/use-fleet-view";
 import type { FuelLogDTO, VehicleDTO, DriverDTO } from "@/lib/types";
 import { formatCurrency, formatDate, formatNumber, todayInputDate } from "@/lib/utils";
 import { STATION_LABEL, FORM_STATIONS } from "@/lib/constants";
+import { BRAND } from "@/lib/brand";
+import { downloadFuelPdf } from "@/lib/fuel-pdf";
 
 const emptyForm = {
   vehicleId: "",
@@ -98,6 +100,7 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkStation, setBulkStation] = useState("");
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const availableStations = data?.stations ?? [];
 
@@ -213,6 +216,37 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
     if (!confirm("Delete this fuel record?")) return;
     const res = await apiSend(`/api/fuel/${l.id}`, "DELETE");
     if (res.ok) reload();
+  }
+  async function exportPdf() {
+    if (!data || exporting) return;
+    setExporting(true);
+    try {
+      const period = formatDateRange(data.dateStart, data.dateEnd, range);
+      const scope = [
+        station ? (STATION_LABEL[station] ?? station) : "All stations",
+        purchaseType ? (PURCHASE_TYPE_LABEL[purchaseType] ?? purchaseType) : "All types",
+        viewTab === "duplicates" ? "Duplicates only" : null,
+        search ? `Search: "${search}"` : null,
+      ].filter(Boolean).join(" · ");
+      await downloadFuelPdf({
+        brand: BRAND,
+        title: "Fuel Management",
+        subtitle: `${period} · ${scope} · ${filtered.length} transactions`,
+        summary: [
+          { label: "Total Spend", value: formatCurrency(stats.cost) },
+          { label: "Gas (Unleaded)", value: formatCurrency(gasCost) },
+          { label: "Diesel", value: formatCurrency(dieselCost) },
+          { label: "Total Volume", value: `${formatNumber(stats.gal)} Gal` },
+          { label: "Avg Price/Gal", value: formatCurrency(stats.avg) },
+          { label: "Fill-ups", value: String(stats.count) },
+        ],
+        rows: filtered,
+        typeLabel: PURCHASE_TYPE_LABEL,
+        fileName: `fuel-${station || "all"}-${data.dateStart.slice(0, 10)}_${data.dateEnd.slice(0, 10)}.pdf`,
+      });
+    } finally {
+      setExporting(false);
+    }
   }
   function toggleSelect(id: string) {
     setSelected((prev) => {
@@ -364,6 +398,9 @@ export function FuelClient({ canManage }: { canManage: boolean }) {
               className="h-9 w-full rounded-lg border border-[var(--color-border)] bg-white pl-9 pr-3 text-sm outline-none focus:border-blue-500"
             />
           </div>
+          <Button variant="secondary" onClick={exportPdf} disabled={!data || exporting || filtered.length === 0}>
+            <FileDown size={16} /> {exporting ? "Preparing…" : "Download PDF"}
+          </Button>
           {canManage && (
             <Button onClick={openAdd}>
               <Plus size={16} /> Log Fuel

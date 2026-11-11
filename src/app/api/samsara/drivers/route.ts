@@ -2,6 +2,31 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireManager } from "@/lib/api";
 import { getSamsaraDrivers, isConfigured } from "@/lib/samsara";
+import { STATIONS } from "@/lib/constants";
+
+const STATION_BY_TAG: Record<string, string> = {
+  Houston: "IAH",
+  Austin: "AUS",
+  Harlingen: "HRL",
+  Laredo: "LRD",
+  Temple: "ACT",
+  "College Station": "CLL",
+  Beaumont: "BPT",
+  Richmond: "RNH",
+  Norfolk: "ORF",
+};
+
+// Samsara tags are either a city ("Houston") or "CODE - City" ("RNH - Richmond").
+// Only this portal's stations are accepted, so a driver never gets the sister
+// portal's station; an unrecognized tag yields null instead of a default.
+function stationFromTags(tags: { name: string }[]): string | null {
+  for (const { name } of tags) {
+    const code = name.split(/\s*-\s*/)[0].trim().toUpperCase();
+    const station = STATIONS.includes(code) ? code : STATION_BY_TAG[name.trim()];
+    if (station && STATIONS.includes(station)) return station;
+  }
+  return null;
+}
 
 export async function POST() {
   const auth = await requireManager();
@@ -73,18 +98,7 @@ export async function POST() {
       n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()
     ).join(" ") || "Driver";
 
-    // Determine station from tags
-    const tagName = sd.tags?.[0]?.name ?? "";
-    const stationMap: Record<string, string> = {
-      Houston: "IAH",
-      Austin: "AUS",
-      Harlingen: "HRL",
-      Laredo: "LRD",
-      Temple: "ACT",
-      "College Station": "CLL",
-      Beaumont: "BPT",
-    };
-    const station = stationMap[tagName] || "IAH";
+    const station = stationFromTags(sd.tags ?? []);
 
     // Try to match existing driver
     let existing = bySamsaraId.get(sd.id);
@@ -95,7 +109,7 @@ export async function POST() {
     if (existing) {
       await prisma.driver.update({
         where: { id: existing.id },
-        data: { samsaraId: sd.id, station },
+        data: { samsaraId: sd.id, ...(station ? { station } : {}) },
       });
       updated++;
     } else {

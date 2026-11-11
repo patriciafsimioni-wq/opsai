@@ -325,7 +325,7 @@ export async function GET(req: NextRequest) {
           cost: wo.cost ?? 0,
           vehicle: v?.dxNumber ?? v?.name ?? "Unknown",
           station: (wo.station ?? v?.station ?? "—") as string,
-          vendor: (wo.performedBy ?? wo.vendor ?? "") as string,
+          vendor: (wo.vendor ?? wo.performedBy ?? "") as string,
           date: wo.completedAt ? new Date(wo.completedAt).toISOString().slice(0, 10) : "",
           category: cat,
         });

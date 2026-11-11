@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -12,8 +12,9 @@ import {
   DollarSign,
   BarChart3,
   Activity,
+  FileDown,
 } from "lucide-react";
-import { Card, CardHeader, StatCard } from "@/components/ui";
+import { Button, Card, CardHeader, StatCard } from "@/components/ui";
 import {
   BarChartCard,
   AreaChartCard,
@@ -27,6 +28,8 @@ import { formatCurrency, formatNumber } from "@/lib/utils";
 import { STATION_LABEL, VEHICLE_STATUS, titleCase } from "@/lib/constants";
 import { ExportButton } from "@/components/ReportsExport";
 import { MileageReport } from "@/components/MileageReport";
+import { BRAND } from "@/lib/brand";
+import { downloadSectionsPdf } from "@/lib/sections-pdf";
 
 type ReportsApiResponse = {
   stations: string[];
@@ -41,8 +44,10 @@ type ReportsApiResponse = {
     totalVehicles: number;
     activeVehicles: number;
     avgMileage: number;
+    vehiclesDriving: number;
     totalCost: number;
   };
+  monthlySummary: { label: string; avgMiles: number; vehiclesDriving: number; fuel: number; total: number }[];
   costTrend: { label: string; Fuel: number; Maintenance: number; Parts: number; Total: number }[];
   fuelTrend: { label: string; spend: number; volume: number; fillUps: number }[];
   avgPriceTrend: { label: string; value: number }[];
@@ -79,6 +84,9 @@ export function ReportsClient() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   });
 
+  const [exporting, setExporting] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
+
   const fleetView = useFleetView();
   const apiUrl = `/api/reports?range=${range}&date=${refDate}${station ? `&station=${station}` : ""}&fv=${fleetView}`;
   const { data, loading } = useData<ReportsApiResponse>(apiUrl);
@@ -96,6 +104,8 @@ export function ReportsClient() {
 
   const stats = data?.stats;
   const costTrend = data?.costTrend ?? [];
+  const monthlySummary = data?.monthlySummary ?? [];
+  const periodHint = range === "week" ? "This week" : "This month";
   const fuelTrend = data?.fuelTrend ?? [];
   const avgPriceTrend = data?.avgPriceTrend ?? [];
   const turnover = data?.turnover;
@@ -138,13 +148,32 @@ export function ReportsClient() {
   }
 
   // Export rows
-  const exportRows = costTrend.map((r) => ({
+  const exportRows = costTrend.map((r, i) => ({
     Month: r.label,
+    "Avg Miles / Vehicle": monthlySummary[i]?.avgMiles ?? "",
     "Fuel Cost": r.Fuel,
     "Maintenance Cost": r.Maintenance,
     "Parts & Supplies": r.Parts,
     "Total Cost": r.Total,
   }));
+
+  async function exportPdf() {
+    if (!reportRef.current || !data) return;
+    setExporting(true);
+    try {
+      const period = formatDateRange(data.dateStart, data.dateEnd, range);
+      const scope = station ? (STATION_LABEL[station] ?? station) : "All stations";
+      const fleet = fleetView === "TRACTOR_TRAILER" ? " · Trucks & Trailers" : fleetView === "REGULAR" ? " · Regular fleet" : "";
+      await downloadSectionsPdf({
+        container: reportRef.current,
+        title: `${BRAND} · Reports & Analytics`,
+        subtitle: `${period} · ${scope}${fleet}`,
+        fileName: `fleet-report-${station || "all"}-${data.dateStart.slice(0, 10)}_${data.dateEnd.slice(0, 10)}.pdf`,
+      });
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -154,7 +183,12 @@ export function ReportsClient() {
           <h1 className="text-2xl font-bold text-slate-900">Reports & Analytics</h1>
           <p className="text-sm text-slate-500">Operational performance, cost insights, and fleet trends.</p>
         </div>
-        <ExportButton rows={exportRows} filename="fleet-report.csv" label="Export CSV" />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="secondary" onClick={exportPdf} disabled={!data || loading || exporting}>
+            <FileDown size={16} /> {exporting ? "Preparing…" : "Download PDF"}
+          </Button>
+          <ExportButton rows={exportRows} filename="fleet-report.csv" label="Export CSV" />
+        </div>
       </div>
 
       {/* Filters row */}
@@ -215,7 +249,7 @@ export function ReportsClient() {
       {loading && !data ? (
         <p className="py-12 text-center text-sm text-slate-400">Loading reports…</p>
       ) : (
-        <>
+        <div ref={reportRef} className="space-y-4">
           {/* KPI Cards Row 1: Financial */}
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard
@@ -223,6 +257,7 @@ export function ReportsClient() {
               value={formatCurrency(stats?.totalCost ?? 0)}
               icon={<DollarSign size={18} />}
               accent="#dc2626"
+              hint={`${periodHint} · fuel + maintenance`}
             />
             <StatCard
               label="Fuel Spend"
@@ -271,10 +306,11 @@ export function ReportsClient() {
               accent="#16a34a"
             />
             <StatCard
-              label="Avg Mileage"
+              label="Avg Miles / Vehicle"
               value={`${formatNumber(stats?.avgMileage ?? 0)} mi`}
               icon={<BarChart3 size={18} />}
               accent="#7c3aed"
+              hint={`${periodHint} · ${stats?.vehiclesDriving ?? 0} vehicles driven`}
             />
             <StatCard
               label="Work Orders"
@@ -283,6 +319,35 @@ export function ReportsClient() {
               accent="#d97706"
             />
           </div>
+
+          {/* Month-by-month summary */}
+          <Card>
+            <CardHeader title="Monthly Summary" subtitle="Each month on its own · last 6 months" />
+            <div className="overflow-x-auto p-4">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-medium">Month</th>
+                    <th className="px-3 py-2 text-right font-medium">Avg Miles / Vehicle</th>
+                    <th className="px-3 py-2 text-right font-medium">Vehicles Driven</th>
+                    <th className="px-3 py-2 text-right font-medium">Fuel Spend</th>
+                    <th className="px-3 py-2 text-right font-medium">Total Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...monthlySummary].reverse().map((r) => (
+                    <tr key={r.label} className="border-t border-[var(--color-border)]">
+                      <td className="px-3 py-1.5 text-slate-700">{r.label}</td>
+                      <td className="px-3 py-1.5 text-right">{r.avgMiles ? `${formatNumber(r.avgMiles)} mi` : "—"}</td>
+                      <td className="px-3 py-1.5 text-right text-slate-500">{r.vehiclesDriving || "—"}</td>
+                      <td className="px-3 py-1.5 text-right">{formatCurrency(r.fuel)}</td>
+                      <td className="px-3 py-1.5 text-right font-medium">{formatCurrency(r.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
 
           {/* Cost Trend (6 months) + Fleet Status */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -472,7 +537,7 @@ export function ReportsClient() {
               />
             </div>
           </Card>
-        </>
+        </div>
       )}
     </div>
   );

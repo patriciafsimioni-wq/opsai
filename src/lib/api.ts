@@ -105,3 +105,12 @@ export async function requireApprover(): Promise<
 export function badRequest(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
 }
+
+/** Vercel Cron sends `Authorization: Bearer <CRON_SECRET>` when that env var
+ *  is set on the project; with no secret configured the job is open (it is
+ *  idempotent), so set CRON_SECRET to lock it down. */
+export function isCronAuthorized(req: Request): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return true;
+  return req.headers.get("authorization") === `Bearer ${secret}`;
+}
